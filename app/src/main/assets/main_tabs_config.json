@@ -1,0 +1,35 @@
+{
+  "activeColor": "#FF05BD5D",
+  "inActiveColor": "#FFF4F4F4",
+  "selectTab": 0,
+  "tabs": [
+    {
+      "size": 36,
+      "enable": true,
+      "index": 0,
+      "route": "chat_fragment",
+      "title": "禅信"
+    },
+    {
+      "size": 36,
+      "enable": true,
+      "index": 1,
+      "route": "social_fragment",
+      "title": "朋友"
+    },
+    {
+      "size": 36,
+      "enable": true,
+      "index": 2,
+      "route": "find_fragment",
+      "title": "发现"
+    },
+    {
+      "size": 36,
+      "enable": true,
+      "index": 3,
+      "route": "user_fragment",
+      "title": "我"
+    }
+  ]
+}

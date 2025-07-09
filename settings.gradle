@@ -1,0 +1,49 @@
+pluginManagement {
+    repositories {
+        mavenLocal()
+        maven {
+            allowInsecureProtocol = true //允许访问非安全协议
+            url 'http://dl.bintray.com/umsdk/release'
+        }
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenLocal()
+        maven {url 'https://maven.aliyun.com/repository/releases'}
+        maven {url 'https://maven.aliyun.com/repository/google'}
+        maven {url 'https://maven.aliyun.com/repository/central'}
+        maven {url 'https://maven.aliyun.com/repository/gradle-plugin'}
+        maven {url 'https://maven.aliyun.com/repository/public'}
+        google()
+        mavenCentral()
+    }
+    versionCatalogs {
+        create("androids") {
+            library('glide','com.github.bumptech.glide','glide').version('4.15.0')
+            library('glide-complier','com.github.bumptech.glide','compiler').version('4.15.0')
+            library('glide-transformations','jp.wasabeef','glide-transformations').version('4.0.0')
+            library('ratrofit','com.squareup.retrofit2','retrofit').version('2.9.0')
+            library('converter-gson','com.squareup.retrofit2','converter-gson').version('2.9.0')
+            library('okhttp','com.squareup.okhttp3','okhttp').version('4.9.1')
+            library('logging','com.squareup.okhttp3','logging-interceptor').version('4.9.1')
+            bundle('http',['glide','glide-transformations','ratrofit','converter-gson','okhttp','logging'])
+        }
+        create('alibabaLibs') {
+            library('fastJson','com.alibaba','fastjson').version('1.2.59')
+        }
+    }
+}
+
+rootProject.name = "chan_xin_android"
+include ':app'
