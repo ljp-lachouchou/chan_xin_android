@@ -16,7 +16,12 @@
     <item name="android:listDivider">@drawable/list_divider</item>
     <!-- Customize your theme here. -->
 </style>
+<style name="slashScreen" parent="Theme.Chan_xin_android">
+    <item name="android:windowBackground">@drawable/splash_background</item>
+    <item name="android:windowFullscreen">true</item>
+    <item name="android:windowContentOverlay">@null</item>
 
+</style>
 <style name="fullScreen" parent="Theme.Chan_xin_android">
     <item name="android:windowFullscreen">true</item>
 </style>

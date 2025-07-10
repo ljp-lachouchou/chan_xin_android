@@ -2,14 +2,22 @@ package com.software.jetpack.compose.chan_xin_android.ui.base
 
 import android.annotation.SuppressLint
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,22 +30,18 @@ import androidx.compose.material.ButtonColors
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.ButtonElevation
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.pullrefresh.PullRefreshDefaults
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,11 +63,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.coroutineScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultLittleSize
+import com.software.jetpack.compose.chan_xin_android.ui.activity.loginActivityScreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
-import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
+import com.software.jetpack.compose.chan_xin_android.ui.theme.LittleTextColor
+import com.software.jetpack.compose.chan_xin_android.ui.theme.PressedLittleTextColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.TextColor
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.coroutines.EmptyCoroutineContext
 
@@ -73,44 +84,56 @@ val baseBoxModifier =Modifier
     .fillMaxSize()
 
 
+@SuppressLint("CoroutineCreationDuringComposition")
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun BaseBox(
+fun BaseBox(modifier: Modifier = Modifier,enabledFoot:Boolean = true,
             content: @Composable BoxScope.() -> Unit) {
     var pullDistancePx by remember { mutableFloatStateOf(0f) }
     var refreshOffsetPx by remember { mutableFloatStateOf(0f) }
     var holdPx by remember { mutableFloatStateOf(0f) }
+
+    val scope = rememberCoroutineScope()
     with(LocalDensity.current) {
         holdPx = maxPullPx.toPx()
         refreshOffsetPx = PullRefreshDefaults.RefreshingOffset.toPx()
     }
-  val animate = remember {
-      Animatable(0f)
-  }
-    LaunchedEffect(pullDistancePx) {
-        animate.animateTo(targetValue = 0f)
+    val animate = remember {
+        Animatable(0f)
     }
+
     Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)
         .pointerInput(Unit) {
-            detectDragGestures(onDragStart = {
+            detectDragGestures(
+                onDragStart = {
                 if (animate.isRunning) {
-
+                    scope.launch {
+                        animate.stop()
+                    }
                 }
             },
                 onDrag = {
                         change, dragAmount ->
                     val deltaY = dragAmount.y
                     val newDistance = pullDistancePx + deltaY
-                    pullDistancePx = newDistance.coerceIn(0f, holdPx)
+                    pullDistancePx = newDistance.coerceIn(if (enabledFoot) -holdPx else 0f, holdPx)
                     change.consume() //消费手势
-                })
+                },
+                onDragEnd = {
+                    Log.e("onDragEnd","start")
+                    pullDistancePx = 0f
+                    scope.launch {
+                        Log.e("onDragEnd","Run")
+                        animate.animateTo(0f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh))
+                    }
+                }
+            )
         }
         ) {
         Box(modifier =Modifier
                 .graphicsLayer {
             translationY = pullDistancePx
             Log.e("DELTA","translationY$translationY")
-
         }.fillMaxSize()) {
             content()
         }
@@ -173,7 +196,6 @@ fun BaseButton(onClick: () -> Unit,
                colors: ButtonColors = ButtonDefaults.buttonColors(backgroundColor = IconGreen, contentColor = Color.White),
                contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
                content: @Composable RowScope.() -> Unit) {
-
     Button(onClick = onClick,
     modifier = modifier,
     enabled = enabled,
@@ -184,4 +206,79 @@ fun BaseButton(onClick: () -> Unit,
     colors = colors,
     contentPadding=contentPadding,
     content = content)
+}
+@Composable
+fun LittleText(text: String,
+               event:()->Unit,
+               modifier: Modifier = Modifier,
+               fontSize: TextUnit = defaultLittleSize,
+               fontStyle: FontStyle? = null,
+               fontWeight: FontWeight? = null,
+               fontFamily: FontFamily? = null,
+               letterSpacing: TextUnit = TextUnit.Unspecified,
+               textDecoration: TextDecoration? = null,
+               textAlign: TextAlign? = null,
+               lineHeight: TextUnit = TextUnit.Unspecified,
+               overflow: TextOverflow = TextOverflow.Clip,
+               softWrap: Boolean = true,
+               maxLines: Int = Int.MAX_VALUE,
+               minLines: Int = 1,
+               onTextLayout: ((TextLayoutResult) -> Unit)? = null,
+               style: TextStyle = LocalTextStyle.current) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val textColor  = when (interactionSource.collectIsPressedAsState().value){
+        true -> PressedLittleTextColor
+        else -> LittleTextColor
+    }
+    Text(
+        text = text,
+        modifier = modifier.clickable(indication = null, interactionSource = interactionSource) { event() },
+        color = textColor,
+        fontSize = fontSize,
+        fontStyle = fontStyle,
+        fontWeight = fontWeight,
+        fontFamily = fontFamily,
+        letterSpacing = letterSpacing,
+        textDecoration = textDecoration,
+        textAlign = textAlign,
+        lineHeight = lineHeight,
+        overflow = overflow,
+        softWrap = softWrap,
+        maxLines = maxLines,
+        minLines = minLines,
+        onTextLayout = onTextLayout,
+        style = style
+    )
+}
+@Composable
+fun BaseTransBetweenScreens(firstScreen: @Composable() (AnimatedVisibilityScope.() -> Unit)?,secondScreen: @Composable() AnimatedVisibilityScope.() -> Unit) {
+    val stateCover = remember {
+        MutableTransitionState(true)
+    }
+    val stateScreen = remember {
+        if (firstScreen != null) MutableTransitionState(false) else MutableTransitionState(true)
+    }
+    LaunchedEffect(Unit) {
+        delay(2000)
+        if (firstScreen != null) {
+            stateCover.targetState = false
+            stateScreen.targetState = true
+            return@LaunchedEffect
+        }
+    }
+   if (firstScreen != null) {
+       AnimatedVisibility (visibleState = stateCover) {
+           firstScreen()
+       }
+   }
+    if (firstScreen == null) {
+        AnimatedVisibility(visibleState = stateScreen, enter = expandHorizontally()) {
+            secondScreen()
+        }
+    }else {
+        AnimatedVisibility(visibleState = stateScreen) {
+            secondScreen()
+        }
+    }
+
 }
