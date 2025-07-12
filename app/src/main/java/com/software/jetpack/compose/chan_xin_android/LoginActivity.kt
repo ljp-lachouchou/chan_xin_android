@@ -35,8 +35,11 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.lifecycleScope
+import com.software.jetpack.compose.chan_xin_android.http.service.ApiService
+import com.software.jetpack.compose.chan_xin_android.http.service.HttpService
 import com.software.jetpack.compose.chan_xin_android.lifecycle.LoginActivityObserver
 import com.software.jetpack.compose.chan_xin_android.ui.activity.AppCoverScreen
+import com.software.jetpack.compose.chan_xin_android.ui.activity.AppCoverScreenNav
 import com.software.jetpack.compose.chan_xin_android.ui.activity.loginActivityScreen
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseActivity
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseTransBetweenScreens
@@ -58,6 +61,9 @@ class LoginActivity: BaseActivity() {
     }
     private val retrievePasswordEvent:()->Unit = {
         retrievePasswordService()
+    }
+    private val registerEvent:()->Unit = {
+        registerService()
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.slashScreen)
@@ -90,12 +96,15 @@ class LoginActivity: BaseActivity() {
     private fun retrievePasswordService() {
         lifecycleScope
     }
+    private fun registerService() {
+
+    }
     override fun getDefaultLifeCycle(): DefaultLifecycleObserver {
         return LoginActivityObserver()
     }
     @Composable
     fun NoPhone() {
-        AppCoverScreen()
+        AppCoverScreenNav(loginEvent=loginEvent)
     }
 
 

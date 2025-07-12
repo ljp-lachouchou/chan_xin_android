@@ -70,6 +70,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.fragment.fragment
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen

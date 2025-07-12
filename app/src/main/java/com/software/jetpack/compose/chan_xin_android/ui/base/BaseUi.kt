@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonColors
 import androidx.compose.material.ButtonDefaults
@@ -33,6 +35,9 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.pullrefresh.PullRefreshDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +62,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,9 +74,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.coroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultLittleSize
+import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultPlaceholderText
 import com.software.jetpack.compose.chan_xin_android.ui.activity.loginActivityScreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.LittleTextColor
+import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.PressedLittleTextColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.TextColor
 import kotlinx.coroutines.coroutineScope
@@ -102,7 +110,7 @@ fun BaseBox(modifier: Modifier = Modifier,enabledFoot:Boolean = true,
         Animatable(0f)
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)
+    Box(modifier = modifier
         .pointerInput(Unit) {
             detectDragGestures(
                 onDragStart = {
@@ -281,4 +289,57 @@ fun BaseTransBetweenScreens(firstScreen: @Composable() (AnimatedVisibilityScope.
         }
     }
 
+}
+@Composable
+fun BaseTextField(value: String,
+                  onValueChange: (String) -> Unit,
+                  modifier: Modifier = Modifier,
+                  enabled: Boolean = true,
+                  readOnly: Boolean = false,
+                  textStyle: TextStyle = androidx.compose.material3.LocalTextStyle.current,
+                  label: @Composable (() -> Unit)? = null,
+                  placeholder: String,
+                  leadingIcon: @Composable (() -> Unit)? = null,
+                  trailingIcon: @Composable (() -> Unit)? = null,
+                  prefix: @Composable (() -> Unit)? = null,
+                  suffix: @Composable (() -> Unit)? = null,
+                  supportingText: @Composable (() -> Unit)? = null,
+                  isError: Boolean = false,
+                  visualTransformation: VisualTransformation = VisualTransformation.None,
+                  keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+                  keyboardActions: KeyboardActions = KeyboardActions.Default,
+                  singleLine: Boolean = false,
+                  maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+                  minLines: Int = 1,
+                  interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+                  shape: Shape = TextFieldDefaults.shape) {
+    TextField(
+        colors = TextFieldDefaults.colors(
+            cursorColor = IconGreen,
+            unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent,
+            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent
+        ),
+        value = value,
+        onValueChange = onValueChange,
+        leadingIcon = leadingIcon,
+        placeholder = { Text(placeholder, color = PlaceholderColor) },
+        modifier = modifier,
+        enabled = enabled,
+        readOnly = readOnly,
+        textStyle = textStyle,
+        label = label,
+        trailingIcon = trailingIcon,
+        prefix = prefix,
+        suffix = suffix,
+        supportingText = supportingText,
+        isError = isError,
+        visualTransformation = visualTransformation,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+        singleLine = singleLine,
+        maxLines = maxLines,
+        minLines = minLines,
+        interactionSource = interactionSource,
+        shape = shape
+    )
 }

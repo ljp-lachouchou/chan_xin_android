@@ -37,7 +37,9 @@ dependencyResolutionManagement {
             library('converter-gson','com.squareup.retrofit2','converter-gson').version('2.9.0')
             library('okhttp','com.squareup.okhttp3','okhttp').version('4.9.1')
             library('logging','com.squareup.okhttp3','logging-interceptor').version('4.9.1')
-            bundle('http',['glide','glide-transformations','ratrofit','converter-gson','okhttp','logging'])
+            library('adapter-rxjava','com.squareup.retrofit2','adapter-rxjava3').version('2.9.0')
+            library('adapter-coroutines', 'com.jakewharton.retrofit', 'retrofit2-kotlin-coroutines-adapter').version('0.9.2')
+            bundle('http',['glide','glide-transformations','ratrofit','converter-gson','okhttp','logging','adapter-coroutines','adapter-rxjava'])
         }
         create('alibabaLibs') {
             library('fastJson','com.alibaba','fastjson').version('1.2.59')

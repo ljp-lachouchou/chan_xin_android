@@ -1,5 +1,7 @@
 package com.software.jetpack.compose.chan_xin_android
 
+import com.software.jetpack.compose.chan_xin_android.http.service.ApiService
+import com.software.jetpack.compose.chan_xin_android.http.service.HttpService
 import org.junit.Test
 
 import org.junit.Assert.*
@@ -12,6 +14,6 @@ import org.junit.Assert.*
 class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
-        assertEquals(4, 2 + 2)
+
     }
 }
