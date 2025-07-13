@@ -12,17 +12,29 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -50,13 +62,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -67,15 +87,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.coroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.software.jetpack.compose.chan_xin_android.R
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultLittleSize
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultPlaceholderText
-import com.software.jetpack.compose.chan_xin_android.ui.activity.loginActivityScreen
+import com.software.jetpack.compose.chan_xin_android.ui.theme.ChatGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.LittleTextColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor
@@ -343,3 +366,131 @@ fun BaseTextField(value: String,
         shape = shape
     )
 }
+@Composable
+fun Triangle(
+    modifier: Modifier = Modifier,
+    color: Color = Color.Blue,
+    isFilled: Boolean = true, // 是否填充
+    size: Int = 40 // 三角形大小
+) {
+    Canvas(modifier = modifier.size(size.dp)) {
+        val path = Path().apply {
+            // 定义三角形的三个顶点
+            moveTo(size / 2f, 0f) // 顶部顶点
+            lineTo(size.toFloat(), size.toFloat()) // 右下角
+            lineTo(0f, size.toFloat()) // 左下角
+            close() // 闭合路径形成三角形
+        }
+
+        // 根据是否填充选择绘制方式
+        if (isFilled) {
+            drawPath(path, color) // 填充颜色
+        } else {
+            drawPath(path, color, style = Stroke(width = 2f)) // 仅描边
+        }
+    }
+}
+
+
+enum class BubbleDirection { LEFT, RIGHT }
+
+@Composable
+fun ChatBubble(
+    message: String,
+    direction: BubbleDirection = BubbleDirection.LEFT,
+    modifier: Modifier = Modifier,
+    maxWidthPercentage: Float = 0.7f,
+    tailWidth: Dp = 10.dp,
+    tailHeight: Dp = 12.dp,
+    bubbleColor: Color = ChatGreen,
+    textStyle: TextStyle = TextStyle(
+        fontSize = 16.sp,
+        color = if (direction == BubbleDirection.LEFT) Color.Black else Color.Black
+    )
+) {
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
+    Box(
+        modifier = modifier
+            .widthIn(
+                max =screenWidthDp * maxWidthPercentage
+            )
+    ) {
+        // 绘制气泡背景
+        Canvas(modifier = Modifier.matchParentSize()) {
+            val width = size.width
+            val height = size.height
+
+            val bubblePath = Path().apply {
+               if (direction == BubbleDirection.RIGHT) {
+                   moveTo(tailWidth.toPx(), 0f)
+                   // 右侧边
+                   lineTo(width - tailWidth.toPx() / 2, 0f)
+                   lineTo(width - tailWidth.toPx() / 2, height)
+                   moveTo(width - tailWidth.toPx() / 2, height)
+                   lineTo(tailWidth.toPx(), height)
+                   lineTo(tailWidth.toPx(),0f)
+                   moveTo(width - tailWidth.toPx() / 2, (height - tailHeight.toPx())  / 2)
+                   lineTo(width+tailWidth.toPx()/ 2,height / 2)
+                   lineTo(width - tailWidth.toPx() / 2, (height + tailHeight.toPx())  / 2)
+               }else {
+                   moveTo(tailWidth.toPx(),0f)
+                   lineTo(width - tailWidth.toPx() / 2, 0f)
+                   lineTo(width - tailWidth.toPx() / 2, height)
+                   moveTo(width - tailWidth.toPx() / 2, height)
+                   lineTo(tailWidth.toPx(), height)
+                   lineTo(tailWidth.toPx(),0f)
+                   moveTo(0f,height / 2)
+                   lineTo(tailWidth.toPx(),(height - tailHeight.toPx()) / 2)
+                   lineTo(tailWidth.toPx(),(height + tailHeight.toPx()) / 2)
+               }
+            }
+
+            drawPath(path = bubblePath, color = bubbleColor)
+        }
+
+        // 气泡内的文本内容
+        Text(
+            text = message,
+            style = textStyle,
+            modifier = Modifier
+                .padding(
+                    start = 12.dp + if (direction == BubbleDirection.LEFT) tailWidth else 0.dp,
+                    end = 12.dp + if (direction == BubbleDirection.RIGHT) tailWidth else 0.dp,
+                    top = 8.dp,
+                    bottom = 8.dp
+                )
+                .align(Alignment.CenterStart)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ChatBubblePreview() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // 左侧气泡（对方）
+        ChatBubble(
+            message = "你好！",
+            direction = BubbleDirection.LEFT
+        )
+
+        // 右侧气泡（自己）
+        ChatBubble(
+            message = "这是一个右侧气泡，通常用于自己发送的消息。",
+            direction = BubbleDirection.RIGHT
+        )
+
+        // 长文本气泡
+        ChatBubble(
+            message = "这是一个很长的消息，测试气泡的自动换行功能。Jetpack Compose 是 Android 官方推荐的现代 UI 工具包，用它开发界面非常高效，代码也更简洁。aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
+            direction = BubbleDirection.LEFT
+        )
+    }
+}
+
+

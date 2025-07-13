@@ -1,7 +1,9 @@
 package com.software.jetpack.compose.chan_xin_android
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.datastore.dataStore
 import androidx.lifecycle.DefaultLifecycleObserver
 import com.software.jetpack.compose.chan_xin_android.lifecycle.MainActivityObserver
 

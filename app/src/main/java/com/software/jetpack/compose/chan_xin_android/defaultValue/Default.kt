@@ -9,3 +9,6 @@ val defaultLoginImageSize = 100.dp
 const val defaultPlaceholderText = "请填写禅信密码"
 val defaultLittleSize = 14.sp
 val DefaultHoDivider= 10.dp
+val DefaultUserPadding = 10.dp
+val DefaultUserScreenItemDp = 50.dp
+val DefaultFontSize = 16.sp

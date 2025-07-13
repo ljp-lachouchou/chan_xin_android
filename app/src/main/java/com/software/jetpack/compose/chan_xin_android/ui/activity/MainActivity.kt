@@ -11,8 +11,10 @@ import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 //noinspection UsingMaterialAndMaterial3Libraries
@@ -30,6 +32,7 @@ import androidx.compose.material.MaterialTheme
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Surface
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -73,6 +76,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.fragment.fragment
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserScreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.NavigationBarColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
@@ -117,7 +121,7 @@ fun MainActivityScreen() {
            composable(route = TabEnum.HOME.route){ Text("禅信") }
            composable(route = TabEnum.SOCIAL.route){ Text("社交") }
            composable(route = TabEnum.FIND.route){ Text("发现") }
-           composable(route = TabEnum.USER.route){ Text("我") }
+           composable(route = TabEnum.USER.route){ UserScreen() }
        }
    }
 }
@@ -135,6 +139,9 @@ fun ButtonTabItem(scope:RowScope,tab:TabEnum,selectedTab:Int,onClick:() -> Unit)
         unselectedContentColor = Color.Black
     )
 }
+
+
+
 
 
 

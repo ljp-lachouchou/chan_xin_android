@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <application
+        android:name=".MyApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -20,11 +21,6 @@
         <activity
             android:name=".LoginActivity"
             android:exported="true"
-            android:launchMode="standard"
-            android:clearTaskOnLaunch="false"
-            android:finishOnTaskLaunch="false"
-            android:label="@string/app_name"
-
             android:theme="@style/slashScreen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -34,9 +30,6 @@
         </activity>
         <activity
             android:name=".MainActivity"
-            android:launchMode="standard"
-            android:clearTaskOnLaunch="false"
-            android:finishOnTaskLaunch="false"
             android:exported="true"/>
     </application>
 

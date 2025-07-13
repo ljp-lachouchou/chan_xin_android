@@ -1,7 +1,9 @@
 package com.software.jetpack.compose.chan_xin_android
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.provider.ContactsContract.CommonDataKinds.Phone
@@ -35,14 +37,18 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.compose.rememberNavController
 import com.software.jetpack.compose.chan_xin_android.http.service.ApiService
 import com.software.jetpack.compose.chan_xin_android.http.service.HttpService
 import com.software.jetpack.compose.chan_xin_android.lifecycle.LoginActivityObserver
 import com.software.jetpack.compose.chan_xin_android.ui.activity.AppCoverScreen
 import com.software.jetpack.compose.chan_xin_android.ui.activity.AppCoverScreenNav
-import com.software.jetpack.compose.chan_xin_android.ui.activity.loginActivityScreen
+import com.software.jetpack.compose.chan_xin_android.ui.activity.LoginActivityScreen
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseActivity
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseTransBetweenScreens
+import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
+import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName
+import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.PHONE_KEY
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -55,7 +61,6 @@ import okhttp3.internal.wait
 
 class LoginActivity: BaseActivity() {
     private val Context.dataStore : DataStore<Preferences> by preferencesDataStore(name = "users")
-    private val phoneKey = "phone"
     private val loginEvent:()->Unit = {
         loginService()
     }
@@ -69,8 +74,10 @@ class LoginActivity: BaseActivity() {
         setTheme(R.style.slashScreen)
         super.onCreate(savedInstanceState)
         setTheme(R.style.Theme_Chan_xin_android)
+
        lifecycleScope.launch(Dispatchers.IO) {
            val phone = hasLoginHistory()
+           val token = AppGlobal.tokenIsAva()
            Log.e("isHas", phone)
            withContext(Dispatchers.Main) {
                setContent {
@@ -78,17 +85,23 @@ class LoginActivity: BaseActivity() {
                    if (phone == "") { //没有历史，用户第一次使用
                        NoPhone()
                    }else {
-                       HasPhone(phone)
+                       if (token == "") HasPhone(phone)
+                       else {
+                           val intent = Intent(this@LoginActivity,MainActivity::class.java)
+                           intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP) // 清除目标 Activity 之上的所有 Activity
+                           intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)  // 创建新任务（通常与 CLEAR_TOP 一起使用）
+                           this@LoginActivity.startActivity(intent)
+                           this@LoginActivity.finish()
+                       }
+
                    }
                }
            }
        }
     }
     private suspend fun hasLoginHistory():String {
-
-        return dataStore.data.map { preferences ->
-            preferences[stringPreferencesKey(phoneKey)] ?: ""
-        }.first() // 检查是否存在phoneKey
+//        AppGlobal.saveUserRela(PHONE_KEY,"")
+        return AppGlobal.hasPhoneHistory()
     }
     private fun loginService() {
 
@@ -104,13 +117,13 @@ class LoginActivity: BaseActivity() {
     }
     @Composable
     fun NoPhone() {
-        AppCoverScreenNav(loginEvent=loginEvent)
+        AppCoverScreenNav()
     }
 
 
     @Composable
     fun HasPhone(phone: String) {
-        loginActivityScreen(phone, loginEvent = loginEvent, retrievePasswordEvent = retrievePasswordEvent)
+        LoginActivityScreen(phone)
     }
 
 }

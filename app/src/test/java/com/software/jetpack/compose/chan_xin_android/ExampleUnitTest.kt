@@ -1,10 +1,11 @@
 package com.software.jetpack.compose.chan_xin_android
 
-import com.software.jetpack.compose.chan_xin_android.http.service.ApiService
-import com.software.jetpack.compose.chan_xin_android.http.service.HttpService
+import com.alibaba.sdk.android.oss.ClientException
+import com.aliyuncs.sts.model.v20150401.AssumeRoleRequest
+import com.aliyuncs.sts.model.v20150401.AssumeRoleResponse
 import org.junit.Test
+import java.lang.invoke.MethodType
 
-import org.junit.Assert.*
 
 /**
  * Example local unit test, which will execute on the development machine (host).
@@ -14,6 +15,8 @@ import org.junit.Assert.*
 class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
+
+
 
     }
 }

@@ -68,4 +68,8 @@ dependencies {
     androidTestImplementation libs.androidx.ui.test.junit4
     debugImplementation libs.androidx.ui.tooling
     debugImplementation libs.androidx.ui.test.manifest
+    implementation libs.coil
+    implementation 'com.liulishuo.filedownloader:library:1.7.7'
+    implementation "com.aliyun.dpa:oss-android-sdk:2.9.21"
+    implementation("com.aliyun:aliyun-java-sdk-sts:3.0.0")
 }
