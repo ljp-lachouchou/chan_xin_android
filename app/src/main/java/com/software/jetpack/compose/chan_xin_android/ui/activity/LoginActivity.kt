@@ -1,5 +1,6 @@
 package com.software.jetpack.compose.chan_xin_android.ui.activity
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -92,11 +93,13 @@ import coil.request.ImageResult
 import com.google.gson.Gson
 import com.software.jetpack.compose.chan_xin_android.MainActivity
 import com.software.jetpack.compose.chan_xin_android.R
+import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultHoDivider
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultPaddingBottom
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultPaddingTop
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultLoginImageSize
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultPlaceholderText
+import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
 import com.software.jetpack.compose.chan_xin_android.http.service.ApiService
@@ -191,6 +194,7 @@ fun BottomSheetContent(navController: NavHostController,bottomSheetState: ModalB
 
     }
 }
+@SuppressLint("CoroutineCreationDuringComposition")
 @Composable
 fun MainLoginContent(
     phone: String,
@@ -202,6 +206,14 @@ fun MainLoginContent(
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var avatar = ""
+    var isShow by remember { mutableStateOf(false) }
+    scope.launch {
+        isLoading = true
+        avatar = UserDatabase.getInstance().userDao().getUserAvatarByPhone(phone)
+        isShow = true
+        isLoading = false
+    }
     BaseBox {
         Column(modifier = Modifier
             .fillMaxSize()
@@ -209,46 +221,48 @@ fun MainLoginContent(
             ,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(modifier = Modifier.size(defaultLoginImageSize),
-                painter = painterResource(R.drawable.default_avatar),
-                contentDescription = null
-            )
-            Spacer(Modifier.padding(vertical = 5.dp))
-            val tStyle = TextStyle(fontSize = 20.sp)
-            Wrapper {
-                BaseText(text = phone, style = tStyle)
-            }
-            Spacer(Modifier.padding(vertical = 20.dp))
-            Wrapper {
-                BaseTextField(
-                    value = password,
-                    onValueChange = {
-                        password = it
-                    },
-                    leadingIcon = {
-                        BaseText("密码")
-                    }, placeholder = defaultPlaceholderText
+            if(isShow) {
+                AsyncImage(modifier = Modifier.size(defaultLoginImageSize),
+                    model = ImageRequest.Builder(AppGlobal.getAppContext()).data(if (avatar != "") avatar else R.drawable.default_avatar).build(),
+                    contentDescription = null
                 )
-            }
-            HorizontalDivider(color = DividerColor, modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = DefaultHoDivider))
-            Spacer(Modifier.weight(0.55f))
-            BaseButton(onClick = {
-                scope.launch{
-                    isLoading = true
-                    login(phone,password, context)
-                    isLoading = false
+                Spacer(Modifier.padding(vertical = 5.dp))
+                val tStyle = TextStyle(fontSize = 20.sp)
+                Wrapper {
+                    BaseText(text = phone, style = tStyle)
                 }
-            }, modifier = Modifier
-                .width(165.dp)
-                .height(45.dp)) {
-                Text("登录", style = tStyle, color = Color.White)
+                Spacer(Modifier.padding(vertical = 20.dp))
+                Wrapper {
+                    BaseTextField(
+                        value = password,
+                        onValueChange = {
+                            password = it
+                        },
+                        leadingIcon = {
+                            BaseText("密码")
+                        }, placeholder = defaultPlaceholderText
+                    )
+                }
+                HorizontalDivider(color = DividerColor, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = DefaultHoDivider))
+                Spacer(Modifier.weight(0.55f))
+                BaseButton(onClick = {
+                    scope.launch{
+                        isLoading = true
+                        login(phone,password, context)
+                        isLoading = false
+                    }
+                }, modifier = Modifier
+                    .width(165.dp)
+                    .height(45.dp)) {
+                    Text("登录", style = tStyle, color = Color.White)
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                BottomRow({
+                    Toast.makeText(AppGlobal.getAppContext(),"找回密码：未编写",Toast.LENGTH_SHORT).show()
+                }, moreEvent)
             }
-            Spacer(modifier = Modifier.weight(1f))
-            BottomRow({
-                Toast.makeText(AppGlobal.getAppContext(),"找回密码：未编写",Toast.LENGTH_SHORT).show()
-            }, moreEvent)
         }
         LoadingDialog(isLoading)
     }
@@ -382,6 +396,8 @@ fun LoginScreen(navController: NavHostController) {
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+
     Scaffold(topBar = {AppTopBar(navController=navController)}) {
         padding->
         BaseBox(modifier = Modifier
@@ -466,6 +482,11 @@ suspend fun loginService(phone:String,password:String):Boolean {
     if (loginResp.data?.exp != null) {
         AppGlobal.saveUserRela(PreferencesFileName.USER_TOKEN_EXP,864400+System.currentTimeMillis())
     }
+    val userInfo = apiService.userInfo(loginResp.data?.token)
+    val user = userInfo.data?.info ?: User()
+    user.password = password
+    Log.e("loginService",user.toString())
+    UserDatabase.getInstance().userDao().saveUser(user)
     return true
 }
 suspend fun register(navController:NavHostController,nickname: String,sex: Byte,phone: String,password: String,selectedImageUri: Uri?) {

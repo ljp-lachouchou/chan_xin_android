@@ -7,6 +7,7 @@ import com.software.jetpack.compose.chan_xin_android.util.StringUtil
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
@@ -24,4 +25,10 @@ interface ApiService {
     suspend fun register(@Body registerReq:RegisterReq):ApiResult<TokenResp>
     @POST("v1/user/login")
     suspend fun login(@Body loginReq:LoginReq):ApiResult<TokenResp>
+
+    data class DataWrapper(val info:User)
+    @GET("v1/user/userinfo")
+    suspend fun userInfo(@Header("Authorization") authToken: String? = "",) : ApiResult<DataWrapper>
+
+
 }

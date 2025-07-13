@@ -1,5 +1,6 @@
 package com.software.jetpack.compose.chan_xin_android.http.service
 
+import com.google.gson.Gson
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor

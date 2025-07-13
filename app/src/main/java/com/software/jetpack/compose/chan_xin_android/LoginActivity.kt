@@ -85,15 +85,14 @@ class LoginActivity: BaseActivity() {
                    if (phone == "") { //没有历史，用户第一次使用
                        NoPhone()
                    }else {
-                       HasPhone(phone)
-//                       if (token == "") HasPhone(phone)
-//                       else {
-//                           val intent = Intent(this@LoginActivity,MainActivity::class.java)
-//                           intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP) // 清除目标 Activity 之上的所有 Activity
-//                           intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)  // 创建新任务（通常与 CLEAR_TOP 一起使用）
-//                           this@LoginActivity.startActivity(intent)
-//                           this@LoginActivity.finish()
-//                       }
+                       if (token == "") HasPhone(phone)
+                       else {
+                           val intent = Intent(this@LoginActivity,MainActivity::class.java)
+                           intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP) // 清除目标 Activity 之上的所有 Activity
+                           intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)  // 创建新任务（通常与 CLEAR_TOP 一起使用）
+                           this@LoginActivity.startActivity(intent)
+                           this@LoginActivity.finish()
+                       }
 
                    }
                }
