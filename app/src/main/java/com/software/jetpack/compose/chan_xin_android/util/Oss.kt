@@ -42,6 +42,7 @@ object Oss {
         val credentialProvider: OSSCredentialProvider =
             OSSStsTokenCredentialProvider(accessKeyId, accessKeySecret, securityToken)
         val config = ClientConfiguration()
+
         val oss = OSSClient(AppGlobal.getAppContext(), endpoint, credentialProvider)
         oss.setRegion(region)
 
@@ -50,7 +51,6 @@ object Oss {
             "chan_xin/image/$fileName",
             uri
         )
-        // 设置文件元数据为可选操作。
         val metadata = ObjectMetadata()
 
         metadata.setHeader("x-oss-object-acl", "public-read")
