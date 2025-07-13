@@ -11,18 +11,8 @@ import com.alibaba.sdk.android.oss.common.auth.OSSStsTokenCredentialProvider
 import com.alibaba.sdk.android.oss.model.ObjectMetadata
 import com.alibaba.sdk.android.oss.model.PutObjectRequest
 import com.alibaba.sdk.android.oss.model.PutObjectResult
-import com.aliyuncs.DefaultAcsClient
-import com.aliyuncs.auth.sts.AssumeRoleRequest
-import com.aliyuncs.auth.sts.AssumeRoleResponse
-import com.aliyuncs.http.MethodType
-import com.aliyuncs.profile.DefaultProfile
-import com.aliyuncs.profile.IClientProfile
 import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.io.InputStreamReader
-import java.io.OutputStreamWriter
 
 
 object Oss {

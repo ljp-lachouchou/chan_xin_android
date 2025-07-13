@@ -45,7 +45,7 @@ import com.software.jetpack.compose.chan_xin_android.ui.theme.RightArrowColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
 
 @Composable
-fun UserScreen(avatar:String = "",nickname:String,sex:Byte) {
+fun UserScreen(avatar:String = "",nickname:String = "",sex:Byte = 0) {
     Surface(modifier = Modifier.fillMaxSize(), color = SurfaceColor) {
         BaseBox(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
             Column(modifier = Modifier.fillMaxWidth().background(color = Color.White).padding(top = DefaultPaddingTop)) {
