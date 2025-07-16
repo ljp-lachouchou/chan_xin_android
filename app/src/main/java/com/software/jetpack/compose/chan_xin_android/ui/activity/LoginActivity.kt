@@ -9,8 +9,6 @@ import android.text.TextUtils
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,23 +39,17 @@ import androidx.compose.material.ModalBottomSheetLayout
 import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.RadioButton
-import androidx.compose.material.RadioButtonColors
 import androidx.compose.material.RadioButtonDefaults
 import androidx.compose.material.Scaffold
-import androidx.compose.material.Surface
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.minimumInteractiveComponentSize
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TooltipState
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -83,13 +75,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import androidx.navigation.activity
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import coil.request.ImageResult
 import com.google.gson.Gson
 import com.software.jetpack.compose.chan_xin_android.MainActivity
 import com.software.jetpack.compose.chan_xin_android.R
@@ -111,31 +101,26 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.BaseTextField
 import com.software.jetpack.compose.chan_xin_android.ui.base.ChatBubble
 import com.software.jetpack.compose.chan_xin_android.ui.base.LittleText
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
-import com.software.jetpack.compose.chan_xin_android.ui.base.Triangle
-import com.software.jetpack.compose.chan_xin_android.ui.theme.ChatGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
-import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.TextColor
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import com.software.jetpack.compose.chan_xin_android.util.Oss
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
-import jp.wasabeef.glide.transformations.CropTransformation.CropType
+import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.annotations.Async
 import retrofit2.HttpException
-import java.security.Timestamp
 
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun LoginActivityScreen(phone:String = "19931417018") {
+fun LoginActivityScreen(vm:UserViewmodel,phone:String = "19931417018") {
     val bottomSheetState = rememberModalBottomSheetState(ModalBottomSheetValue.Hidden)
     val scope = rememberCoroutineScope()
     val navController = rememberNavController()
@@ -145,18 +130,17 @@ fun LoginActivityScreen(phone:String = "19931417018") {
     val moreEvent:()->Unit = {
         scope.launch { bottomSheetState.show() }
     }
-
     NavHost(navController = navController, startDestination = "parent") {
         composable("parent") {
             ModalBottomSheetLayout(sheetContent = bottomSheetContent,sheetState = bottomSheetState, sheetShape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)) {
-                MainLoginContent(phone,moreEvent)
+                MainLoginContent(vm,phone,moreEvent)
             }
         }
         composable("register") {
-            RegisterScreen(navController)
+            RegisterScreen(vm, navController)
         }
         composable("login") {
-            LoginScreen(navController)
+            LoginScreen(vm, navController)
         }
     }
 }
@@ -197,6 +181,7 @@ fun BottomSheetContent(navController: NavHostController,bottomSheetState: ModalB
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
 fun MainLoginContent(
+    vm: UserViewmodel,
     phone: String,
     moreEvent: () -> Unit
 ){
@@ -250,7 +235,7 @@ fun MainLoginContent(
                 BaseButton(onClick = {
                     scope.launch{
                         isLoading = true
-                        login(phone,password, context)
+                        login(vm, phone, password, context)
                         isLoading = false
                     }
                 }, modifier = Modifier
@@ -270,8 +255,8 @@ fun MainLoginContent(
 }
 
 @Composable
-fun Wrapper(content:@Composable () -> Unit){
-    Box {
+fun Wrapper(modifier: Modifier = Modifier,contentAlignment: Alignment = Alignment.TopStart,content:@Composable () -> Unit){
+    Box(modifier = modifier,contentAlignment = contentAlignment) {
         content()
     }
 }
@@ -304,7 +289,7 @@ val LocalDialogTextModifier = compositionLocalOf {
 
 
 @Composable
-fun AppCoverScreen(navController:NavHostController) {
+fun AppCoverScreen(vm: UserViewmodel, navController: NavHostController) {
     Box(modifier = Modifier
         .fillMaxSize()
         .background(
@@ -347,23 +332,24 @@ fun AppCoverScreen(navController:NavHostController) {
     }
 }
 @Composable
-fun AppCoverScreenNav() {
+fun AppCoverScreenNav(vm:UserViewmodel) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "parent") {
         composable(route="parent") {
-            AppCoverScreen(navController)
+            AppCoverScreen(vm,navController)
         }
         composable(route = "login") {
-            LoginScreen(navController)
+            LoginScreen(vm,navController)
         }
         composable(route="register") {
-            RegisterScreen(navController)
+            RegisterScreen(vm,navController)
         }
     }
 }
-suspend fun login(phone: String,password: String,context:Context) {
+suspend fun login(vm: UserViewmodel, phone: String, password: String, context: Context) {
+
     try {
-        if (loginService(phone,password)) {
+        if (vm.login(phone,password)) {
             delay(1000)
             withContext(Dispatchers.Main){Toast.makeText(AppGlobal.getAppContext(),"登录成功",Toast.LENGTH_SHORT).show()}
             val intent = Intent(context,MainActivity::class.java)
@@ -390,7 +376,7 @@ suspend fun login(phone: String,password: String,context:Context) {
     }
 }
 @Composable
-fun LoginScreen(navController: NavHostController) {
+fun LoginScreen(vm: UserViewmodel, navController: NavHostController) {
     var password by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -449,7 +435,7 @@ fun LoginScreen(navController: NavHostController) {
                 BaseButton(onClick = {
                     scope.launch(Dispatchers.IO) {
                         isLoading = true
-                        login(phone,password,context)
+                        login(vm,phone,password,context)
                         isLoading = false
                     }
                 }, modifier = Modifier
@@ -463,35 +449,17 @@ fun LoginScreen(navController: NavHostController) {
     }
 }
 
-suspend fun loginService(phone:String,password:String):Boolean {
-    if (phone == "" || password == "") {
-        return false
-    }
-    //如果dataStore中存在就不用登录了
-    val apiService = HttpService.getService()
-    val loginResp = apiService.login(ApiService.LoginReq(phone = phone, password = password))
-    Log.e("loginService","登录成功")
-    Log.e("loginService", loginResp.data?.exp.toString())
-    //dataStore将token保存
-    if (loginResp.data?.token != null && loginResp.data?.exp != null) {
-        AppGlobal.saveUserRela(PreferencesFileName.PHONE_KEY,phone)
-    }
-    if(loginResp.data?.token != null) {
-        AppGlobal.saveUserRela(PreferencesFileName.USER_TOKEN,loginResp.data?.token!!)
-    }
-    if (loginResp.data?.exp != null) {
-        AppGlobal.saveUserRela(PreferencesFileName.USER_TOKEN_EXP,864400+System.currentTimeMillis())
-    }
-    val userInfo = apiService.userInfo(loginResp.data?.token)
-    val user = userInfo.data?.info ?: User()
-    user.password = password
-    Log.e("loginService",user.toString())
-    UserDatabase.getInstance().userDao().saveUser(user)
-    return true
-}
-suspend fun register(navController:NavHostController,nickname: String,sex: Byte,phone: String,password: String,selectedImageUri: Uri?) {
+suspend fun register(
+    vm: UserViewmodel,
+    navController: NavHostController,
+    nickname: String,
+    sex: Byte,
+    phone: String,
+    password: String,
+    selectedImageUri: Uri?
+) {
     try {
-        if (registerService(nickname,sex,phone,password,selectedImageUri)) {
+        if (vm.register(nickname,sex,phone,password,selectedImageUri)) {
             delay(1500)
 
             withContext(Dispatchers.Main){Toast.makeText(AppGlobal.getAppContext(),"注册成功",Toast.LENGTH_SHORT).show();navController.switchTab("parent")}
@@ -516,7 +484,7 @@ suspend fun register(navController:NavHostController,nickname: String,sex: Byte,
     }
 }
 @Composable
-fun RegisterScreen(navController: NavHostController) {
+fun RegisterScreen(vm: UserViewmodel, navController: NavHostController) {
     var password by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var nickname by remember { mutableStateOf("") }
@@ -616,7 +584,7 @@ fun RegisterScreen(navController: NavHostController) {
                 BaseButton(onClick = {
                     scope.launch(Dispatchers.IO){
                         isUpload = true
-                        register(navController,nickname,sex,phone,password,selectedImageUri)
+                        register(vm,navController,nickname,sex,phone,password,selectedImageUri)
                         isUpload = false
                     }
                 }, modifier = Modifier
@@ -631,28 +599,6 @@ fun RegisterScreen(navController: NavHostController) {
 
     }
 }
-
-suspend fun registerService(nickname: String, sex: Byte, phone: String, password: String, uri: Uri?):Boolean {
-
-    val apiService = HttpService.getService()
-
-
-    if (!TextUtils.isEmpty(StringUtil.validatePassword(password))) {
-        Toast.makeText(AppGlobal.getAppContext(),StringUtil.validatePassword(password),Toast.LENGTH_SHORT).show()
-        return false
-    }
-    val avatar = Oss.uploadFile(
-        System.currentTimeMillis().toString()+"."+StringUtil.getFileExtensionFromUri(AppGlobal.getAppContext(),uri),uri)
-    Log.e("registerResp",avatar)
-    val registerResp =
-        apiService.register(ApiService.RegisterReq(phone, password, nickname, sex, avatar.trim()))
-    Log.e("registerResp",registerResp.msg)
-    Log.e("registerResp",registerResp.data?.token.toString())
-    return true
-
-
-}
-
 @Composable
 fun sexSingleSelection(modifier: Modifier = Modifier
     .fillMaxWidth()
@@ -675,6 +621,14 @@ fun sexSingleSelection(modifier: Modifier = Modifier
     return sex.toByte()
 }
 @Composable
+fun AppTopBar(title:String = "",navigationIcon: @Composable () -> Unit,actions: @Composable RowScope.() -> Unit = {},backgroundColor: Color,titleColor:Color) {
+    TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = titleColor) }, navigationIcon = navigationIcon, actions =actions,backgroundColor = backgroundColor)
+}
+@Composable
+fun AppTopBar(title:String = "",navigationIcon: @Composable () -> Unit,actions: @Composable RowScope.() -> Unit = {},backgroundColor: Color) {
+    TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = navigationIcon, actions =actions,backgroundColor = backgroundColor)
+}
+@Composable
 fun AppTopBar(title:String = "",navigationIcon: @Composable () -> Unit,actions: @Composable RowScope.() -> Unit = {}) {
     TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = navigationIcon, actions =actions,backgroundColor = SurfaceColor)
 }
@@ -685,6 +639,34 @@ fun AppTopBar(title:String = "",actions: @Composable RowScope.() -> Unit = {},na
             Icon(Icons.Filled.Close, contentDescription = null)
         }
     }, actions =actions,backgroundColor = SurfaceColor)
+}
+@Composable
+fun AppTopBar(title:String = "",actions: @Composable RowScope.() -> Unit = {},navController:NavHostController,route:String) {
+    TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = {
+        IconButton(onClick = {navController.switchTab(route)}) {
+            Icon(Icons.Filled.Close, contentDescription = null)
+        }
+    }, actions =actions,backgroundColor = SurfaceColor)
+}
+@Composable
+fun AppTopBar(title:String = "",navController:NavHostController,route:String) {
+    TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = {
+        IconButton(onClick = {navController.switchTab(route)}) {
+            Icon(Icons.Filled.Close, contentDescription = null)
+        }
+    }, actions ={
+
+    },backgroundColor = SurfaceColor)
+}
+@Composable
+fun AppTopBarBack(title:String = "",navController:NavHostController) {
+    TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = {
+        IconButton(onClick = {navController.navigateUp()}) {
+            Icon(Icons.Filled.Close, contentDescription = null)
+        }
+    }, actions ={
+
+    },backgroundColor = SurfaceColor)
 }
 @Composable
 fun IconButton(

@@ -1,87 +1,56 @@
 package com.software.jetpack.compose.chan_xin_android.ui.activity
 
-import android.content.Context
-import androidx.annotation.FloatRange
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.TweenSpec
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import android.app.Activity
+import android.util.Log
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.selectable
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.BottomNavigation
 //noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.ContentAlpha
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Icon
 //noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.LocalContentAlpha
 //noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.LocalContentColor
 //noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.MaterialTheme
 //noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Scaffold
-import androidx.compose.material.Surface
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.FirstBaseline
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.MeasureResult
-import androidx.compose.ui.layout.MeasureScope
-import androidx.compose.ui.layout.Placeable
-import androidx.compose.ui.layout.layoutId
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.fastFirst
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.fragment.fragment
-import com.software.jetpack.compose.chan_xin_android.ext.switchTab
-import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.SettingScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserScreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.NavigationBarColor
-import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
-import kotlin.math.max
-import kotlin.math.roundToInt
+import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 
 enum class TabEnum(val label:String,val imageVector: ImageVector,val route:String) {
     HOME("禅信",Icons.Filled.Home,"chat_fragment"),
@@ -95,6 +64,17 @@ fun BottomNavBar(navController: NavHostController) {
     var selectedTab by remember {
         mutableIntStateOf(0)
     }
+    selectedTab = when (navController.currentDestination?.route) {
+        TabEnum.HOME.route -> 0
+        TabEnum.FIND.route -> 2
+        TabEnum.SOCIAL.route -> 1
+        TabEnum.USER.route -> 3
+        else -> 0
+    }
+    val activity = LocalContext.current as Activity
+    BackHandler {
+        activity.moveTaskToBack(true)
+    }
     BottomNavigation(
         backgroundColor = NavigationBarColor,
         elevation = 0.dp
@@ -106,24 +86,58 @@ fun BottomNavBar(navController: NavHostController) {
                 if (selectedTab == tab.ordinal) return@ButtonTabItem
                 selectedTab = tab.ordinal
                 //导航
-                navController.switchTab(tab.route)
+                navController.navigate(tab.route)
+
             }
         }
     }
 
 }
 @Composable
-fun MainActivityScreen() {
-    val navController = rememberNavController()//控制器
-   Scaffold(bottomBar = { BottomNavBar(navController) }) { padding->
-       //设置路由
-       NavHost(navController = navController, startDestination = TabEnum.HOME.route, modifier = Modifier.padding(padding)) {
-           composable(route = TabEnum.HOME.route){ Text("禅信") }
-           composable(route = TabEnum.SOCIAL.route){ Text("社交") }
-           composable(route = TabEnum.FIND.route){ Text("发现") }
-           composable(route = TabEnum.USER.route){ UserScreen() }
-       }
-   }
+fun MainActivityScreen(vm: UserViewmodel) {
+    val rootNavController = rememberNavController()
+    NavHost(navController = rootNavController, startDestination = "parent") {
+        composable("parent") { MainScreen(rootNavController,vm) }
+        composable("about") { AboutChanXinScreen(rootNavController) }
+        composable("userInfo") {UserInfoScreen(navController = rootNavController,vm = vm)}
+        composable("setting") {SettingScreen(navController = rootNavController,vm=vm)}
+    }
+
+}
+@Composable
+fun MainScreen(rootController:NavHostController,vm:UserViewmodel) {
+    val mainController = rememberNavController()
+    Scaffold(bottomBar = { BottomNavBar(mainController) }) { padding->
+
+        //设置路由
+        NavHost(navController = mainController, startDestination = TabEnum.HOME.route, modifier = Modifier.padding(padding), enterTransition = { EnterTransition.None }, exitTransition = { ExitTransition.None }) {
+            composable(route = TabEnum.HOME.route){
+                val activity = LocalContext.current as Activity
+
+                // 拦截返回键，直接退出应用
+                BackHandler(enabled = true) {
+                    activity.moveTaskToBack(true) // 切换到后台
+                }
+                Text("禅信") }
+            composable(route = TabEnum.SOCIAL.route){
+                val activity = LocalContext.current as Activity
+
+                // 拦截返回键，直接退出应用
+                BackHandler(enabled = true) {
+                    activity.moveTaskToBack(true) // 切换到后台
+                }
+                Text("社交") }
+            composable(route = TabEnum.FIND.route){
+                val activity = LocalContext.current as Activity
+
+                // 拦截返回键，直接退出应用
+                BackHandler(enabled = true) {
+                    activity.moveTaskToBack(true) // 切换到后台
+                }
+                Text("发现") }
+            composable(route = TabEnum.USER.route){ UserScreen(navController = rootController,vm = vm) }
+        }
+    }
 }
 @Composable
 fun ButtonTabItem(scope:RowScope,tab:TabEnum,selectedTab:Int,onClick:() -> Unit) {

@@ -17,6 +17,7 @@ interface ApiService {
     data class RegisterReq(val phone: String,val password:String,val nickname:String=UUID.randomUUID().toString(),val sex:Byte = 0,val avatar:String = "")
     data class LoginReq(val phone: String,val password:String)
     data class TokenResp(val token:String,val exp:Long)
+    data class UpdateUserReq(val nickname: String? = null,val avatar:String? = null,val sex:Int? = null)
     @GET("v1/user/findUser")
     suspend fun findUser(@Query("name") name: String = "点",@Query("phone") phone:String="1",@Query("ids") ids:String=StringUtil.listToString(
         listOf("1")
@@ -29,6 +30,8 @@ interface ApiService {
     data class DataWrapper(val info:User)
     @GET("v1/user/userinfo")
     suspend fun userInfo(@Header("Authorization") authToken: String? = "",) : ApiResult<DataWrapper>
+    @PATCH("v1/user/update")
+    suspend fun updateUser(@Header("Authorization") authToken:String? = "",@Body updateUserReq: UpdateUserReq):ApiResult<DataWrapper>
 
 
 }

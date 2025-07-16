@@ -16,7 +16,7 @@ import java.io.InputStreamReader
 
 
 object Oss {
-    fun uploadFile(fileName:String,uri: Uri?) :String{
+    suspend fun uploadFile(fileName:String,uri: Uri?) :String{
         var endpoint = ""
         var accessKeyId = ""
         var accessKeySecret = ""

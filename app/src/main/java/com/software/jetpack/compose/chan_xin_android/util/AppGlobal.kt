@@ -12,6 +12,7 @@ import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.PH
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USERS_FILE
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USER_TOKEN
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USER_TOKEN_EXP
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -61,6 +62,11 @@ object AppGlobal {
         context.userDataStore.edit {preferences ->
             preferences[key] = value
         }
+    }
+    suspend fun getUserPhone():String {
+        return context.userDataStore.data.map { preferences ->
+            preferences[PHONE_KEY] ?: ""
+        }.first() // 检查是否存在phoneKey
     }
 
 }
