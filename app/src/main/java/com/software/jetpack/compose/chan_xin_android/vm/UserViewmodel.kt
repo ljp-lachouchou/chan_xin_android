@@ -17,6 +17,7 @@ import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.http.service.ApiService
 import com.software.jetpack.compose.chan_xin_android.http.service.HttpService
+import com.software.jetpack.compose.chan_xin_android.repo.UserRepository
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import com.software.jetpack.compose.chan_xin_android.util.Oss
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName
@@ -24,17 +25,22 @@ import com.software.jetpack.compose.chan_xin_android.util.StringUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.min
 
 @HiltViewModel
-class UserViewmodel @Inject constructor():ViewModel() {
-    private val _user = MutableStateFlow(User())
+class UserViewmodel @Inject constructor(private val userRepository: UserRepository):ViewModel() {
     private val _findUserInfo = MutableStateFlow<List<User>?>(listOf())
-    val myUser : StateFlow<User>
-        get() = _user
+
+    val myUser: StateFlow<User> = userRepository.currentUserFlow.stateIn(
+        scope = viewModelScope,
+        initialValue = User(),
+        started = SharingStarted.WhileSubscribed(5000)
+    )
     var pagedUsers: Flow<PagingData<User>>? = null
     suspend fun login(phone:String,password:String):Boolean {
         if (phone == "" || password == "") {
@@ -60,15 +66,16 @@ class UserViewmodel @Inject constructor():ViewModel() {
         user.password = password
         Log.e("loginService",user.toString())
         UserDatabase.getInstance().userDao().saveUser(user)
-        loadUser(phone)
+        userRepository.setPhone(user.phone)
         return true
     }
     suspend fun updateUser(sex: Int?=null,nickname: String?=null,avatar:String?=null) {
         val apiService = HttpService.getService()
         val result = apiService.updateUser(AppGlobal.tokenIsAva(), ApiService.UpdateUserReq(nickname,avatar,sex))
         Log.e("updateUser",result.data?.info.toString())
-        _user.value = result.data?.info!!
-        UserDatabase.getInstance().userDao().saveUser(_user.value)
+        UserDatabase.getInstance().userDao().saveUser(result.data?.info?:User())
+        userRepository.setPhone(result.data?.info?.phone?:"")
+
     }
     suspend fun findUser(
         name: String = "------1", phone: String = "1", ids: String = StringUtil.listToString(
@@ -86,7 +93,6 @@ class UserViewmodel @Inject constructor():ViewModel() {
     }
     fun loadUser(phone: String) {
         viewModelScope.launch {
-            _user.value = UserDatabase.getInstance().userDao().getUserInfoByPhone(phone)
             Log.e("userviewmodel",myUser.value.toString())
         }
     }

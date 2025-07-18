@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.software.jetpack.compose.chan_xin_android.entity.User
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface IUserDao {
@@ -14,7 +15,7 @@ interface IUserDao {
     @Query("SELECT * FROM users WHERE `id` = :id")
     suspend fun getUserInfoById(id:String):User
     @Query("SELECT * FROM users WHERE `phone` = :phone")
-    suspend fun getUserInfoByPhone(phone:String):User
+    fun getUserInfoByPhone(phone:String):Flow<User>
 
     @Query("SELECT `avatar` FROM users WHERE `phone` = :phone")
     suspend fun getUserAvatarByPhone(phone:String):String

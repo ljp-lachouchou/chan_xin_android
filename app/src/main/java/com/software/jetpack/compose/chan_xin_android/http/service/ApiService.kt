@@ -44,7 +44,7 @@ interface ApiService {
         @SerializedName("apply_id") val applyId: String,
         @SerializedName("apply_time") val applyTime: Long
     )
-    @POST("/v1/social/applyFriend")
+    @POST("/v1/social/firend/applyFriend")
     suspend fun applyFriend(@Body friendApplyRequest: FriendApplyRequest):ApiResult<FriendApplyResponse>
 
 

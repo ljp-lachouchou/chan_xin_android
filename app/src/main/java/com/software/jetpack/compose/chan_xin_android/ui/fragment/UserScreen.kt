@@ -76,8 +76,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -127,20 +129,18 @@ import retrofit2.HttpException
 import java.lang.Exception
 
 @Composable
-fun UserScreen(navController: NavHostController,vm: UserViewmodel) {
+fun UserScreen(navController: NavHostController) {
     val activity = LocalContext.current as Activity
     // 拦截返回键，直接退出应用
     BackHandler(enabled = true) {
         activity.moveTaskToBack(true) // 切换到后台
     }
-    ParentScreen(navController,vm)
+    ParentScreen(navController)
 }
 
 @Composable
-fun UserInfoScreen(navController: NavHostController,vm:UserViewmodel) {
+fun UserInfoScreen(navController: NavHostController,user: User,vm:UserViewmodel = hiltViewModel<UserViewmodel>()) {
     val thisNavController = rememberNavController()
-    val user by vm.myUser.collectAsState()
-
     NavHost(navController = thisNavController, startDestination = UserInfoScreenRouteEnum.PARENT.route) {
         composable(UserInfoScreenRouteEnum.PARENT.route) {InfoMainScreen(navController,user,thisNavController)}
         composable(UserInfoScreenRouteEnum.AVATAR.route) {UpdateAvatarScreen(thisNavController,user,vm)}
@@ -177,18 +177,27 @@ fun UpdateAvatarScreen(navController: NavHostController,user:User,vm:UserViewmod
                 Icon(Icons.Filled.Close, tint = Color.White, contentDescription = null)
             }
         }, backgroundColor = Color.Black,titleColor = Color.White) }, content = {padding->
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black).padding(padding), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .padding(padding), contentAlignment = Alignment.Center) {
                 AsyncImage(
                     model = ImageRequest.Builder(AppGlobal.getAppContext())
                         .data(if (selectedUri != null) selectedUri else {if (user.avatar != "") user.avatar else R.drawable.default_avatar})
                         .build(),
                     contentDescription = null,
-                    modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f),
                     contentScale = ContentScale.Crop
                 )
                 if (selectedUri != null) {
-                    Row(modifier = Modifier.fillMaxWidth().align(Alignment.BottomStart).padding(
-                        DefaultPaddingBottom*3),
+                    Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomStart)
+                        .padding(
+                            DefaultPaddingBottom * 3
+                        ),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceAround
                     ){
@@ -317,13 +326,17 @@ fun UpdateNicknameScreen(thisNavController: NavHostController,user:User,vm: User
         })
     }
     Scaffold(topBar = topBar, content = {padding ->
-        Box( modifier = Modifier.fillMaxSize().background(SurfaceColor)){
+        Box( modifier = Modifier
+            .fillMaxSize()
+            .background(SurfaceColor)){
             BaseTextField(value = nickname, onValueChange = {
                 nickname = it
                 }, placeholder = "",
-                modifier = Modifier.fillMaxWidth().padding(padding)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(padding)
                     .background(color = Color.White)
-                            .focusRequester(focusRequester),
+                    .focusRequester(focusRequester),
                 trailingIcon = {
                 if (nickname != "") Icon(Icons.Filled.Close, tint = IconGreen, contentDescription = null, modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { nickname = "" })
             }, unfocusedContainerColor = Color.White, focusedContainerColor = Color.White, keyboardActions = KeyboardActions(onGo = {
@@ -361,7 +374,9 @@ fun UpdateSexScreen(thisNavController: NavHostController,user:User,vm: UserViewm
         })
     }
     Scaffold(topBar = topBar, content = {padding ->
-        Column(modifier = Modifier.fillMaxWidth().padding(padding)) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .padding(padding)) {
             Wrapper { SexSingleSelect("未知",sex == 0) {sex = 0} }
             Wrapper { SexSingleSelect("男",sex == 1) {sex = 1} }
             Wrapper { SexSingleSelect("女",sex == 2) {sex = 2} }
@@ -383,9 +398,13 @@ suspend fun updateUser(vm:UserViewmodel,sex:Int?=null,nickname:String?=null,avat
 }
 @Composable
 fun SexSingleSelect(title:String="",selected:Boolean,onClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().height(DefaultUserScreenItemDp)
+    Row(modifier = Modifier
+        .fillMaxWidth()
+        .height(DefaultUserScreenItemDp)
         .padding(DefaultUserPadding)
-        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onClick() }) {
+        .clickable(
+            indication = null,
+            interactionSource = remember { MutableInteractionSource() }) { onClick() }) {
         BaseText(text = title, fontSize = DefaultFontSize)
         Spacer(modifier = Modifier.weight(1f))
         if (selected) Icon(imageVector= Icons.Filled.Check, contentDescription = null, tint = IconGreen)
@@ -404,7 +423,10 @@ fun InfoMainScreen(navController:NavHostController,user:User,thisNavController:N
         BoxWithConstraints {
             val width = constraints.maxWidth.dp
             val height = constraints.maxHeight.dp
-            BaseBox(modifier = Modifier.fillMaxSize().padding(padding).background(Color.Gray.copy(0.3f))) {
+            BaseBox(modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color.Gray.copy(0.3f))) {
                 Column(modifier = Modifier.background(Color.White)){
                     UserInfoScreenItem(label = "头像", onClick = {thisNavController.switchTab("avatar")})
                     UserInfoScreenItem(label = "昵称", onClick = {
@@ -420,23 +442,32 @@ fun InfoMainScreen(navController:NavHostController,user:User,thisNavController:N
                     UserInfoScreenItem(label = "手机号", onClick = {
                         Toast.makeText(AppGlobal.getAppContext(),"手机号:${user.phone}",Toast.LENGTH_SHORT).show()
                     }) {
-                        Text(text = buildAnnotatedString {
-                            val pre = user.phone.substring(0 .. 2)
-                            val mid = String((3..<user.phone.length - 2).map { '*' }.toCharArray())
-                            val suf = user.phone.substring(user.phone.length - 2..<user.phone.length)
-                            append(pre)
-                            append(mid)
-                            append(suf)
-                        }, color = TextColor)
+                        Wrapper {
+                            Text(text = buildAnnotatedString {
+                                val pre = user.phone.substring(0 .. 2)
+                                val mid = String((3..<user.phone.length - 2).map { '*' }.toCharArray())
+                                val suf = user.phone.substring(user.phone.length - 2..<user.phone.length)
+                                append(pre)
+                                append(mid)
+                                append(suf)
+                            }, color = TextColor)
+                        }
                     }
                     UserInfoScreenItem(label = "禅信号", onClick = {}) {
                         BaseText(user.id)
                     }
                 }
-                AsyncImage(model = ImageRequest.Builder(context = LocalContext.current).data(if (user.avatar == "") R.drawable.default_avatar else user.avatar).build(),contentDescription = null, modifier = Modifier.size(30.dp).align(Alignment.TopEnd
-                ).offset(width*-0.043f,height*0.007f).clip(
-                    RoundedCornerShape(DefaultRoundCircleShapeDp / 2)
-                ), contentScale = ContentScale.Crop,)
+
+                AsyncImage(model = ImageRequest.Builder(context = LocalContext.current).data(if (user.avatar == "") R.drawable.default_avatar else user.avatar).build(),contentDescription = null, modifier = Modifier
+                    .size(30.dp)
+                    .align(
+                        Alignment.TopEnd
+                    )
+                    .offset(width * -0.043f, height * 0.007f)
+                    .clip(
+                        RoundedCornerShape(DefaultRoundCircleShapeDp / 2)
+                    ), contentScale = ContentScale.Crop,)
+
             }
         }
     })
@@ -446,21 +477,32 @@ fun AboutChanXinScreen(navController: NavHostController) {
     Scaffold(topBar = {AppTopBarBack(title = "关于我们", navController=navController)}, content = {padding->
         Column (verticalArrangement = Arrangement.Center){
             Spacer(Modifier.height(DefaultPaddingTop*2))
-            BaseText("禅信:一款android端仿微信开源项目app", modifier = Modifier.fillMaxSize().padding(padding), textAlign = TextAlign.Center)
+            BaseText("禅信:一款android端仿微信开源项目app", modifier = Modifier
+                .fillMaxSize()
+                .padding(padding), textAlign = TextAlign.Center)
         }
     })
 }
 
 //设置界面
 @Composable
-fun SettingScreen(navController:NavHostController,vm: UserViewmodel) {
+fun SettingScreen(navController:NavHostController) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     Scaffold(topBar = { AppTopBar(title = "设置", navController = navController) }, content = {padding->
-        Column(modifier = Modifier.fillMaxSize().background(SurfaceColor).padding(padding)) {
-            Spacer(Modifier.height(40.dp).fillMaxWidth().background(SurfaceColor))
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .background(SurfaceColor)
+            .padding(padding)) {
+            Spacer(Modifier
+                .height(40.dp)
+                .fillMaxWidth()
+                .background(SurfaceColor))
             UserInfoScreenItem(label = "个人资料", onClick = {navController.switchTab("userInfo")})
-            Spacer(Modifier.height(20.dp).fillMaxWidth().background(SurfaceColor))
+            Spacer(Modifier
+                .height(20.dp)
+                .fillMaxWidth()
+                .background(SurfaceColor))
             UserInfoScreenItem(label = "退出登录", onClick = {
                 scope.launch { AppGlobal.saveUserRela(PreferencesFileName.USER_TOKEN,"") }
                 scope.launch { AppGlobal.saveUserRela(PreferencesFileName.USER_TOKEN_EXP,0) }
@@ -476,7 +518,7 @@ fun SettingScreen(navController:NavHostController,vm: UserViewmodel) {
 }
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
-fun ParentScreen(navController: NavHostController, vm: UserViewmodel) {
+fun ParentScreen(navController: NavHostController, vm: UserViewmodel= hiltViewModel()) {
     val user by vm.myUser.collectAsState()
     Log.e("UserScreen",vm.myUser.value.toString())
     val sexPainter = when(user.sex.toInt()) {
@@ -486,36 +528,71 @@ fun ParentScreen(navController: NavHostController, vm: UserViewmodel) {
         else -> R.drawable.unknow
     }
     Surface(modifier = Modifier.fillMaxSize(), color = SurfaceColor) {
-        BaseBox(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
-            Column(modifier = Modifier.fillMaxWidth().background(color = Color.White).padding(top = DefaultPaddingTop)) {
-                Row(modifier = Modifier
+        BaseBox(modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent)) {
+            Column(modifier = Modifier
+                .fillMaxWidth()
+                .background(color = Color.White)
+                .padding(top = DefaultPaddingTop)) {
+                UserSimpleItem(user, imageClick = {navController.switchTab(MainActivityRouteEnum.USER_INFO_IN_USER.route)}, sexPainter = sexPainter){navController.switchTab(MainActivityRouteEnum.USER_INFO_IN_USER.route)}
+                Spacer(modifier = Modifier
+                    .height(40.dp)
                     .fillMaxWidth()
-                    .height(DefaultUserScreenItemDp*3).padding(DefaultUserPadding)
-                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { navController.switchTab(MainActivityRouteEnum.USER_INFO_IN_USER.route) }) {
-                    AsyncImage(model = ImageRequest.Builder(context = LocalContext.current).data(if (user.avatar == "") R.drawable.default_avatar else user.avatar).build(),contentDescription = null, modifier = Modifier.size(60.dp).clip(
-                        RoundedCornerShape(DefaultRoundCircleShapeDp)
-                    ), contentScale = ContentScale.Crop,)
-                    Spacer(modifier = Modifier.width(DefaultUserPadding))
-                    Column {
-                        BaseText(text = user.nickname, style = TextStyle(fontWeight = FontWeight.Bold), fontSize = 24.sp)
-                        Row {
-                            BaseText("性别: ")
-                            Image(painter = painterResource(sexPainter), modifier = Modifier.size(25.dp), contentDescription = null, contentScale = ContentScale.Crop)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(40.dp).fillMaxWidth().background(SurfaceColor))
+                    .background(SurfaceColor))
                 UserScreenItem(imageVector = Icons.Outlined.FavoriteBorder, label = "朋友圈", tintColor = ChatGreen) {
 
                 }
-                Spacer(modifier = Modifier.height(40.dp).fillMaxWidth().background(SurfaceColor))
+                Spacer(modifier = Modifier
+                    .height(40.dp)
+                    .fillMaxWidth()
+                    .background(SurfaceColor))
                 UserScreenItem(imageVector = Icons.Outlined.Settings, label = "设置", tintColor = Color.Blue) {
                     navController.switchTab(MainActivityRouteEnum.SETTING_IN_USER.route)
                 }
-                Spacer(modifier = Modifier.height(40.dp).fillMaxWidth().background(SurfaceColor))
+                Spacer(modifier = Modifier
+                    .height(40.dp)
+                    .fillMaxWidth()
+                    .background(SurfaceColor))
                 UserScreenItem(imageVector = Icons.Outlined.MailOutline, label = "关于我们", tintColor = Color.Blue) {
                     navController.switchTab(MainActivityRouteEnum.ABOUT_IN_USER.route)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun UserSimpleItem(user:User,sexPainter:Int,imageClick:(()->Unit)?=null,heightDp:Dp = DefaultUserScreenItemDp * 3,color: Color = Color.White,onClick: () -> Unit = {}) {
+    Row(modifier = Modifier
+        .fillMaxWidth()
+        .height(heightDp)
+        .background(color)
+        .padding(DefaultUserPadding)
+        .clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null
+        ) { onClick() }) {
+        AsyncImage(
+            model = ImageRequest.Builder(context = LocalContext.current)
+                .data(if (user.avatar == "") R.drawable.default_avatar else user.avatar).build(),
+            contentDescription = null,
+            modifier = Modifier
+                .size(60.dp)
+                .clip(
+                    RoundedCornerShape(DefaultRoundCircleShapeDp)
+                )
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }) { if (imageClick != null) imageClick() },
+            contentScale = ContentScale.Crop,
+        )
+        Spacer(modifier = Modifier.width(DefaultUserPadding))
+        Column {
+            BaseText(text = user.nickname, style = TextStyle(fontWeight = FontWeight.Bold), fontSize = 24.sp)
+            Row {
+                BaseText("性别: ")
+                Image(painter = painterResource(sexPainter), modifier = Modifier.size(25.dp), contentDescription = null, contentScale = ContentScale.Crop)
             }
         }
     }
@@ -526,7 +603,10 @@ fun UserScreenItem(imageVector: ImageVector, label:String,tintColor:Color = Icon
     Box(modifier = Modifier.clickable {
         onClick()
     }) {
-        Row(modifier = Modifier.fillMaxWidth().height(DefaultUserScreenItemDp).padding(DefaultUserPadding)) {
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .height(DefaultUserScreenItemDp)
+            .padding(DefaultUserPadding)) {
             Icon(imageVector,contentDescription = null, tint = tintColor)
             Spacer(modifier = Modifier.width(DefaultUserPadding))
             BaseText(text = label, fontSize = DefaultFontSize)
@@ -537,10 +617,15 @@ fun UserScreenItem(imageVector: ImageVector, label:String,tintColor:Color = Icon
 }
 @Composable
 fun UserInfoScreenItem(label:String,onClick:()->Unit,content:@Composable ()->Unit = {}) {
-    Box(modifier = Modifier.background(Color.White).clickable {
-        onClick()
-    }) {
-        Row(modifier = Modifier.fillMaxWidth().height(DefaultUserScreenItemDp).padding(DefaultUserPadding)) {
+    Box(modifier = Modifier
+        .background(Color.White)
+        .clickable {
+            onClick()
+        }) {
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .height(DefaultUserScreenItemDp)
+            .padding(DefaultUserPadding)) {
             Spacer(modifier = Modifier.width(DefaultUserPadding))
             BaseText(text = label, fontSize = DefaultFontSize)
             Spacer(modifier = Modifier.weight(1f))

@@ -29,19 +29,16 @@ class MainActivity : BaseActivity(),OnBackPressedDispatcherOwner{
             val phone = AppGlobal.getUserPhone()
             withContext(Dispatchers.Main) {
                 setContent {
-
                     //拦截返回手势
                     LifecycleComponent()
-                    Log.e("mainActivity_sharedViewModel",sharedUserViewModel.myUser.value.toString())
-                    sharedUserViewModel.loadUser(phone)
-                    MainActivityScreen(sharedUserViewModel)
+                    MainActivityScreen()
                 }
             }
         }
     }
 
     override fun getDefaultLifeCycle(): DefaultLifecycleObserver {
-        return MainActivityObserver(sharedUserViewModel)
+        return MainActivityObserver()
     }
 
 

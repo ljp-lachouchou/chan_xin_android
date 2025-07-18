@@ -1,5 +1,6 @@
 package com.software.jetpack.compose.chan_xin_android.ui.activity
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Build
 import android.util.Log
@@ -36,9 +37,12 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,6 +51,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -57,11 +62,15 @@ import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScr
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SearchFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SettingScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoInFriendBySearchScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserScreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.NavigationBarColor
+import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
+import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
+import kotlinx.coroutines.launch
 
 enum class TabEnum(val label:String,val resId:Int,val route:String) {
     HOME("禅信", R.drawable.chan_xin,"chat_fragment"),
@@ -112,26 +121,29 @@ enum class MainActivityRouteEnum(val route: String) {
     FIND_USER_IN_FRIEND("find_user"),
     USER_INFO_IN_FRIEND_BY_SEARCH("userInfoInFriendBySearch")
 }
+@SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MainActivityScreen(vm: UserViewmodel) {
+fun MainActivityScreen() {
     val rootNavController = rememberNavController()
+    val vm :UserViewmodel = hiltViewModel()
+    val user by vm.myUser.collectAsState()
+    Log.e("users",user.toString())
     NavHost(navController = rootNavController, startDestination = MainActivityRouteEnum.PARENT.route) {
-        composable(MainActivityRouteEnum.PARENT.route) { MainScreen(rootNavController,vm) }
+        composable(MainActivityRouteEnum.PARENT.route) { MainScreen(rootNavController) }
         composable(MainActivityRouteEnum.ABOUT_IN_USER.route) { AboutChanXinScreen(rootNavController) }
-        composable(MainActivityRouteEnum.USER_INFO_IN_USER.route) {UserInfoScreen(navController = rootNavController,vm = vm)}
-        composable(MainActivityRouteEnum.SETTING_IN_USER.route) {SettingScreen(navController = rootNavController,vm=vm)}
-        composable(MainActivityRouteEnum.FIND_USER_IN_FRIEND.route) { SearchFriendScreen(rootNavController,vm) }
-        composable(MainActivityRouteEnum.USER_INFO_IN_FRIEND_BY_SEARCH.route) { BaseText("被点击的用户信息") }
+        composable(MainActivityRouteEnum.USER_INFO_IN_USER.route) {UserInfoScreen(navController = rootNavController,user=user)}
+        composable(MainActivityRouteEnum.SETTING_IN_USER.route) {SettingScreen(navController = rootNavController)}
+        composable(MainActivityRouteEnum.FIND_USER_IN_FRIEND.route) { SearchFriendScreen(rootNavController) }
+        composable(MainActivityRouteEnum.USER_INFO_IN_FRIEND_BY_SEARCH.route) { UserInfoInFriendBySearchScreen(rootNavController) }
     }
 
 }
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MainScreen(rootController:NavHostController,vm:UserViewmodel) {
+fun MainScreen(rootController:NavHostController) {
     val mainController = rememberNavController()
     Scaffold(bottomBar = { BottomNavBar(mainController) }) { padding->
-
         //设置路由
         NavHost(navController = mainController,
             startDestination = TabEnum.HOME.route,
@@ -147,7 +159,7 @@ fun MainScreen(rootController:NavHostController,vm:UserViewmodel) {
                 Text("禅信")
             }
             composable(route = TabEnum.SOCIAL.route) {
-                FriendScreen(rootController,vm)
+                FriendScreen(rootController)
             }
             composable(route = TabEnum.FIND.route) {
                 val activity = LocalContext.current as Activity
@@ -160,8 +172,7 @@ fun MainScreen(rootController:NavHostController,vm:UserViewmodel) {
             }
             composable(route = TabEnum.USER.route) {
                 UserScreen(
-                    navController = rootController,
-                    vm = vm
+                    navController = rootController
                 )
             }
         }

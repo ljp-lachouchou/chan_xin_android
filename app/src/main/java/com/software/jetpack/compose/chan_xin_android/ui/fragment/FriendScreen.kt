@@ -13,7 +13,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
@@ -38,21 +37,21 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
-import androidx.compose.material.RadioButtonDefaults
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -79,29 +78,28 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.paging.LoadState
-import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.google.gson.Gson
 import com.software.jetpack.compose.chan_xin_android.R
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultPaddingTop
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPadding
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
-import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultPlaceholderText
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
+import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
 import com.software.jetpack.compose.chan_xin_android.ui.activity.AppTopBar
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityRouteEnum
 import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
@@ -109,6 +107,7 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseScreenItem
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
+import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
@@ -116,19 +115,21 @@ import com.software.jetpack.compose.chan_xin_android.ui.theme.TextColor
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
 import com.software.jetpack.compose.chan_xin_android.util.VibratorHelper
+import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
 import kotlin.math.roundToInt
-
+enum class FriendScreenRouteEnum(val route:String) {
+    PARENT("parent")
+}
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun FriendScreen(navController:NavHostController,uvm:UserViewmodel) {
+fun FriendScreen(navController:NavHostController, uvm:UserViewmodel= hiltViewModel(), svm:SocialViewModel= hiltViewModel()) {
     val activity = LocalContext.current as Activity
     // 拦截返回键，直接退出应用
     BackHandler(enabled = true) {
@@ -136,16 +137,131 @@ fun FriendScreen(navController:NavHostController,uvm:UserViewmodel) {
     }
     val thisNavController = rememberNavController()
     NavHost(navController = thisNavController, startDestination = FriendScreenRouteEnum.PARENT.route) {
-        composable(FriendScreenRouteEnum.PARENT.route) {MainFriendScreen(navController,thisNavController, uvm = uvm)}
+        composable(FriendScreenRouteEnum.PARENT.route) {MainFriendScreen(navController,thisNavController, uvm = uvm, svm = svm)}
     }
 
 }
-enum class FriendScreenRouteEnum(val route:String) {
-    PARENT("parent")
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter", "StateFlowValueCalledInComposition")
+@Composable
+fun UserInfoInFriendBySearchScreen(navController: NavHostController, uvm: UserViewmodel= hiltViewModel(), svm:SocialViewModel= hiltViewModel()) {
+    val user by uvm.myUser.collectAsState()
+    val sexPainter = when(svm.wantApplyFriend.value.sex.toInt()) {
+        0 -> R.drawable.unknow
+        1-> R.drawable.man
+        2->R.drawable.woman
+        else -> R.drawable.unknow
+    }
+    var greetMsg by remember { mutableStateOf("我是${user.nickname}") }
+    var isLoading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    Scaffold(topBar = {
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Row(modifier = Modifier
+                .fillMaxWidth()
+                .padding(DefaultUserPadding)) {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = null,
+                    modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {navController.navigateUp()})
+            }
+            BaseText("申请添加朋友")
+        }
+    }){ _->
+        BaseBox(modifier = Modifier
+            .fillMaxSize()
+            .background(color = SurfaceColor)) {
+            Column {
+                UserSimpleItem(
+                    svm.wantApplyFriend.value,
+                    heightDp = DefaultPaddingTop * 1.3f,
+                    imageClick = {
+
+                    },
+                    sexPainter = sexPainter
+                )
+                HorizontalDivider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(color = Color.White)
+                        .padding(DefaultUserPadding),
+                    color = DividerColor
+                )
+                BaseScreenItem(preContent = { BaseText("来源") }, onClick = {}) {
+                    BaseText("来自于账号搜索", color = PlaceholderColor)
+                }
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = DividerColor,
+                    thickness = 5.dp
+                )
+                TextField(
+                    value = greetMsg,
+                    label = { BaseText("打个招呼吧") },
+                    onValueChange = { greetMsg = it },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        cursorColor = IconGreen,
+                        unfocusedContainerColor = Color.White,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent
+                    ), modifier = Modifier.fillMaxWidth()
+                )
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = DividerColor,
+                    thickness = 5.dp
+                )
+                BaseScreenItem(onClick = {
+                    scope.launch {
+                        isLoading = true
+                        applyFriend(user.id,svm.wantApplyFriend.value.id,greetMsg,svm)
+                        delay(500)
+                        isLoading = false
+                    }
+                }) {
+                    BaseText(
+                        "添加到通讯录",
+                        color = Color.Blue,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+            LoadingDialog(isLoading)
+        }
+    }
 }
+
+suspend fun applyFriend(aId: String, tId: String, greetMsg: String,svm:SocialViewModel) {
+    try {
+        val friendApplyResponse = svm.applyFriend(aId,tId,greetMsg)
+        withContext(Dispatchers.Main) {
+            Toast.makeText(AppGlobal.getAppContext(),"申请成功，请耐心等待对方通过",Toast.LENGTH_SHORT).show()
+        }
+    }catch (e:HttpException) {
+        if (e.response() != null && e.response()!!.errorBody() != null&&Gson().fromJson(e.response()!!.errorBody()!!.string(),ApiResult::class.java).code == 2) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(AppGlobal.getAppContext(),"你对对方已经提交过好友申请",Toast.LENGTH_SHORT).show()
+            }
+        }else {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(AppGlobal.getAppContext(),"网络可能出了些问题",Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    } catch (e:Exception) {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(AppGlobal.getAppContext(),"网络可能出了些问题",Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
-fun SearchFriendScreen(navController: NavHostController,uvm:UserViewmodel) {
+fun SearchFriendScreen(navController: NavHostController, uvm:UserViewmodel = hiltViewModel<UserViewmodel>(), svm:SocialViewModel = hiltViewModel<SocialViewModel>()) {
     var isFocus by remember { mutableStateOf(false) }
     var findModel by remember { mutableIntStateOf(0) } //0:手机号;1:禅信号;2:昵称
     var find by remember { mutableStateOf("") }
@@ -166,10 +282,8 @@ fun SearchFriendScreen(navController: NavHostController,uvm:UserViewmodel) {
     }) { _ ->
         AnimatedVisibility(visible = isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
             uvm.pagedUsers = null
-            SearchFriendFieldScreen(navController = navController,find=find, onValueChange = {s:String->find=s}, isFocus = isFocus, uvm = uvm, findModel = findModel, findModelChange = {findModel=it}, onFindEvent = {findModel,uvm,find->
-                if (uvm is UserViewmodel) {
-                    findUser(findModel,uvm,find)
-                }
+            SearchFriendFieldScreen(svm = svm,navController = navController,find=find, onValueChange = {s:String->find=s}, isFocus = isFocus, uvm = uvm, findModel = findModel, findModelChange = {findModel=it}, onFindEvent = { findModel, uvm, _, find->
+                findUser(findModel,uvm,find)
             }){isFocus = false}
         }
         AnimatedVisibility(visible = !isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
@@ -205,8 +319,9 @@ fun SearchScreenFirstScreen(isPadding:Boolean = true,onClick: () -> Unit) {
         }
     }
 }
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
-fun SearchFriendFieldScreen(navController:NavHostController,find:String,findModel:Int,onValueChange:(String)->Unit,findModelChange:(k:Int)->Unit,isFocus:Boolean,uvm:UserViewmodel,onFindEvent:suspend (findModel:Int,uvm:ViewModel,find:String)->Unit,onClick: () -> Unit) {
+fun SearchFriendFieldScreen(navController:NavHostController,find:String,findModel:Int,onValueChange:(String)->Unit,findModelChange:(k:Int)->Unit,isFocus:Boolean,uvm:UserViewmodel,svm:SocialViewModel,onFindEvent:suspend (findModel:Int,uvm:UserViewmodel,svm:SocialViewModel,find:String)->Unit,onClick: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     var isLoading by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -260,7 +375,7 @@ fun SearchFriendFieldScreen(navController:NavHostController,find:String,findMode
                             uvm.pagedUsers = null
                             scope.launch {
                                 isLoading = true
-                                onFindEvent(findModel,uvm,find)
+                                onFindEvent(findModel,uvm,svm,find)
                                 isLoading = false
                             }
                         }),
@@ -318,10 +433,16 @@ fun SearchFriendFieldScreen(navController:NavHostController,find:String,findMode
             ) {
                 LazyColumn {
                     items(users?.itemCount ?: 0) { i ->
-                        FriendScreenItem(
-                            if (users?.get(i)?.avatar != "") users?.get(i)?.avatar
-                                ?: R.drawable.default_avatar else R.drawable.default_avatar,
-                            onClick = {navController.switchTab(MainActivityRouteEnum.USER_INFO_IN_FRIEND_BY_SEARCH.route)}) { BaseText(users?.get(i)?.nickname ?: "") }
+                        if (users?.get(i)?.id != uvm.myUser.value.id) {
+                            FriendScreenItem(
+                                if (users?.get(i)?.avatar != "") users?.get(i)?.avatar
+                                    ?: R.drawable.default_avatar else R.drawable.default_avatar,
+                                onClick = {
+                                    svm.loadWantApplyFriend(user = users?.get(i) ?: User())
+                                    navController.switchTab(MainActivityRouteEnum.USER_INFO_IN_FRIEND_BY_SEARCH.route)
+                                }) { BaseText(users?.get(i)?.nickname ?: "") }
+                        }
+
                     }
                 }
             }
@@ -346,7 +467,7 @@ suspend fun findUser(findModel: Int, uvm: UserViewmodel, find: String) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostController,uvm: UserViewmodel) {
+fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostController,uvm: UserViewmodel,svm:SocialViewModel) {
     var isFocus by remember { mutableStateOf(false) }
     var findModel by remember { mutableIntStateOf(0) } //0:手机号;1:禅信号;2:昵称
     var find by remember { mutableStateOf("") }
@@ -372,14 +493,14 @@ fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostC
                     item {
                         AnimatedVisibility(visible = isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
                             uvm.pagedUsers = null
-                            SearchFriendFieldScreen(navController=navController,
+                            SearchFriendFieldScreen(svm = svm, navController=navController,
                                 isFocus = isFocus,
                                 uvm = uvm,
                                 findModel = findModel,
                                 find = find,
                                 onValueChange = { find = it },
                                 findModelChange = { findModel = it },
-                                onFindEvent = { findModel, uvm, find ->
+                                onFindEvent = { findModel, uvm,svm, find ->
 
                                 }) { isFocus = false }
                         }
@@ -388,7 +509,12 @@ fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostC
                         }
                     }
                     item {
-                        FriendScreenItem(data = R.drawable.new_friend, onClick = {}) {
+                        FriendScreenItem(data = R.drawable.handle_apply, onClick = {}) {
+                            BaseText("请求列表")
+                        }
+                    }
+                    item {
+                        FriendScreenItem(data = R.drawable.handle_apply, onClick = {}) {
                             BaseText("新的朋友")
                         }
                     }
@@ -540,7 +666,10 @@ fun ContactSideBar(
             color = commonColor,
             modifier = modifier
                 .size(40.dp * scale)
-                .offset((-itemCircleSize-1f).dp,topPadding+((selectedIndex - 1)*(spacerSize+itemCircleSize)).dp)
+                .offset(
+                    (-itemCircleSize - 1f).dp,
+                    topPadding + ((selectedIndex - 1) * (spacerSize + itemCircleSize)).dp
+                )
                 .alpha(alpha),
             shape = CircleShape
         ) {

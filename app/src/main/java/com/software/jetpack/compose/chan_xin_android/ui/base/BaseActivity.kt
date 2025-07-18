@@ -11,8 +11,6 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 abstract class BaseActivity: ComponentActivity() {
-    internal val sharedUserViewModel: UserViewmodel by viewModels<UserViewmodel>()
-    internal val sharedSocialViewModel:SocialViewModel by viewModels<SocialViewModel>()
     @Composable
     fun LifecycleComponent() {
         DisposableEffect(lifecycle.currentState) {

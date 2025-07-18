@@ -57,6 +57,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.DefaultLifecycleObserver
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -92,7 +93,7 @@ class CameraActivity:BaseActivity() {
             val permissionState = rememberPermissionState(permission = Manifest.permission.CAMERA)
             when {
                 permissionState.status.isGranted -> {
-                    CameraX(sharedUserViewModel)
+                    CameraX()
                 }
                 permissionState.status.shouldShowRationale-> {
                     PermissionRationaleUI{
@@ -121,7 +122,7 @@ class CameraActivity:BaseActivity() {
     }
 }
 @Composable
-fun CameraX(vm:UserViewmodel) {
+fun CameraX(vm:UserViewmodel= hiltViewModel()) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
     val cameraProviderFuture = remember {
