@@ -1,6 +1,7 @@
 package com.software.jetpack.compose.chan_xin_android.http.service
 
 import com.google.gson.JsonObject
+import com.google.gson.annotations.SerializedName
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
@@ -21,17 +22,30 @@ interface ApiService {
     @GET("v1/user/findUser")
     suspend fun findUser(@Query("name") name: String = "点",@Query("phone") phone:String="1",@Query("ids") ids:String=StringUtil.listToString(
         listOf("1")
-    )):ApiResult<List<User>>
+    )):ApiResult<DataUsersWrapper>
     @POST("v1/user/register")
     suspend fun register(@Body registerReq:RegisterReq):ApiResult<TokenResp>
     @POST("v1/user/login")
     suspend fun login(@Body loginReq:LoginReq):ApiResult<TokenResp>
 
-    data class DataWrapper(val info:User)
+    data class DataUserWrapper(val info:User)
+    data class DataUsersWrapper(val infos:List<User>)
     @GET("v1/user/userinfo")
-    suspend fun userInfo(@Header("Authorization") authToken: String? = "",) : ApiResult<DataWrapper>
+    suspend fun userInfo(@Header("Authorization") authToken: String? = "",) : ApiResult<DataUserWrapper>
     @PATCH("v1/user/update")
-    suspend fun updateUser(@Header("Authorization") authToken:String? = "",@Body updateUserReq: UpdateUserReq):ApiResult<DataWrapper>
+    suspend fun updateUser(@Header("Authorization") authToken:String? = "",@Body updateUserReq: UpdateUserReq):ApiResult<DataUserWrapper>
+
+    data class FriendApplyRequest(
+        @SerializedName("applicant_id") val applicantId: String = "1",
+        @SerializedName("target_id") val targetId: String = "1",
+        @SerializedName("greet_msg") val greetMsg: String = "1"
+    )
+    data class FriendApplyResponse(
+        @SerializedName("apply_id") val applyId: String,
+        @SerializedName("apply_time") val applyTime: Long
+    )
+    @POST("/v1/social/applyFriend")
+    suspend fun applyFriend(@Body friendApplyRequest: FriendApplyRequest):ApiResult<FriendApplyResponse>
 
 
 }

@@ -87,6 +87,7 @@ import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultHoDivider
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultPaddingBottom
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultPaddingTop
+import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultLoginImageSize
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultPlaceholderText
 import com.software.jetpack.compose.chan_xin_android.entity.User
@@ -639,6 +640,10 @@ fun AppTopBar(title:String = "",actions: @Composable RowScope.() -> Unit = {},na
             Icon(Icons.Filled.Close, contentDescription = null)
         }
     }, actions =actions,backgroundColor = SurfaceColor)
+}
+@Composable
+fun AppTopBar(title:String = "",actions: @Composable RowScope.() -> Unit = {},navController:NavHostController?=null,navigationIcon:@Composable (() -> Unit)?) {
+    TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth().padding(horizontal = DefaultUserScreenItemDp), textAlign = TextAlign.Center) }, navigationIcon = navigationIcon, actions =actions,backgroundColor = SurfaceColor)
 }
 @Composable
 fun AppTopBar(title:String = "",actions: @Composable RowScope.() -> Unit = {},navController:NavHostController,route:String) {

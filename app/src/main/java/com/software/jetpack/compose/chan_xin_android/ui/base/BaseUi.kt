@@ -44,7 +44,10 @@ import androidx.compose.material.ButtonColors
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.ButtonElevation
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.pullrefresh.PullRefreshDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -96,6 +99,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.coroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.software.jetpack.compose.chan_xin_android.R
+import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultFontSize
+import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPadding
+import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultLittleSize
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultPlaceholderText
 import com.software.jetpack.compose.chan_xin_android.ui.theme.ChatGreen
@@ -103,10 +109,12 @@ import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.LittleTextColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.PressedLittleTextColor
+import com.software.jetpack.compose.chan_xin_android.ui.theme.RightArrowColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.TextColor
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import okhttp3.internal.wait
 import kotlin.coroutines.EmptyCoroutineContext
 
 val maxPullPx = 200.dp
@@ -162,10 +170,11 @@ fun BaseBox(modifier: Modifier = Modifier,enabledFoot:Boolean = true,
         }
         ) {
         Box(modifier =Modifier
-                .graphicsLayer {
-            translationY = pullDistancePx
-            Log.e("DELTA","translationY$translationY")
-        }.fillMaxSize()) {
+            .graphicsLayer {
+                translationY = pullDistancePx
+                Log.e("DELTA", "translationY$translationY")
+            }
+            .fillMaxSize()) {
             content()
         }
     }
@@ -517,6 +526,26 @@ fun ChatBubble(
     }
 }
 
+@Composable
+fun BaseScreenItem(
+    preContent: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit,
+    tailContent: (@Composable () -> Unit)? = null,
+    backgroundColor:Color = Color.White,
+    content: @Composable () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxWidth().height(DefaultUserScreenItemDp).background(backgroundColor).clickable { onClick();Log.e("iiii","iiiii") }.padding(horizontal = 15.dp), contentAlignment = Alignment.Center) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (preContent != null) {
+                preContent()
+            }
+            Spacer(modifier = Modifier.width(DefaultUserPadding))
+            content()
+            Spacer(modifier = Modifier.weight(1f))
+            if (tailContent != null) {tailContent()}
+        }
+    }
+}
 @Preview(showBackground = true)
 @Composable
 fun ChatBubblePreview() {

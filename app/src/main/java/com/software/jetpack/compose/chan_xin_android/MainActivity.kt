@@ -1,15 +1,14 @@
 package com.software.jetpack.compose.chan_xin_android
 
 import android.annotation.SuppressLint
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.LaunchedEffect
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.compose.rememberNavController
 import com.software.jetpack.compose.chan_xin_android.lifecycle.MainActivityObserver
 
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityScreen
@@ -22,6 +21,7 @@ import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class MainActivity : BaseActivity(),OnBackPressedDispatcherOwner{
+    @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("StateFlowValueCalledInComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,16 +32,16 @@ class MainActivity : BaseActivity(),OnBackPressedDispatcherOwner{
 
                     //拦截返回手势
                     LifecycleComponent()
-                    Log.e("mainActivity_sharedViewModel",sharedViewModel.myUser.value.toString())
-                    sharedViewModel.loadUser(phone)
-                    MainActivityScreen(sharedViewModel)
+                    Log.e("mainActivity_sharedViewModel",sharedUserViewModel.myUser.value.toString())
+                    sharedUserViewModel.loadUser(phone)
+                    MainActivityScreen(sharedUserViewModel)
                 }
             }
         }
     }
 
     override fun getDefaultLifeCycle(): DefaultLifecycleObserver {
-        return MainActivityObserver(sharedViewModel)
+        return MainActivityObserver(sharedUserViewModel)
     }
 
 

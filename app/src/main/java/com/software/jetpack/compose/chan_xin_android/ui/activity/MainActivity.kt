@@ -1,18 +1,23 @@
 package com.software.jetpack.compose.chan_xin_android.ui.activity
 
 import android.app.Activity
+import android.os.Build
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.BottomNavigation
 //noinspection UsingMaterialAndMaterial3Libraries
@@ -37,14 +42,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.software.jetpack.compose.chan_xin_android.R
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.SearchFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SettingScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserScreen
@@ -52,11 +62,11 @@ import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.NavigationBarColor
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 
-enum class TabEnum(val label:String,val imageVector: ImageVector,val route:String) {
-    HOME("禅信",Icons.Filled.Home,"chat_fragment"),
-    SOCIAL("朋友",Icons.Filled.AccountBox,"social_fragment"),
-    FIND("发现",Icons.Filled.Favorite,"find_fragment"),
-    USER("我",Icons.Filled.Person,"user_fragment"),
+enum class TabEnum(val label:String,val resId:Int,val route:String) {
+    HOME("禅信", R.drawable.chan_xin,"chat_fragment"),
+    SOCIAL("朋友",R.drawable.friend,"social_fragment"),
+    FIND("发现",R.drawable.find,"find_fragment"),
+    USER("我",R.drawable.user,"user_fragment"),
 }
 val FragmentModifier = Modifier.padding(bottom = 60.dp)
 @Composable
@@ -93,6 +103,7 @@ fun BottomNavBar(navController: NavHostController) {
     }
 
 }
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MainActivityScreen(vm: UserViewmodel) {
     val rootNavController = rememberNavController()
@@ -101,41 +112,48 @@ fun MainActivityScreen(vm: UserViewmodel) {
         composable("about") { AboutChanXinScreen(rootNavController) }
         composable("userInfo") {UserInfoScreen(navController = rootNavController,vm = vm)}
         composable("setting") {SettingScreen(navController = rootNavController,vm=vm)}
+        composable("find_user") { SearchFriendScreen(rootNavController,vm) }
     }
 
 }
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MainScreen(rootController:NavHostController,vm:UserViewmodel) {
     val mainController = rememberNavController()
     Scaffold(bottomBar = { BottomNavBar(mainController) }) { padding->
 
         //设置路由
-        NavHost(navController = mainController, startDestination = TabEnum.HOME.route, modifier = Modifier.padding(padding), enterTransition = { EnterTransition.None }, exitTransition = { ExitTransition.None }) {
-            composable(route = TabEnum.HOME.route){
+        NavHost(navController = mainController,
+            startDestination = TabEnum.HOME.route,
+            modifier = Modifier.padding(padding),
+            enterTransition = { expandVertically(tween(200)) },
+            exitTransition = { shrinkVertically(tween(200)) }) {
+            composable(route = TabEnum.HOME.route) {
+                val activity = LocalContext.current as Activity
+                // 拦截返回键，直接退出应用
+                BackHandler(enabled = true) {
+                    activity.moveTaskToBack(true) // 切换到后台
+                }
+                Text("禅信")
+            }
+            composable(route = TabEnum.SOCIAL.route) {
+                FriendScreen(rootController)
+            }
+            composable(route = TabEnum.FIND.route) {
                 val activity = LocalContext.current as Activity
 
                 // 拦截返回键，直接退出应用
                 BackHandler(enabled = true) {
                     activity.moveTaskToBack(true) // 切换到后台
                 }
-                Text("禅信") }
-            composable(route = TabEnum.SOCIAL.route){
-                val activity = LocalContext.current as Activity
-
-                // 拦截返回键，直接退出应用
-                BackHandler(enabled = true) {
-                    activity.moveTaskToBack(true) // 切换到后台
-                }
-                Text("社交") }
-            composable(route = TabEnum.FIND.route){
-                val activity = LocalContext.current as Activity
-
-                // 拦截返回键，直接退出应用
-                BackHandler(enabled = true) {
-                    activity.moveTaskToBack(true) // 切换到后台
-                }
-                Text("发现") }
-            composable(route = TabEnum.USER.route){ UserScreen(navController = rootController,vm = vm) }
+                Text("发现")
+            }
+            composable(route = TabEnum.USER.route) {
+                UserScreen(
+                    navController = rootController,
+                    vm = vm
+                )
+            }
         }
     }
 }
@@ -145,7 +163,11 @@ fun ButtonTabItem(scope:RowScope,tab:TabEnum,selectedTab:Int,onClick:() -> Unit)
         modifier = Modifier.indication(indication = null, interactionSource = remember { MutableInteractionSource() }),
         selected = (tab.ordinal == selectedTab),
         icon = {
-            Icon( modifier = Modifier.indication(indication = null, interactionSource = remember { MutableInteractionSource() }),imageVector = tab.imageVector, contentDescription = null, tint = if (selectedTab==tab.ordinal) IconGreen else Color.Black)
+            Icon( modifier = Modifier
+                .size(20.dp)
+                .indication(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }), painter = painterResource(tab.resId), contentDescription = null, tint = if (selectedTab==tab.ordinal) IconGreen else Color.Black)
         },
         onClick = onClick,
         label = { Text( modifier = Modifier.indication(indication = null, interactionSource = remember { MutableInteractionSource() }),text = tab.label) },

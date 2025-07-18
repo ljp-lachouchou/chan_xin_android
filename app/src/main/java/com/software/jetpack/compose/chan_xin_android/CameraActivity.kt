@@ -35,8 +35,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Button
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
@@ -46,7 +44,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -73,8 +70,6 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.BaseActivity
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseButton
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
-import com.software.jetpack.compose.chan_xin_android.ui.camera.Camera
-import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import com.software.jetpack.compose.chan_xin_android.util.Oss
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
@@ -97,7 +92,7 @@ class CameraActivity:BaseActivity() {
             val permissionState = rememberPermissionState(permission = Manifest.permission.CAMERA)
             when {
                 permissionState.status.isGranted -> {
-                    CameraX(sharedViewModel)
+                    CameraX(sharedUserViewModel)
                 }
                 permissionState.status.shouldShowRationale-> {
                     PermissionRationaleUI{

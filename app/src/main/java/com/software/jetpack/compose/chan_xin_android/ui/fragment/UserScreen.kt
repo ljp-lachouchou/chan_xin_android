@@ -318,7 +318,7 @@ fun UpdateNicknameScreen(thisNavController: NavHostController,user:User,vm: User
                     .background(color = Color.White)
                             .focusRequester(focusRequester),
                 trailingIcon = {
-                if (nickname != "") Icon(Icons.Filled.Close, tint = IconGreen, contentDescription = null)
+                if (nickname != "") Icon(Icons.Filled.Close, tint = IconGreen, contentDescription = null, modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { nickname = "" })
             }, unfocusedContainerColor = Color.White, focusedContainerColor = Color.White, keyboardActions = KeyboardActions(onGo = {
                 Log.e("keyboardActions","keyboardActions")
                 scope.launch {
@@ -421,6 +421,9 @@ fun InfoMainScreen(navController:NavHostController,user:User,thisNavController:N
                             append(mid)
                             append(suf)
                         }, color = TextColor)
+                    }
+                    UserInfoScreenItem(label = "禅信号", onClick = {}) {
+                        BaseText(user.id)
                     }
                 }
                 AsyncImage(model = ImageRequest.Builder(context = LocalContext.current).data(if (user.avatar == "") R.drawable.default_avatar else user.avatar).build(),contentDescription = null, modifier = Modifier.size(30.dp).align(Alignment.TopEnd

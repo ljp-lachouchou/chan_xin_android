@@ -44,10 +44,10 @@ class LoginActivity: BaseActivity() {
                setContent {
                    LifecycleComponent()
                    if (phone == "") { //没有历史，用户第一次使用
-                       NoPhone(sharedViewModel)
+                       NoPhone(sharedUserViewModel)
                    }else {
 //                       HasPhone(sharedViewModel,phone)
-                       if (token == "") HasPhone(sharedViewModel,phone)
+                       if (token == "") HasPhone(sharedUserViewModel,phone)
                        else {
                            val intent = Intent(this@LoginActivity,MainActivity::class.java)
                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP) // 清除目标 Activity 之上的所有 Activity

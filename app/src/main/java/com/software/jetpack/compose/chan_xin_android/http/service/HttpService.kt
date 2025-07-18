@@ -7,10 +7,13 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava3.RxJava3CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 object HttpService {
     private val okHttpClient = OkHttpClient
         .Builder().addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY))
+        .readTimeout(8, TimeUnit.SECONDS)     // 读取超时
+        .writeTimeout(8, TimeUnit.SECONDS)    // 写入超时
         .build()
     private var retrofit:Retrofit? = null
     fun getService():ApiService {
