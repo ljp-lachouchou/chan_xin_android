@@ -52,6 +52,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.software.jetpack.compose.chan_xin_android.R
+import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SearchFriendScreen
@@ -103,16 +104,25 @@ fun BottomNavBar(navController: NavHostController) {
     }
 
 }
+enum class MainActivityRouteEnum(val route: String) {
+    PARENT("parent"),
+    ABOUT_IN_USER("about"),
+    USER_INFO_IN_USER("userInfo"),
+    SETTING_IN_USER("setting"),
+    FIND_USER_IN_FRIEND("find_user"),
+    USER_INFO_IN_FRIEND_BY_SEARCH("userInfoInFriendBySearch")
+}
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MainActivityScreen(vm: UserViewmodel) {
     val rootNavController = rememberNavController()
-    NavHost(navController = rootNavController, startDestination = "parent") {
-        composable("parent") { MainScreen(rootNavController,vm) }
-        composable("about") { AboutChanXinScreen(rootNavController) }
-        composable("userInfo") {UserInfoScreen(navController = rootNavController,vm = vm)}
-        composable("setting") {SettingScreen(navController = rootNavController,vm=vm)}
-        composable("find_user") { SearchFriendScreen(rootNavController,vm) }
+    NavHost(navController = rootNavController, startDestination = MainActivityRouteEnum.PARENT.route) {
+        composable(MainActivityRouteEnum.PARENT.route) { MainScreen(rootNavController,vm) }
+        composable(MainActivityRouteEnum.ABOUT_IN_USER.route) { AboutChanXinScreen(rootNavController) }
+        composable(MainActivityRouteEnum.USER_INFO_IN_USER.route) {UserInfoScreen(navController = rootNavController,vm = vm)}
+        composable(MainActivityRouteEnum.SETTING_IN_USER.route) {SettingScreen(navController = rootNavController,vm=vm)}
+        composable(MainActivityRouteEnum.FIND_USER_IN_FRIEND.route) { SearchFriendScreen(rootNavController,vm) }
+        composable(MainActivityRouteEnum.USER_INFO_IN_FRIEND_BY_SEARCH.route) { BaseText("被点击的用户信息") }
     }
 
 }
@@ -137,7 +147,7 @@ fun MainScreen(rootController:NavHostController,vm:UserViewmodel) {
                 Text("禅信")
             }
             composable(route = TabEnum.SOCIAL.route) {
-                FriendScreen(rootController)
+                FriendScreen(rootController,vm)
             }
             composable(route = TabEnum.FIND.route) {
                 val activity = LocalContext.current as Activity

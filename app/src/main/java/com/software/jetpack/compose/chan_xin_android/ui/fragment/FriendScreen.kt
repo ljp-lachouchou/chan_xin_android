@@ -82,8 +82,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -101,6 +103,7 @@ import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultPlaceho
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.ui.activity.AppTopBar
+import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityRouteEnum
 import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseScreenItem
@@ -125,23 +128,27 @@ import kotlin.math.roundToInt
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun FriendScreen(navController:NavHostController) {
+fun FriendScreen(navController:NavHostController,uvm:UserViewmodel) {
     val activity = LocalContext.current as Activity
     // 拦截返回键，直接退出应用
     BackHandler(enabled = true) {
         activity.moveTaskToBack(true) // 切换到后台
     }
     val thisNavController = rememberNavController()
-    NavHost(navController = thisNavController, startDestination = "parent") {
-        composable("parent") {MainFriendScreen(navController,thisNavController)}
+    NavHost(navController = thisNavController, startDestination = FriendScreenRouteEnum.PARENT.route) {
+        composable(FriendScreenRouteEnum.PARENT.route) {MainFriendScreen(navController,thisNavController, uvm = uvm)}
     }
 
 }
-
+enum class FriendScreenRouteEnum(val route:String) {
+    PARENT("parent")
+}
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun SearchFriendScreen(navController: NavHostController,uvm:UserViewmodel) {
     var isFocus by remember { mutableStateOf(false) }
+    var findModel by remember { mutableIntStateOf(0) } //0:手机号;1:禅信号;2:昵称
+    var find by remember { mutableStateOf("") }
     Scaffold(topBar = {
         AnimatedVisibility(visible = !isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
             TopAppBar(title = { Text(text = "添加朋友", modifier = Modifier
@@ -158,7 +165,12 @@ fun SearchFriendScreen(navController: NavHostController,uvm:UserViewmodel) {
         }
     }) { _ ->
         AnimatedVisibility(visible = isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
-            SearchFriendFieldScreen(isFocus,uvm){isFocus = false}
+            uvm.pagedUsers = null
+            SearchFriendFieldScreen(navController = navController,find=find, onValueChange = {s:String->find=s}, isFocus = isFocus, uvm = uvm, findModel = findModel, findModelChange = {findModel=it}, onFindEvent = {findModel,uvm,find->
+                if (uvm is UserViewmodel) {
+                    findUser(findModel,uvm,find)
+                }
+            }){isFocus = false}
         }
         AnimatedVisibility(visible = !isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
             SearchScreenFirstScreen { isFocus = true }
@@ -167,14 +179,13 @@ fun SearchFriendScreen(navController: NavHostController,uvm:UserViewmodel) {
     }
 }
 @Composable
-fun SearchScreenFirstScreen(onClick: () -> Unit) {
+fun SearchScreenFirstScreen(isPadding:Boolean = true,onClick: () -> Unit) {
     Column {
-        Spacer(modifier = Modifier.height(DefaultPaddingTop))
+        if (isPadding) Spacer(modifier = Modifier.height(DefaultPaddingTop))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(DefaultUserScreenItemDp)
-                .padding(horizontal = DefaultUserPadding)
                 .background(color = Color.Gray.copy(0.1f))
                 .clickable(
                     indication = null,
@@ -195,11 +206,11 @@ fun SearchScreenFirstScreen(onClick: () -> Unit) {
     }
 }
 @Composable
-fun SearchFriendFieldScreen(isFocus:Boolean,uvm:UserViewmodel,onClick: () -> Unit) {
+fun SearchFriendFieldScreen(navController:NavHostController,find:String,findModel:Int,onValueChange:(String)->Unit,findModelChange:(k:Int)->Unit,isFocus:Boolean,uvm:UserViewmodel,onFindEvent:suspend (findModel:Int,uvm:ViewModel,find:String)->Unit,onClick: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     var isLoading by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
-    var findModel by remember { mutableIntStateOf(0) } //0:手机号;1:禅信号;2:昵称
+
     LaunchedEffect(isFocus) {
         if (isFocus) {
             focusRequester.requestFocus()
@@ -207,7 +218,7 @@ fun SearchFriendFieldScreen(isFocus:Boolean,uvm:UserViewmodel,onClick: () -> Uni
         }
     }
     val users = uvm.pagedUsers?.collectAsLazyPagingItems()
-    var find by remember { mutableStateOf("") }
+
     val selection = mapOf(0 to "手机号搜索",1 to "禅信号搜索",2 to "昵称搜索")
     val (selectedOption,onOptionSelected) = remember { mutableStateOf(selection[0]) }
     val scope = rememberCoroutineScope()
@@ -224,7 +235,7 @@ fun SearchFriendFieldScreen(isFocus:Boolean,uvm:UserViewmodel,onClick: () -> Uni
                 Wrapper {
                     TextField(
                         value = find,
-                        onValueChange = { find = it },
+                        onValueChange = onValueChange,
                         modifier = Modifier
                             .weight(1f)
                             .padding(
@@ -246,9 +257,10 @@ fun SearchFriendFieldScreen(isFocus:Boolean,uvm:UserViewmodel,onClick: () -> Uni
                         ),
                         maxLines = 1,
                         keyboardActions = KeyboardActions(onSend = {
+                            uvm.pagedUsers = null
                             scope.launch {
                                 isLoading = true
-                                findUser(findModel,uvm,find)
+                                onFindEvent(findModel,uvm,find)
                                 isLoading = false
                             }
                         }),
@@ -279,7 +291,7 @@ fun SearchFriendFieldScreen(isFocus:Boolean,uvm:UserViewmodel,onClick: () -> Uni
                     Row(
                         modifier = Modifier.selectable(
                             selected = v == selectedOption,
-                            onClick = { onOptionSelected(v);findModel = k },
+                            onClick = { onOptionSelected(v);findModelChange(k) },
                             role = Role.RadioButton
                         ), verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -309,7 +321,7 @@ fun SearchFriendFieldScreen(isFocus:Boolean,uvm:UserViewmodel,onClick: () -> Uni
                         FriendScreenItem(
                             if (users?.get(i)?.avatar != "") users?.get(i)?.avatar
                                 ?: R.drawable.default_avatar else R.drawable.default_avatar,
-                            onClick = {}) { BaseText(users?.get(i)?.nickname ?: "") }
+                            onClick = {navController.switchTab(MainActivityRouteEnum.USER_INFO_IN_FRIEND_BY_SEARCH.route)}) { BaseText(users?.get(i)?.nickname ?: "") }
                     }
                 }
             }
@@ -334,9 +346,11 @@ suspend fun findUser(findModel: Int, uvm: UserViewmodel, find: String) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostController) {
+fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostController,uvm: UserViewmodel) {
+    var isFocus by remember { mutableStateOf(false) }
+    var findModel by remember { mutableIntStateOf(0) } //0:手机号;1:禅信号;2:昵称
+    var find by remember { mutableStateOf("") }
     Box(modifier = Modifier.fillMaxSize()) {
-
             Scaffold(topBar = {
                 AppTopBar(title = "朋友", navigationIcon = null, actions = {
                     Icon(
@@ -348,13 +362,31 @@ fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostC
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() }) {
                                 navController.switchTab(
-                                    "find_user"
+                                    MainActivityRouteEnum.FIND_USER_IN_FRIEND.route
                                 )
                             })
                 })
             }) { padding ->
                 BaseBox {
                 LazyColumn(modifier = Modifier.padding(padding)) {
+                    item {
+                        AnimatedVisibility(visible = isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
+                            uvm.pagedUsers = null
+                            SearchFriendFieldScreen(navController=navController,
+                                isFocus = isFocus,
+                                uvm = uvm,
+                                findModel = findModel,
+                                find = find,
+                                onValueChange = { find = it },
+                                findModelChange = { findModel = it },
+                                onFindEvent = { findModel, uvm, find ->
+
+                                }) { isFocus = false }
+                        }
+                        AnimatedVisibility(visible = !isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
+                            SearchScreenFirstScreen(isPadding = false) { isFocus = true }
+                        }
+                    }
                     item {
                         FriendScreenItem(data = R.drawable.new_friend, onClick = {}) {
                             BaseText("新的朋友")
@@ -405,6 +437,9 @@ fun Modifier.clickableWithPosition(
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun ContactSideBar(
+    topPadding:Dp = DefaultPaddingTop*2f,
+    spacerSize:Float = 1.5f,
+    itemCircleSize:Float=  12.5f,
     modifier: Modifier = Modifier,
     selectColor: Color = IconGreen,
     commonColor: Color = Color.Gray.copy(0.6f),
@@ -434,14 +469,15 @@ fun ContactSideBar(
     ) {
         if (animationState == "showing") 1f else 0f
     }
-    val scope = rememberCoroutineScope()
     LaunchedEffect(clickCount) {
         delay(300)
         if (animationState == "showing") {
             animationState = "hiding"
         }
     }
-    Box(modifier = modifier.padding(top = DefaultPaddingTop)) {
+//    Column(verticalArrangement = Arrangement.SpaceBetween,modifier=modifier) {
+//        Spacer(modifier=Modifier.height(DefaultPaddingTop*1.5f))
+    Box(modifier=modifier.padding(top = topPadding)) {
         Column(modifier = Modifier
             .onGloballyPositioned { coordinates ->
                 sideHeight = coordinates.size.height.toFloat()
@@ -477,7 +513,7 @@ fun ContactSideBar(
                 val letter = letters[i]
                 Surface(color = if (selectedIndex == i) selectColor else commonColor,
                     modifier = Modifier
-                        .size(15.dp)
+                        .size(itemCircleSize.dp)
                         .onGloballyPositioned { coordinates ->
                             componentPositions[i] = coordinates.positionInRoot()
                         },
@@ -490,29 +526,30 @@ fun ContactSideBar(
                         color = if (selectedIndex == i) selectTextColor else TextColor
                     )
                 }
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(spacerSize.dp))
             }
         }
-        if (componentPositions[selectedIndex] != null && animationState != "idle") {
-            val globalPosition = componentPositions[selectedIndex]!!
-            val baseY = with(LocalDensity.current) { (globalPosition.y).toDp() }
-            val finalY = baseY + (-95).dp
-            Surface(
-                color = commonColor,
-                modifier = Modifier
-                    .size(40.dp * scale)
-                    .offset((-50).dp, finalY)
-                    .alpha(alpha),
-                shape = CircleShape
-            ) {
-                BaseText(
-                    text = letters[selectedIndex],
-                    textAlign = TextAlign.Center,
-                    fontSize = 30.sp,
-                    color = selectTextColor
-                )
-            }
 
+//        }
+    }
+    if (componentPositions[selectedIndex] != null && animationState != "idle") {
+        val globalPosition = componentPositions[selectedIndex]!!
+        val baseY = with(LocalDensity.current) { (globalPosition.y).toDp() }
+        val finalY = baseY + (-95).dp
+        Surface(
+            color = commonColor,
+            modifier = modifier
+                .size(40.dp * scale)
+                .offset((-itemCircleSize-1f).dp,topPadding+((selectedIndex - 1)*(spacerSize+itemCircleSize)).dp)
+                .alpha(alpha),
+            shape = CircleShape
+        ) {
+            BaseText(
+                text = letters[selectedIndex],
+                textAlign = TextAlign.Center,
+                fontSize = 30.sp,
+                color = selectTextColor
+            )
         }
     }
 

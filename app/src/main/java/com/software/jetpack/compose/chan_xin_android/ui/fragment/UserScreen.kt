@@ -99,6 +99,8 @@ import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.ui.activity.AppTopBar
 import com.software.jetpack.compose.chan_xin_android.ui.activity.AppTopBarBack
 import com.software.jetpack.compose.chan_xin_android.ui.activity.IconButton
+import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityRouteEnum
+import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityScreen
 import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseButton
@@ -139,14 +141,19 @@ fun UserInfoScreen(navController: NavHostController,vm:UserViewmodel) {
     val thisNavController = rememberNavController()
     val user by vm.myUser.collectAsState()
 
-    NavHost(navController = thisNavController, startDestination = "parent") {
-        composable("parent") {InfoMainScreen(navController,user,thisNavController)}
-        composable("avatar") {UpdateAvatarScreen(thisNavController,user,vm)}
-        composable("nickname") { UpdateNicknameScreen(thisNavController,user,vm) }
-        composable("sex") { UpdateSexScreen(thisNavController,user,vm) }
+    NavHost(navController = thisNavController, startDestination = UserInfoScreenRouteEnum.PARENT.route) {
+        composable(UserInfoScreenRouteEnum.PARENT.route) {InfoMainScreen(navController,user,thisNavController)}
+        composable(UserInfoScreenRouteEnum.AVATAR.route) {UpdateAvatarScreen(thisNavController,user,vm)}
+        composable(UserInfoScreenRouteEnum.NICKNAME.route) { UpdateNicknameScreen(thisNavController,user,vm) }
+        composable(UserInfoScreenRouteEnum.SEX.route) { UpdateSexScreen(thisNavController,user,vm) }
     }
 }
-
+enum class UserInfoScreenRouteEnum(val route:String) {
+    PARENT("parent"),
+    AVATAR("avatar"),
+    NICKNAME("nickname"),
+    SEX("sex")
+}
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -484,7 +491,7 @@ fun ParentScreen(navController: NavHostController, vm: UserViewmodel) {
                 Row(modifier = Modifier
                     .fillMaxWidth()
                     .height(DefaultUserScreenItemDp*3).padding(DefaultUserPadding)
-                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { navController.switchTab("userInfo") }) {
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { navController.switchTab(MainActivityRouteEnum.USER_INFO_IN_USER.route) }) {
                     AsyncImage(model = ImageRequest.Builder(context = LocalContext.current).data(if (user.avatar == "") R.drawable.default_avatar else user.avatar).build(),contentDescription = null, modifier = Modifier.size(60.dp).clip(
                         RoundedCornerShape(DefaultRoundCircleShapeDp)
                     ), contentScale = ContentScale.Crop,)
@@ -503,11 +510,11 @@ fun ParentScreen(navController: NavHostController, vm: UserViewmodel) {
                 }
                 Spacer(modifier = Modifier.height(40.dp).fillMaxWidth().background(SurfaceColor))
                 UserScreenItem(imageVector = Icons.Outlined.Settings, label = "设置", tintColor = Color.Blue) {
-                    navController.switchTab("setting")
+                    navController.switchTab(MainActivityRouteEnum.SETTING_IN_USER.route)
                 }
                 Spacer(modifier = Modifier.height(40.dp).fillMaxWidth().background(SurfaceColor))
                 UserScreenItem(imageVector = Icons.Outlined.MailOutline, label = "关于我们", tintColor = Color.Blue) {
-                    navController.switchTab("about")
+                    navController.switchTab(MainActivityRouteEnum.ABOUT_IN_USER.route)
                 }
             }
         }
