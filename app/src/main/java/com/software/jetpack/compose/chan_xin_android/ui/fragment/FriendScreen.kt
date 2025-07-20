@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +33,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -51,8 +54,11 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +76,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
@@ -77,6 +84,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -94,9 +102,11 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.google.gson.Gson
 import com.software.jetpack.compose.chan_xin_android.R
+import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultPaddingTop
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPadding
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
+import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
@@ -106,7 +116,9 @@ import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseScreenItem
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
+import com.software.jetpack.compose.chan_xin_android.ui.base.LittleText
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
+import com.software.jetpack.compose.chan_xin_android.ui.base.RefreshLazyColumn
 import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor
@@ -117,11 +129,13 @@ import com.software.jetpack.compose.chan_xin_android.util.StringUtil
 import com.software.jetpack.compose.chan_xin_android.util.VibratorHelper
 import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
+import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel_HiltModules
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
+import java.time.format.TextStyle
 import kotlin.math.roundToInt
 enum class FriendScreenRouteEnum(val route:String) {
     PARENT("parent")
@@ -145,40 +159,31 @@ fun FriendScreen(navController:NavHostController, uvm:UserViewmodel= hiltViewMod
 @Composable
 fun UserInfoInFriendBySearchScreen(navController: NavHostController, uvm: UserViewmodel= hiltViewModel(), svm:SocialViewModel= hiltViewModel()) {
     val user by uvm.myUser.collectAsState()
-    val sexPainter = when(svm.wantApplyFriend.value.sex.toInt()) {
+    val wantApplyFriend by svm.wantApplyFriend.collectAsState()
+    val sexPainter = when(wantApplyFriend.sex.toInt()) {
         0 -> R.drawable.unknow
         1-> R.drawable.man
         2->R.drawable.woman
         else -> R.drawable.unknow
     }
-    var greetMsg by remember { mutableStateOf("我是${user.nickname}") }
+
+    var greetMsg by remember(user) { mutableStateOf("我是${user.nickname}") }
+    Log.e("greetMsg",greetMsg)
     var isLoading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    var selectedImage by remember { mutableStateOf(false) }
     Scaffold(topBar = {
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Row(modifier = Modifier
-                .fillMaxWidth()
-                .padding(DefaultUserPadding)) {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = null,
-                    modifier = Modifier.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {navController.navigateUp()})
-            }
-            BaseText("申请添加朋友")
-        }
+        TopBarWithBack(navController,"申请添加好友", action = { BaseText("") })
     }){ _->
         BaseBox(modifier = Modifier
             .fillMaxSize()
             .background(color = SurfaceColor)) {
             Column {
                 UserSimpleItem(
-                    svm.wantApplyFriend.value,
+                    wantApplyFriend,
                     heightDp = DefaultPaddingTop * 1.3f,
                     imageClick = {
-
+                        selectedImage = true
                     },
                     sexPainter = sexPainter
                 )
@@ -197,18 +202,20 @@ fun UserInfoInFriendBySearchScreen(navController: NavHostController, uvm: UserVi
                     color = DividerColor,
                     thickness = 5.dp
                 )
-                TextField(
-                    value = greetMsg,
-                    label = { BaseText("打个招呼吧") },
-                    onValueChange = { greetMsg = it },
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        cursorColor = IconGreen,
-                        unfocusedContainerColor = Color.White,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent
-                    ), modifier = Modifier.fillMaxWidth()
-                )
+                Wrapper {
+                    TextField(
+                        value = greetMsg,
+                        label = { BaseText("打个招呼吧") },
+                        onValueChange = { greetMsg = it },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            cursorColor = IconGreen,
+                            unfocusedContainerColor = Color.White,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent
+                        ), modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 HorizontalDivider(
                     modifier = Modifier.fillMaxWidth(),
                     color = DividerColor,
@@ -217,7 +224,7 @@ fun UserInfoInFriendBySearchScreen(navController: NavHostController, uvm: UserVi
                 BaseScreenItem(onClick = {
                     scope.launch {
                         isLoading = true
-                        applyFriend(user.id,svm.wantApplyFriend.value.id,greetMsg,svm)
+                        applyFriend(user.id,wantApplyFriend.id,greetMsg,svm)
                         delay(500)
                         isLoading = false
                     }
@@ -232,6 +239,31 @@ fun UserInfoInFriendBySearchScreen(navController: NavHostController, uvm: UserVi
             }
             LoadingDialog(isLoading)
         }
+        if (selectedImage) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            AsyncImage(model = ImageRequest.Builder(AppGlobal.getAppContext()).data(if (wantApplyFriend.avatar != "") wantApplyFriend.avatar else R.drawable.default_avatar).build(),contentDescription = null, modifier = Modifier.fillMaxWidth().aspectRatio(1f), contentScale = ContentScale.Crop)
+            }
+        }
+    }
+}
+
+@Composable
+fun TopBarWithBack(navController: NavHostController,title :String,action:@Composable ()->Unit = {}) {
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(DefaultUserPadding), horizontalArrangement = Arrangement.SpaceBetween) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = null,
+                modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {navController.navigateUp()})
+            BaseText(text = title)
+            action()
+        }
+
     }
 }
 
@@ -262,11 +294,11 @@ suspend fun applyFriend(aId: String, tId: String, greetMsg: String,svm:SocialVie
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun SearchFriendScreen(navController: NavHostController, uvm:UserViewmodel = hiltViewModel<UserViewmodel>(), svm:SocialViewModel = hiltViewModel<SocialViewModel>()) {
-    var isFocus by remember { mutableStateOf(false) }
-    var findModel by remember { mutableIntStateOf(0) } //0:手机号;1:禅信号;2:昵称
-    var find by remember { mutableStateOf("") }
+    @Stable
+    data class SearchFriendScreenState(val isFocus: Boolean = false,val findModel: Int = 0,val find:String = "")
+    var screenState by remember { mutableStateOf(SearchFriendScreenState()) }
     Scaffold(topBar = {
-        AnimatedVisibility(visible = !isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
+        AnimatedVisibility(visible = !screenState.isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
             TopAppBar(title = { Text(text = "添加朋友", modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = DefaultUserScreenItemDp), textAlign = TextAlign.Center) }, modifier = Modifier
@@ -280,14 +312,15 @@ fun SearchFriendScreen(navController: NavHostController, uvm:UserViewmodel = hil
             })
         }
     }) { _ ->
-        AnimatedVisibility(visible = isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
+        AnimatedVisibility(visible = screenState.isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
             uvm.pagedUsers = null
-            SearchFriendFieldScreen(svm = svm,navController = navController,find=find, onValueChange = {s:String->find=s}, isFocus = isFocus, uvm = uvm, findModel = findModel, findModelChange = {findModel=it}, onFindEvent = { findModel, uvm, _, find->
+            SearchFriendFieldScreen(svm = svm,navController = navController,find=screenState.find, onValueChange = {s:String->screenState=screenState.copy(find = s)}, isFocus = screenState.isFocus, uvm = uvm, findModel =
+                screenState.findModel, findModelChange = {screenState=screenState.copy(findModel = it)}, onFindEvent = { findModel, uvm, _, find->
                 findUser(findModel,uvm,find)
-            }){isFocus = false}
+            }){screenState = screenState.copy(isFocus = false)}
         }
-        AnimatedVisibility(visible = !isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
-            SearchScreenFirstScreen { isFocus = true }
+        AnimatedVisibility(visible = !screenState.isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
+            SearchScreenFirstScreen { screenState = screenState.copy(isFocus = true) }
         }
 
     }
@@ -322,6 +355,7 @@ fun SearchScreenFirstScreen(isPadding:Boolean = true,onClick: () -> Unit) {
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 fun SearchFriendFieldScreen(navController:NavHostController,find:String,findModel:Int,onValueChange:(String)->Unit,findModelChange:(k:Int)->Unit,isFocus:Boolean,uvm:UserViewmodel,svm:SocialViewModel,onFindEvent:suspend (findModel:Int,uvm:UserViewmodel,svm:SocialViewModel,find:String)->Unit,onClick: () -> Unit) {
+    val user by uvm.myUser.collectAsState()
     val focusRequester = remember { FocusRequester() }
     var isLoading by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -433,7 +467,7 @@ fun SearchFriendFieldScreen(navController:NavHostController,find:String,findMode
             ) {
                 LazyColumn {
                     items(users?.itemCount ?: 0) { i ->
-                        if (users?.get(i)?.id != uvm.myUser.value.id) {
+                        if (users?.get(i)?.id != user.id) {
                             FriendScreenItem(
                                 if (users?.get(i)?.avatar != "") users?.get(i)?.avatar
                                     ?: R.drawable.default_avatar else R.drawable.default_avatar,
@@ -468,11 +502,11 @@ suspend fun findUser(findModel: Int, uvm: UserViewmodel, find: String) {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostController,uvm: UserViewmodel,svm:SocialViewModel) {
-    var isFocus by remember { mutableStateOf(false) }
-    var findModel by remember { mutableIntStateOf(0) } //0:手机号;1:禅信号;2:昵称
-    var find by remember { mutableStateOf("") }
+    data class MainFriendScreenState(val isFocus: Boolean = false,val findModel: Int = 0,val find:String = "")
+    var screenState by remember { mutableStateOf(MainFriendScreenState()) }
+    Log.e("ContactSideBars","ContactSideBar")
     Box(modifier = Modifier.fillMaxSize()) {
-            Scaffold(topBar = {
+        Scaffold(topBar = {
                 AppTopBar(title = "朋友", navigationIcon = null, actions = {
                     Icon(
                         painterResource(R.drawable.apply_friend),
@@ -488,33 +522,39 @@ fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostC
                             })
                 })
             }) { padding ->
-                BaseBox {
+            BaseBox {
                 LazyColumn(modifier = Modifier.padding(padding)) {
                     item {
-                        AnimatedVisibility(visible = isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
-                            uvm.pagedUsers = null
-                            SearchFriendFieldScreen(svm = svm, navController=navController,
-                                isFocus = isFocus,
-                                uvm = uvm,
-                                findModel = findModel,
-                                find = find,
-                                onValueChange = { find = it },
-                                findModelChange = { findModel = it },
-                                onFindEvent = { findModel, uvm,svm, find ->
+                        Wrapper {
+                            AnimatedVisibility(visible = screenState.isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
+                                uvm.pagedUsers = null
+                                SearchFriendFieldScreen(svm = svm, navController=navController,
+                                    isFocus = screenState.isFocus,
+                                    uvm = uvm,
+                                    findModel = screenState.findModel,
+                                    find = screenState.find,
+                                    onValueChange = { screenState = screenState.copy(find = it) },
+                                    findModelChange = { screenState = screenState.copy(findModel = it) },
+                                    onFindEvent = { findModel, uvm,svm, find ->
 
-                                }) { isFocus = false }
+                                    }) { screenState = screenState.copy(isFocus = false) }
+                            }
                         }
-                        AnimatedVisibility(visible = !isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
-                            SearchScreenFirstScreen(isPadding = false) { isFocus = true }
+                        Wrapper {
+                            AnimatedVisibility(visible = !screenState.isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
+                                SearchScreenFirstScreen(isPadding = false) { screenState = screenState.copy(isFocus = true) }
+                            }
                         }
                     }
                     item {
-                        FriendScreenItem(data = R.drawable.handle_apply, onClick = {}) {
+                        FriendScreenItem(data = R.drawable.handle_apply, onClick = {navController.switchTab(MainActivityRouteEnum.APPLY_FRIEND_LIST.route)}) {
+                            //TODO:我请求添加的好友
                             BaseText("请求列表")
                         }
                     }
                     item {
                         FriendScreenItem(data = R.drawable.handle_apply, onClick = {}) {
+                            //TODO:别人请求添加我的
                             BaseText("新的朋友")
                         }
                     }
@@ -524,22 +564,110 @@ fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostC
         ContactSideBar(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = 15.dp),
-            letters = (1..26).map { ('a' + it - 1).toString() }.toList()
+                .padding(end = 15.dp)
         ) { selectedIndex ->
 
         }
     }
 }
+@SuppressLint(
+    "UnusedMaterialScaffoldPaddingParameter"
+)
+@Composable
+fun ApplyFriendScreen(navController:NavHostController,uvm:UserViewmodel = hiltViewModel(),svm:SocialViewModel= hiltViewModel()) {
+    @Stable
+    data class ApplyFriendScreenState(
+        var list: List<FriendApply> = emptyList(),
+        var isLoading: Boolean = true
+    )
+
+    val user by uvm.myUser.collectAsState()
+    Log.e("ApplyFriendScreen_user", user.toString())
+
+    val uid by remember(user) { derivedStateOf { user.id } }
+    val screenState by remember { mutableStateOf(ApplyFriendScreenState()) }
+    val applyFriendList by svm.applyFriendList.collectAsState()
+
+// 将状态转换为不可变数据结构，避免并发修改问题
+    val friendItems by remember(screenState.list) {
+        derivedStateOf {
+            screenState.list.map { friend ->
+                FriendItem(
+                    friend = friend,
+                    statusText = when (friend.status) {
+                        0 -> "待验证"
+                        1 -> "已同意"
+                        2 -> "已拒绝"
+                        else -> ""
+                    }
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(uid,screenState.list) {
+        if (uid != "") {
+            if (AppGlobal.isNetworkValid()) {
+                screenState.list = svm.getFriendApplyList(uid)
+                UserDatabase.getInstance().socialDao().saveFriendApply(screenState.list.map { it.copy(applicantId = uid) })
+            } else {
+                screenState.list = applyFriendList
+            }
+        }
+    }
+
+    Scaffold(topBar = {
+        TopBarWithBack(navController, "请求列表(看看你想添加的人吧)") {
+            BaseText(
+                "添加好友",
+                modifier = Modifier.clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }) {
+                    navController.switchTab(MainActivityRouteEnum.FIND_USER_IN_FRIEND.route)
+                })
+        }
+    }) { _ ->
+        Box {
+            LaunchedEffect(Unit) {
+                delay(300)
+                screenState.isLoading = false
+            }
+            RefreshLazyColumn {
+                items(friendItems) { item ->
+                    FriendScreenItem(
+                        if (item.friend.avatar != "") item.friend.avatar else R.drawable.default_avatar,
+                        tailContent = {
+                            BaseText(text = item.statusText, color = PlaceholderColor)
+                        },
+                        onClick = {//todo:验证好友申请
+                            }
+                    ) {
+                        Column {
+                            BaseText(item.friend.nickname, fontWeight = FontWeight.Bold)
+                            BaseText(color = PlaceholderColor, text = item.friend.greetMsg, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+
+            LoadingDialog(screenState.isLoading)
+        }
+    }
+
+}
+data class FriendItem(
+    val friend: FriendApply,
+    val statusText: String
+)
 
 @Composable
-fun FriendScreenItem( data: Any, onClick: () -> Unit,content: @Composable () -> Unit) {
+fun FriendScreenItem( data: Any, onClick: () -> Unit,tailContent:@Composable ()->Unit={},content: @Composable () -> Unit) {
     BaseScreenItem(preContent = {
         AsyncImage(
             model = ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),
-            contentDescription = null, modifier = Modifier.size(40.dp)
+            contentDescription = null, modifier = Modifier.size(40.dp), contentScale = ContentScale.Crop
         )
-    }, onClick = onClick) {
+    }, onClick = onClick, tailContent = tailContent) {
         content()
     }
 }
@@ -559,130 +687,164 @@ fun Modifier.clickableWithPosition(
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
-@SuppressLint("UnusedTransitionTargetStateParameter")
+@SuppressLint("UnusedTransitionTargetStateParameter", "RememberReturnType")
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun ContactSideBar(
-    topPadding:Dp = DefaultPaddingTop*2f,
-    spacerSize:Float = 1.5f,
-    itemCircleSize:Float=  12.5f,
     modifier: Modifier = Modifier,
+    letters: List<String> = ('A'..'Z').map { it.toString() },
+    topPadding: Dp = DefaultPaddingTop*2,
+    itemCircleSize: Float = 12.5f,
+    spacerSize: Float = 1.5f,
+    commonColor: Color = Color.Gray.copy(alpha = 0.3f),
     selectColor: Color = IconGreen,
-    commonColor: Color = Color.Gray.copy(0.6f),
+    commonTextColor: Color = Color.Black,
     selectTextColor: Color = Color.White,
-    letters: List<String>,
-    vibratorHelper: VibratorHelper = remember { VibratorHelper(AppGlobal.getAppContext()) },
-    friendListEvent:(selectIndex:Int)->Unit
+    vibratorHelper: VibratorHelper = VibratorHelper(AppGlobal.getAppContext()), // 假设这是一个振动帮助类aa，
+    friendListEvent: (Int) -> Unit
 ) {
-    var selectedIndex by remember { mutableIntStateOf(-1) }
+    Log.e("SideBarState","SideBarState")
+    // 使用Stable接口确保数据类稳定
+    @Stable
+    data class SideBarState(
+        val selectedIndex: Int = -1,
+        val animationState: String = "idle",
+        val clickCount: Int = 0,
+        val touchY: Float = 0f
+    )
+    var sideBarState by remember {
+        mutableStateOf(SideBarState())
+    }
+
+    // 使用derivedStateOf缓存计算结果
     val componentPositions = remember { mutableMapOf<Int, Offset>() }
-    var animationState by remember { mutableStateOf("idle") } // idle, showing, hiding
-    var clickCount by remember { mutableIntStateOf(0) }
-    val transition = updateTransition(clickCount, label = "animationTransition")
     var sideHeight by remember { mutableFloatStateOf(0f) }
-    var touchY by remember { mutableFloatStateOf(0f) }
+
+    val transition = updateTransition(sideBarState.clickCount, label = "animationTransition")
+
     val scale by transition.animateFloat(
         transitionSpec = {
             tween(durationMillis = 300, easing = FastOutSlowInEasing)
         }, label = "scale"
     ) {
-        if (animationState == "showing") 1f else 0f
+        if (sideBarState.animationState == "showing") 1f else 0f
     }
+
     val alpha by transition.animateFloat(
         transitionSpec = {
             tween(durationMillis = 200)
         }, label = "alpha"
     ) {
-        if (animationState == "showing") 1f else 0f
+        if (sideBarState.animationState == "showing") 1f else 0f
     }
-    LaunchedEffect(clickCount) {
+
+    // 只在clickCount变化时执行，避免其他状态变化触发
+    LaunchedEffect(sideBarState.clickCount) {
         delay(300)
-        if (animationState == "showing") {
-            animationState = "hiding"
+        if (sideBarState.animationState == "showing") {
+            sideBarState = sideBarState.copy(animationState = "hiding")
         }
     }
-//    Column(verticalArrangement = Arrangement.SpaceBetween,modifier=modifier) {
-//        Spacer(modifier=Modifier.height(DefaultPaddingTop*1.5f))
-    Box(modifier=modifier.padding(top = topPadding)) {
-        Column(modifier = Modifier
-            .onGloballyPositioned { coordinates ->
-                sideHeight = coordinates.size.height.toFloat()
-                Log.e("sideHeight", "$sideHeight")
-            }
-            .pointerInteropFilter { event ->
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                        touchY = event.y
-                        if (sideHeight > 0) {
-                            val letterHeight = sideHeight / letters.size
-                            val index = ((touchY / letterHeight).coerceIn(
-                                0f, (letters.size - 1).toFloat()
-                            )).roundToInt()
-                            if (selectedIndex != index) {
-                                selectedIndex = index;vibratorHelper.vibrate()
+    Box(modifier = modifier.padding(top = topPadding)) {
+        key(letters) {
+            Column(
+                modifier = Modifier
+                    .onGloballyPositioned { coordinates ->
+                        sideHeight = coordinates.size.height.toFloat()
+                    }
+                    .pointerInteropFilter { event ->
+                        when (event.action) {
+                            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                                val newTouchY = event.y
+                                if (sideHeight > 0) {
+                                    val letterHeight = sideHeight / letters.size
+                                    val index = ((newTouchY / letterHeight).coerceIn(
+                                        0f, (letters.size - 1).toFloat()
+                                    )).roundToInt()
+
+                                    if (sideBarState.selectedIndex != index) {
+                                        vibratorHelper.vibrate()
+                                        sideBarState = sideBarState.copy(
+                                            selectedIndex = index,
+                                            animationState = "showing",
+                                            clickCount = sideBarState.clickCount + 1,
+                                            touchY = newTouchY
+                                        )
+                                        friendListEvent(index)
+                                    } else if (sideBarState.touchY != newTouchY) {
+                                        sideBarState = sideBarState.copy(touchY = newTouchY)
+                                    }
+                                }
+                                true
                             }
-                            animationState = "showing" // 立即显示
-                            clickCount++ // 触发动画重置
+
+                            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                true
+                            }
+
+                            else -> false
                         }
-                        friendListEvent(selectedIndex)
-                        true
                     }
-
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        true
+            ) {
+                letters.forEachIndexed { index, letter ->
+                    key(index) {
+                        Surface(
+                            color = if (sideBarState.selectedIndex == index) selectColor else commonColor,
+                            modifier = Modifier
+                                .size(itemCircleSize.dp)
+                                .onGloballyPositioned { coordinates ->
+                                    componentPositions[index] = coordinates.positionInRoot()
+                                },
+                            shape = CircleShape
+                        ) {
+                            // 使用remember避免每次重组都创建TextStyle
+                            val textStyle = remember(sideBarState.selectedIndex == index) {
+                                androidx.compose.ui.text.TextStyle(
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 12.sp,
+                                    color = if (sideBarState.selectedIndex == index) selectTextColor else commonTextColor
+                                )
+                            }
+                            Text(
+                                text = letter,
+                                style = textStyle
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(spacerSize.dp))
                     }
-
-                    else -> false
                 }
-            }) {
-            for (i in letters.indices) {
-                val letter = letters[i]
-                Surface(color = if (selectedIndex == i) selectColor else commonColor,
-                    modifier = Modifier
-                        .size(itemCircleSize.dp)
-                        .onGloballyPositioned { coordinates ->
-                            componentPositions[i] = coordinates.positionInRoot()
-                        },
-                    shape = CircleShape
-                ) {
-                    BaseText(
-                        text = letter,
-                        textAlign = TextAlign.Center,
-                        fontSize = 12.sp,
-                        color = if (selectedIndex == i) selectTextColor else TextColor
-                    )
-                }
-                Spacer(modifier = Modifier.height(spacerSize.dp))
             }
         }
-
-//        }
     }
-    if (componentPositions[selectedIndex] != null && animationState != "idle") {
-        val globalPosition = componentPositions[selectedIndex]!!
-        val baseY = with(LocalDensity.current) { (globalPosition.y).toDp() }
-        val finalY = baseY + (-95).dp
-        Surface(
-            color = commonColor,
-            modifier = modifier
-                .size(40.dp * scale)
-                .offset(
-                    (-itemCircleSize - 1f).dp,
-                    topPadding + ((selectedIndex - 1) * (spacerSize + itemCircleSize)).dp
+
+    // 使用sideBarState.selectedIndex作为key，避免不必要的重组
+    if (componentPositions[sideBarState.selectedIndex] != null && sideBarState.animationState != "idle") {
+        val globalPosition = componentPositions[sideBarState.selectedIndex]!!
+
+        // 使用key确保只有当selectedIndex或animationState变化时才重组
+        key(sideBarState.selectedIndex, sideBarState.animationState) {
+            Surface(
+                color = commonColor,
+                modifier = modifier
+                    .size(40.dp * scale)
+                    .offset(
+                        (-itemCircleSize - 1f).dp,
+                        topPadding + ((sideBarState.selectedIndex - 1) * (spacerSize + itemCircleSize)).dp
+                    )
+                    .alpha(alpha),
+                shape = CircleShape
+            ) {
+                Text(
+                    text = letters[sideBarState.selectedIndex],
+                    textAlign = TextAlign.Center,
+                    fontSize = 30.sp,
+                    color = selectTextColor
                 )
-                .alpha(alpha),
-            shape = CircleShape
-        ) {
-            BaseText(
-                text = letters[selectedIndex],
-                textAlign = TextAlign.Center,
-                fontSize = 30.sp,
-                color = selectTextColor
-            )
+            }
         }
     }
-
 }
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Preview

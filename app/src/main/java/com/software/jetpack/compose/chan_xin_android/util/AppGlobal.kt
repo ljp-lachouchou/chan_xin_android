@@ -2,7 +2,11 @@ package com.software.jetpack.compose.chan_xin_android.util
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.app.usage.NetworkStatsManager
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.Build
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -67,6 +71,16 @@ object AppGlobal {
         return context.userDataStore.data.map { preferences ->
             preferences[PHONE_KEY] ?: ""
         }.first() // 检查是否存在phoneKey
+    }
+    fun isNetworkValid():Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)?:return false
+            return networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        }else {
+            val networkInfo = connectivityManager.activeNetworkInfo
+            return networkInfo != null && networkInfo.isConnected
+        }
     }
 
 }

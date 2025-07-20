@@ -11,6 +11,8 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -41,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -57,8 +60,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.software.jetpack.compose.chan_xin_android.R
+import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SearchFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SettingScreen
@@ -119,7 +124,8 @@ enum class MainActivityRouteEnum(val route: String) {
     USER_INFO_IN_USER("userInfo"),
     SETTING_IN_USER("setting"),
     FIND_USER_IN_FRIEND("find_user"),
-    USER_INFO_IN_FRIEND_BY_SEARCH("userInfoInFriendBySearch")
+    USER_INFO_IN_FRIEND_BY_SEARCH("userInfoInFriendBySearch"),
+    APPLY_FRIEND_LIST("apply_friend_list")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -127,15 +133,20 @@ enum class MainActivityRouteEnum(val route: String) {
 fun MainActivityScreen() {
     val rootNavController = rememberNavController()
     val vm :UserViewmodel = hiltViewModel()
+    val svm:SocialViewModel = hiltViewModel()
     val user by vm.myUser.collectAsState()
     Log.e("users",user.toString())
+    rememberCoroutineScope().launch {
+        Log.e("countc",UserDatabase.getInstance().socialDao().getFriendApplyCount().toString())
+    }
     NavHost(navController = rootNavController, startDestination = MainActivityRouteEnum.PARENT.route) {
         composable(MainActivityRouteEnum.PARENT.route) { MainScreen(rootNavController) }
         composable(MainActivityRouteEnum.ABOUT_IN_USER.route) { AboutChanXinScreen(rootNavController) }
         composable(MainActivityRouteEnum.USER_INFO_IN_USER.route) {UserInfoScreen(navController = rootNavController,user=user)}
         composable(MainActivityRouteEnum.SETTING_IN_USER.route) {SettingScreen(navController = rootNavController)}
-        composable(MainActivityRouteEnum.FIND_USER_IN_FRIEND.route) { SearchFriendScreen(rootNavController) }
-        composable(MainActivityRouteEnum.USER_INFO_IN_FRIEND_BY_SEARCH.route) { UserInfoInFriendBySearchScreen(rootNavController) }
+        composable(MainActivityRouteEnum.FIND_USER_IN_FRIEND.route) { SearchFriendScreen(rootNavController,svm=svm) }
+        composable(MainActivityRouteEnum.USER_INFO_IN_FRIEND_BY_SEARCH.route) { UserInfoInFriendBySearchScreen(rootNavController,svm=svm) }
+        composable(MainActivityRouteEnum.APPLY_FRIEND_LIST.route) { ApplyFriendScreen(rootNavController,svm=svm) }
     }
 
 }
@@ -143,13 +154,14 @@ fun MainActivityScreen() {
 @Composable
 fun MainScreen(rootController:NavHostController) {
     val mainController = rememberNavController()
+    val screenCache = remember { mutableMapOf<String,@Composable () -> Unit>() }
     Scaffold(bottomBar = { BottomNavBar(mainController) }) { padding->
         //设置路由
         NavHost(navController = mainController,
             startDestination = TabEnum.HOME.route,
             modifier = Modifier.padding(padding),
-            enterTransition = { expandVertically(tween(200)) },
-            exitTransition = { shrinkVertically(tween(200)) }) {
+            enterTransition = { fadeIn(tween(1000)) },
+            exitTransition = { fadeOut(tween(1000)) }) {
             composable(route = TabEnum.HOME.route) {
                 val activity = LocalContext.current as Activity
                 // 拦截返回键，直接退出应用
@@ -159,7 +171,14 @@ fun MainScreen(rootController:NavHostController) {
                 Text("禅信")
             }
             composable(route = TabEnum.SOCIAL.route) {
-                FriendScreen(rootController)
+                val friendScreen = screenCache.getOrPut(TabEnum.SOCIAL.route) {
+                    {
+                        FriendScreen(
+                            navController = rootController
+                        )
+                    }
+                }
+                friendScreen()
             }
             composable(route = TabEnum.FIND.route) {
                 val activity = LocalContext.current as Activity
@@ -171,9 +190,14 @@ fun MainScreen(rootController:NavHostController) {
                 Text("发现")
             }
             composable(route = TabEnum.USER.route) {
-                UserScreen(
-                    navController = rootController
-                )
+                val userScreen = screenCache.getOrPut(TabEnum.USER.route) {
+                    {
+                        UserScreen(
+                            navController = rootController
+                        )
+                    }
+                }
+                userScreen()
             }
         }
     }

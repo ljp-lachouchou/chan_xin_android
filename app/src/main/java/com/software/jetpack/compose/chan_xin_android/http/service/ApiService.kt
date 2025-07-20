@@ -1,11 +1,10 @@
 package com.software.jetpack.compose.chan_xin_android.http.service
 
-import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
+import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
-import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -22,18 +21,19 @@ interface ApiService {
     @GET("v1/user/findUser")
     suspend fun findUser(@Query("name") name: String = "点",@Query("phone") phone:String="1",@Query("ids") ids:String=StringUtil.listToString(
         listOf("1")
-    )):ApiResult<DataUsersWrapper>
+    )):ApiResult<DataInfosWrapper<User>>
     @POST("v1/user/register")
     suspend fun register(@Body registerReq:RegisterReq):ApiResult<TokenResp>
     @POST("v1/user/login")
     suspend fun login(@Body loginReq:LoginReq):ApiResult<TokenResp>
 
-    data class DataUserWrapper(val info:User)
-    data class DataUsersWrapper(val infos:List<User>)
+    data class DataInfoWrapper<T>(val info:T)
+    data class DataInfosWrapper<T>(val infos:List<T>)
+    data class DataListWrapper<T>(val list:List<FriendApply>)
     @GET("v1/user/userinfo")
-    suspend fun userInfo(@Header("Authorization") authToken: String? = "",) : ApiResult<DataUserWrapper>
+    suspend fun userInfo(@Header("Authorization") authToken: String? = "",) : ApiResult<DataInfoWrapper<User>>
     @PATCH("v1/user/update")
-    suspend fun updateUser(@Header("Authorization") authToken:String? = "",@Body updateUserReq: UpdateUserReq):ApiResult<DataUserWrapper>
+    suspend fun updateUser(@Header("Authorization") authToken:String? = "",@Body updateUserReq: UpdateUserReq):ApiResult<DataInfoWrapper<User>>
 
     data class FriendApplyRequest(
         @SerializedName("applicant_id") val applicantId: String = "1",
@@ -46,6 +46,8 @@ interface ApiService {
     )
     @POST("/v1/social/firend/applyFriend")
     suspend fun applyFriend(@Body friendApplyRequest: FriendApplyRequest):ApiResult<FriendApplyResponse>
+    @GET("/v1/social/firend/getFriendApplyList")
+    suspend fun getFriendApplyList(@Query("user_id") uid:String):ApiResult<DataListWrapper<FriendApply>>
 
 
 }

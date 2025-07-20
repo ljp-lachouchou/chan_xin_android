@@ -1,5 +1,9 @@
 package com.software.jetpack.compose.chan_xin_android.entity
 
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
 
 data class Friend(
@@ -23,4 +27,18 @@ data class FriendStatusInfo(
     val remark: String=""
 ){
     constructor():this(false,false,false,"")
+}
+@Entity("friend_apply", indices = [Index("user_id","applicant_id", unique = true)])
+data class FriendApply(
+    @PrimaryKey(true)
+    val id:Int,
+    @SerializedName("user_id") @ColumnInfo(name = "user_id") val userId: String,
+    @ColumnInfo("applicant_id") val applicantId:String,
+    val nickname: String,
+    @SerializedName("avatar_url") @ColumnInfo(name = "avatar_url") val avatar: String,
+    val gender: Int,
+    @SerializedName("greet_msg") @ColumnInfo(name = "greet_msg") val greetMsg: String,
+    val status: Int
+){
+    constructor():this(0,"","","","",0,"",0)
 }

@@ -26,7 +26,6 @@ class MainActivity : BaseActivity(),OnBackPressedDispatcherOwner{
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         lifecycleScope.launch(Dispatchers.IO) {
-            val phone = AppGlobal.getUserPhone()
             withContext(Dispatchers.Main) {
                 setContent {
                     //拦截返回手势

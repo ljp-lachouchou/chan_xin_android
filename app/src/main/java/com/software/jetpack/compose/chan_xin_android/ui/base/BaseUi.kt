@@ -16,6 +16,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.FlingBehavior
+import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -36,6 +38,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -49,6 +54,7 @@ import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.pullrefresh.PullRefreshDefaults
+import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldColors
@@ -249,7 +255,7 @@ fun BaseButton(onClick: () -> Unit,
 }
 @Composable
 fun LittleText(text: String,
-               event:()->Unit,
+               event:()->Unit = {},
                modifier: Modifier = Modifier,
                fontSize: TextUnit = defaultLittleSize,
                fontStyle: FontStyle? = null,
@@ -534,7 +540,12 @@ fun BaseScreenItem(
     backgroundColor:Color = Color.White,
     content: @Composable () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxWidth().height(DefaultUserScreenItemDp).background(backgroundColor).clickable { onClick();Log.e("iiii","iiiii") }.padding(horizontal = 15.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier
+        .fillMaxWidth()
+        .height(DefaultUserScreenItemDp)
+        .background(backgroundColor)
+        .clickable { onClick();Log.e("iiii", "iiiii") }
+        .padding(horizontal = 15.dp), contentAlignment = Alignment.Center) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (preContent != null) {
                 preContent()
@@ -572,6 +583,68 @@ fun ChatBubblePreview() {
             message = "这是一个很长的消息，测试气泡的自动换行功能。Jetpack Compose 是 Android 官方推荐的现代 UI 工具包，用它开发界面非常高效，代码也更简洁。aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
             direction = BubbleDirection.LEFT
         )
+    }
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun RefreshLazyColumn(
+    modifier: Modifier = Modifier, state: LazyListState = rememberLazyListState(),
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    reverseLayout: Boolean = false,
+    verticalArrangement: Arrangement.Vertical =
+        if (!reverseLayout) Arrangement.Top else Arrangement.Bottom,
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
+    flingBehavior: FlingBehavior = ScrollableDefaults.flingBehavior(),
+    userScrollEnabled: Boolean = true, isRefresh:Boolean = false,refreshEvent:()->Unit = {},content: LazyListScope.() -> Unit
+) {
+    var pullDistancePx by remember { mutableFloatStateOf(0f) }
+    var refreshOffsetPx by remember { mutableFloatStateOf(0f) }
+    var holdPx by remember { mutableFloatStateOf(0f) }
+
+    val scope = rememberCoroutineScope()
+    with(LocalDensity.current) {
+        holdPx = maxPullPx.toPx()
+        refreshOffsetPx = PullRefreshDefaults.RefreshingOffset.toPx()
+    }
+    val animate = remember {
+        Animatable(0f)
+    }
+
+    Box(
+        modifier = modifier
+            .pullRefresh(onPull = { delta ->
+                val newDistance = pullDistancePx + delta
+                pullDistancePx = newDistance.coerceIn( 0f, holdPx)
+                pullDistancePx
+            }, onRelease = {
+                if (isRefresh) refreshEvent()
+                pullDistancePx = 0f
+                scope.launch {
+                    Log.e("onDragEnd", "Run")
+                    animate.animateTo(
+                        0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    )
+                }
+                it
+            })
+    ) {
+        LazyColumn(
+            modifier = modifier.graphicsLayer { translationY=pullDistancePx },
+            state = state,
+            contentPadding = contentPadding,
+            reverseLayout = reverseLayout,
+            verticalArrangement = verticalArrangement,
+            horizontalAlignment = horizontalAlignment,
+            flingBehavior = flingBehavior,
+            userScrollEnabled = userScrollEnabled
+        ) {
+            content()
+        }
     }
 }
 

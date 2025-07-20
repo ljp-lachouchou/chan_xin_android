@@ -16,7 +16,8 @@ interface IUserDao {
     suspend fun getUserInfoById(id:String):User
     @Query("SELECT * FROM users WHERE `phone` = :phone")
     fun getUserInfoByPhone(phone:String):Flow<User>
-
+    @Query("SELECT COUNT(1) FROM users")
+    fun getUserCount():Int
     @Query("SELECT `avatar` FROM users WHERE `phone` = :phone")
     suspend fun getUserAvatarByPhone(phone:String):String
 }

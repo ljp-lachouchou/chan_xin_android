@@ -419,7 +419,7 @@ fun InfoMainScreen(navController:NavHostController,user:User,thisNavController:N
         2->"女"
         else -> ""
     }
-    Scaffold(topBar = { AppTopBar(title = "个人资料", navController = navController) }, content = {padding->
+    Scaffold(topBar = { AppTopBarBack(title = "个人资料", navController = navController) }, content = {padding->
         BoxWithConstraints {
             val width = constraints.maxWidth.dp
             val height = constraints.maxHeight.dp
