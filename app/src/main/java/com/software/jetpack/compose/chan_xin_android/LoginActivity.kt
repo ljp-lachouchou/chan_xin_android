@@ -17,6 +17,7 @@ import com.software.jetpack.compose.chan_xin_android.ui.activity.AppCoverScreenN
 import com.software.jetpack.compose.chan_xin_android.ui.activity.LoginActivityScreen
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseActivity
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
+import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.PHONE_KEY
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

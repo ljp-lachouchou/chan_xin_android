@@ -15,6 +15,8 @@ interface ISocialDao {
     fun getApplyFriendList(uid: String):Flow<List<FriendApply>>
     @Query("SELECT * FROM friend_apply WHERE applicant_id = :uid")
     suspend fun getApplyFriendList2(uid:String):List<FriendApply>
+    @Query("DELETE FROM friend_apply")
+    suspend fun deleteAll()
     @Query("SELECT * FROM friend_apply")
     suspend fun getAllFriendApplyList():List<FriendApply>
     @Insert(onConflict = OnConflictStrategy.REPLACE)

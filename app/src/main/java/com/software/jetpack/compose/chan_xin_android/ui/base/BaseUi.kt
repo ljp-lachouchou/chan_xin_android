@@ -2,12 +2,15 @@ package com.software.jetpack.compose.chan_xin_android.ui.base
 
 import android.annotation.SuppressLint
 import android.util.Log
+import android.view.MotionEvent
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -19,6 +22,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -26,10 +31,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,13 +56,16 @@ import androidx.compose.material.Button
 import androidx.compose.material.ButtonColors
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.ButtonElevation
+import androidx.compose.material.Checkbox
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
+import androidx.compose.material.Surface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.pullrefresh.PullRefreshDefaults
 import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldColors
@@ -65,13 +76,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -79,7 +94,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -97,6 +116,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -104,12 +124,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.coroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.software.jetpack.compose.chan_xin_android.R
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultFontSize
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPadding
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultLittleSize
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultPlaceholderText
+import com.software.jetpack.compose.chan_xin_android.ui.activity.AppTopBarBack
 import com.software.jetpack.compose.chan_xin_android.ui.theme.ChatGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.LittleTextColor
@@ -117,11 +140,13 @@ import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.PressedLittleTextColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.RightArrowColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.TextColor
+import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.internal.wait
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.math.abs
 
 val maxPullPx = 200.dp
 
@@ -560,6 +585,7 @@ fun BaseScreenItem(
 @Preview(showBackground = true)
 @Composable
 fun ChatBubblePreview() {
+    Log.e("ppp222","ppp")
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -647,5 +673,170 @@ fun RefreshLazyColumn(
         }
     }
 }
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@Composable
+fun CanLookImage(data:Any,isSelected:Boolean = false,onChange:()->Unit,content:@Composable ()->Unit) {
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+    val verticalThreshold = screenHeight * 0.3f
+    if (!isSelected) {
+        content()
+    } else {
+        BackHandler {
+            onChange()
+        }
+        Scaffold(topBar = {
+            AppTopBarBack(tint = Color.White, color = Color.Black,onChange = onChange)
+        }) { _->
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .clipToBounds(),
+                contentAlignment = Alignment.Center
+            ) {
+                ImageViewer(data) {
+                    if (it > verticalThreshold.value) onChange()
+
+                }
+            }
+        }
+
+    }
+}
+
+@Composable
+fun ImageViewer(data:Any,onVerticalDrag:(Float)->Unit) {
+    var imageSize by remember { mutableStateOf(IntSize.Zero) }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var isGestureInProgress by remember { mutableStateOf(false) }
+    var actualOffset by remember { mutableStateOf(Offset.Zero) }
+    val state = rememberTransformableState { zoomChange, panChange, _ ->
+        if (!isGestureInProgress) isGestureInProgress = true
+        scale = (scale * zoomChange).coerceIn(0.5f,5f)
+        offset = Offset(
+            (offset.x + panChange.x).coerceAtLeast(getMinOffsetX(imageSize, scale))
+                .coerceAtMost(
+                    getMaxOffsetX(imageSize, scale)
+                ),
+            (offset.y + panChange.y).coerceAtLeast(getMinOffsetY(imageSize, scale))
+                .coerceAtMost(
+                    getMaxOffsetY(imageSize, scale)
+                )
+        )
+        actualOffset = Offset(actualOffset.x+panChange.x,actualOffset.y+panChange.y)
+    }
+
+    val scaleAnimate by animateFloatAsState(targetValue = scale)
 
 
+    AsyncImage(
+        model = ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .graphicsLayer {
+                scaleX = scaleAnimate
+                scaleY = scaleAnimate
+                translationY = offset.y
+                translationX = offset.x
+            }
+            .transformable(state)
+            .onGloballyPositioned { coordinates ->
+                imageSize = coordinates.size
+            }
+    )
+    if (!isGestureInProgress && scale < 1f) {
+        scale = 1f
+    }
+    if (!isGestureInProgress && scale >= 1f) {
+        onVerticalDrag(abs(actualOffset.y-offset.y))
+    }
+    if (state.isTransformInProgress.not() && isGestureInProgress) {
+        isGestureInProgress = false
+    }
+}
+private fun getMinOffsetX(imageSize: IntSize, scale: Float): Float {
+    if (imageSize.width == 0) return 0f
+    val scaledWidth = imageSize.width * scale
+    return if (scaledWidth <= imageSize.width) {
+        0f // 如果图片缩小到小于等于原始宽度，不允许向左偏移
+    } else {
+        -(scaledWidth-imageSize.width) / 2 // 限制最大向左偏移
+    }
+}
+
+private fun getMaxOffsetX(imageSize: IntSize, scale: Float): Float {
+    if (imageSize.width == 0) return 0f
+    val scaledWidth = imageSize.width * scale
+    return if (scaledWidth <= imageSize.width) {
+        0f // 如果图片缩小到小于等于原始宽度，不允许向右偏移
+    } else {
+        (scaledWidth-imageSize.width) / 2 // 限制最大向右偏移
+    }
+}
+
+private fun getMinOffsetY(imageSize: IntSize, scale: Float): Float {
+    if (imageSize.height == 0) return 0f
+    val scaledHeight = imageSize.height * scale
+    return if (scaledHeight <= imageSize.height) {
+        0f // 如果图片缩小到小于等于原始高度，不允许向上偏移
+    } else {
+        -(scaledHeight - imageSize.height) / 2 // 限制最大向上偏移
+    }
+}
+
+private fun getMaxOffsetY(imageSize: IntSize, scale: Float): Float {
+    if (imageSize.height == 0) return 0f
+    val scaledHeight = imageSize.height * scale
+    return if (scaledHeight <= imageSize.height) {
+        0f // 如果图片缩小到小于等于原始高度，不允许向下偏移
+    } else {
+        (scaledHeight - imageSize.height) / 2 // 限制最大向下偏移
+    }
+}
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun selectCharRows(chars:String,surfaceUnselectColor:Color = Color.Gray.copy(0.1f),surfaceSelectColor:Color = IconGreen):List<Boolean> {
+    val booleanArray = remember { mutableStateListOf<Boolean>() }.apply {
+        repeat(chars.length){add(false)}
+    }
+    FlowRow(modifier = Modifier.fillMaxWidth().padding(start = 20.dp)) {
+        chars.forEachIndexed { i,char->
+            val (checked, onCheckedChange) = remember { mutableStateOf(false) }
+            SelectCharItem(checked,char.toString(),surfaceSelectColor=surfaceSelectColor, surfaceUnselectColor = surfaceUnselectColor) {
+                booleanArray[i] = !checked
+                onCheckedChange(!checked)
+            }
+            if (i<chars.length - 1) {
+                Spacer(modifier = Modifier.width(20.dp))
+            }
+        }
+    }
+    return booleanArray
+}
+
+@Composable
+fun SelectCharItem(
+    selected: Boolean = false,
+    dir: String,
+    surfaceSize: Dp = 20.dp,
+    textSize: Float = 12f,
+    surfaceUnselectColor: Color = Color.Gray.copy(0.1f),
+    surfaceSelectColor: Color = IconGreen,
+    onClick: () -> Unit
+) {
+    Surface(color = if (selected) surfaceSelectColor else surfaceUnselectColor,
+        shape = RoundedCornerShape(0.dp),
+        modifier = Modifier
+            .size(surfaceSize)
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }) { onClick() }) {
+        BaseText(dir, fontSize = textSize.sp, textAlign = TextAlign.Center)
+    }
+}

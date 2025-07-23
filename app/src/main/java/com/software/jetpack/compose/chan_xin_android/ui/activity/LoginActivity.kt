@@ -674,6 +674,16 @@ fun AppTopBarBack(title:String = "",navController:NavHostController) {
     },backgroundColor = SurfaceColor)
 }
 @Composable
+fun AppTopBarBack(title:String = "",tint:Color = Color.Black,color:Color= SurfaceColor,onChange:()->Unit) {
+    TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = {
+        IconButton(onClick = onChange) {
+            Icon(Icons.Filled.Close, contentDescription = null, tint = tint)
+        }
+    }, actions ={
+
+    },backgroundColor = color)
+}
+@Composable
 fun IconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

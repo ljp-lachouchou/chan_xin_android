@@ -12,4 +12,5 @@ data class User(
 
 ) {
     constructor():this(phone = "",password = "")
+    constructor(nickname: String,avatar:String,sex:Byte):this("","","",avatar,nickname,sex,0)
 }

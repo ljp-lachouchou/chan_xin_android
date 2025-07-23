@@ -1,26 +1,37 @@
 package com.software.jetpack.compose.chan_xin_android.vm
 
+import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.LOGGER
+import com.google.gson.Gson
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
+import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
 import com.software.jetpack.compose.chan_xin_android.entity.User
+import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
 import com.software.jetpack.compose.chan_xin_android.http.service.ApiService
 import com.software.jetpack.compose.chan_xin_android.http.service.ApiService.FriendApplyResponse
 import com.software.jetpack.compose.chan_xin_android.http.service.HttpService
 import com.software.jetpack.compose.chan_xin_android.repo.SocialRepository
+import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.withContext
+import retrofit2.HttpException
 import javax.inject.Inject
 
 @HiltViewModel
 class SocialViewModel @Inject constructor(private val socialRepository:SocialRepository):ViewModel(){
-    private val _wantApplyFriend = MutableStateFlow(User())
+    private val _wantApplyFriend = MutableStateFlow(FriendApply())
     private val _friendList = MutableStateFlow(listOf<Friend>())
+    private val apiService = HttpService.getService()
     val friendList:StateFlow<List<Friend>>
         get() = _friendList
     val applyFriendList = socialRepository.currentApplyFriendListFlow.stateIn(
@@ -28,20 +39,94 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
-    val wantApplyFriend:StateFlow<User>
+    val handleFriendApplyList = socialRepository.currentHandleFriendApplyListFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+    val wantApplyFriend:StateFlow<FriendApply>
         get() = _wantApplyFriend
-    fun loadWantApplyFriend(user:User) {
+    fun loadWantApplyFriend(user:FriendApply) {
         _wantApplyFriend.value = user
     }
     suspend fun applyFriend(userId:String="2",targetId:String="1",greetMsg:String="1"): FriendApplyResponse? {
-        val apiService = HttpService.getService()
         val applyFriend =
             apiService.applyFriend(ApiService.FriendApplyRequest(userId, targetId, greetMsg))
         return applyFriend.data
     }
     suspend fun getFriendApplyList(uid:String):List<FriendApply> {
-        val apiService = HttpService.getService()
-        return apiService.getFriendApplyList(uid).data?.list ?: emptyList()
+        try {
+            return apiService.getFriendApplyList(uid).data?.list ?: emptyList()
+        } catch (e: Exception) {
+            return emptyList()
+        }
+    }
+    suspend fun getHandleFriendApplyList(tid:String):List<FriendApply> {
+        try {
+            return apiService.getHandleFriendApplyList(tid).data?.list ?: emptyList()
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    AppGlobal.getAppContext(),
+                    "网络可能有些问题",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            return emptyList()
+        }
+    }
+    suspend fun handleFriendApply(applicantId:String="1",targetId:String="1",isApproved:Boolean) {
+        try {
+            apiService.handleFriendApply(
+                ApiService.FriendApplyAction(
+                    applicantId,
+                    targetId,
+                    isApproved
+                )
+            )
+            withContext(Dispatchers.Main) {
+                Toast.makeText(AppGlobal.getAppContext(),"操作成功",Toast.LENGTH_SHORT).show()
+            }
+        }catch (e:HttpException) {
+            if (e.response()?.errorBody() != null) {
+                val body = e.response()?.errorBody()!!.string()
+                val obj = Gson().fromJson(body,ApiResult::class.java)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(AppGlobal.getAppContext(),obj.msg,Toast.LENGTH_SHORT).show()
+                }
+            }else {
+                Log.e("okhttp0","okhttp0")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(AppGlobal.getAppContext(),"网络有些问题",Toast.LENGTH_SHORT).show()
+                }
+            }
+        }catch (e:Exception){
+            Log.e("okhttp1",e.toString())
+            withContext(Dispatchers.Main) {
+                Toast.makeText(AppGlobal.getAppContext(),"网络有些问题",Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    suspend fun updateFriendStatus(userId: String,friendId:String,friendStatus: FriendStatus = FriendStatus(false,false,false,"")) {
+        try {
+            apiService.updateFriendStatus(ApiService.UpdateFriendStatus(userId,friendId,friendStatus))
+        }catch (e:Exception) {
+            Log.e("fuck_updateFriendStatus",e.toString())
+            withContext(Dispatchers.Main) {
+                Toast.makeText(AppGlobal.getAppContext(),"网络有些问题",Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    suspend fun getFriendList(uid:String="1"):List<Friend> {
+        try {
+            val apiResult = apiService.getFriendList(uid)
+            return apiResult.data?.list ?: emptyList()
+        }catch (e:Exception) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(AppGlobal.getAppContext(),"网络异常,获取好友列表失败",Toast.LENGTH_SHORT).show()
+            }
+            return emptyList()
+        }
     }
 
 

@@ -5,6 +5,13 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
+@Entity("friend_relation")
+data class FriendRelation(
+    @PrimaryKey(true) val id: Long,
+    @ColumnInfo("user_id") val userId: String,
+    @ColumnInfo("friend_id") val friendId: String,
+    val status: FriendStatus
+)
 
 data class Friend(
     @SerializedName("user_id") val userId: String,
@@ -19,7 +26,9 @@ data class FriendStatus(
     @SerializedName("is_topped") val isTopped: Boolean? = null,
     @SerializedName("is_blocked") val isBlocked: Boolean? = null,
     val remark: String? = null
-)
+){
+    constructor():this(false,false,false,"")
+}
 data class FriendStatusInfo(
     @SerializedName("is_muted") val isMuted: Boolean = false,
     @SerializedName("is_topped") val isTopped: Boolean= false,
@@ -41,4 +50,5 @@ data class FriendApply(
     val status: Int
 ){
     constructor():this(0,"","","","",0,"",0)
+    constructor(uid:String,nickname:String,avatar:String,sex:Int):this(0,uid,"",nickname,avatar,sex,"",0)
 }

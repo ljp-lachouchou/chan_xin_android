@@ -27,7 +27,15 @@ class SocialRepository @Inject constructor(private val socialDao: ISocialDao,pri
         Log.e("SocialRepository_uid",uid)
         socialDao.getApplyFriendList(uid)
     }.catch {
-        Log.e("fuck_SocialRepository_Error",it.message.toString())
+        Log.e("fuck_SocialRepository_Error_uid",it.message.toString())
+        flowOf<List<FriendApply>>(emptyList())
+    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val currentHandleFriendApplyListFlow = _currentUid.flatMapLatest { uid ->
+        Log.e("SocialRepository_tid", uid)
+        socialDao.getHandleApplyList(uid)
+    }.catch {
+        Log.e("fuck_SocialRepository_Error_i=tid", it.message.toString())
         flowOf<List<FriendApply>>(emptyList())
     }
     init {

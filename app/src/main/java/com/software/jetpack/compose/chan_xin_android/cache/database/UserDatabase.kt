@@ -3,15 +3,20 @@ package com.software.jetpack.compose.chan_xin_android.cache.database
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverter
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.software.jetpack.compose.chan_xin_android.cache.dao.ISocialDao
 import com.software.jetpack.compose.chan_xin_android.cache.dao.IUserDao
+import com.software.jetpack.compose.chan_xin_android.converter.FriendStatusConverter
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
+import com.software.jetpack.compose.chan_xin_android.entity.FriendRelation
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 internal const val DATABASE_NAME = "chan_xin.db"
-@Database(entities = [User::class,FriendApply::class], version = 4, exportSchema = true)
+@Database(entities = [User::class,FriendApply::class,FriendRelation::class], version = 5, exportSchema = true)
+@TypeConverters(FriendStatusConverter::class)
 abstract class UserDatabase:RoomDatabase() {
     abstract fun userDao():IUserDao
     abstract fun socialDao():ISocialDao
@@ -60,12 +65,24 @@ abstract class UserDatabase:RoomDatabase() {
 
                 }
             }
+            val migration4To5 = object : Migration(4,5) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `friend_relation` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `user_id` TEXT NOT NULL,
+                            `friend_id` TEXT NOT NULL,
+                            `status` TEXT NOT NULL
+                        )
+                    """.trimIndent())
 
+                }
+            }
             return Room.databaseBuilder(
                 context = AppGlobal.getAppContext(), klass = UserDatabase::
                 class.java, name = DATABASE_NAME
             )
-                .addMigrations(migration1To2,migration2To3,migration3To4)
+                .addMigrations(migration1To2,migration2To3,migration3To4,migration4To5)
                 .build()
         }
     }

@@ -1,7 +1,9 @@
 package com.software.jetpack.compose.chan_xin_android.http.service
 
 import com.google.gson.annotations.SerializedName
+import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
+import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
@@ -10,6 +12,7 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Query
 import java.util.UUID
 
@@ -29,7 +32,7 @@ interface ApiService {
 
     data class DataInfoWrapper<T>(val info:T)
     data class DataInfosWrapper<T>(val infos:List<T>)
-    data class DataListWrapper<T>(val list:List<FriendApply>)
+    data class DataListWrapper<T>(val list:List<T>)
     @GET("v1/user/userinfo")
     suspend fun userInfo(@Header("Authorization") authToken: String? = "",) : ApiResult<DataInfoWrapper<User>>
     @PATCH("v1/user/update")
@@ -44,10 +47,22 @@ interface ApiService {
         @SerializedName("apply_id") val applyId: String,
         @SerializedName("apply_time") val applyTime: Long
     )
+    class Empty()
     @POST("/v1/social/firend/applyFriend")
     suspend fun applyFriend(@Body friendApplyRequest: FriendApplyRequest):ApiResult<FriendApplyResponse>
     @GET("/v1/social/firend/getFriendApplyList")
     suspend fun getFriendApplyList(@Query("user_id") uid:String):ApiResult<DataListWrapper<FriendApply>>
+    @GET("/v1/social/firend/getHandleFriendApplyList")
+    suspend fun getHandleFriendApplyList(@Query("targetId") tid:String):ApiResult<DataListWrapper<FriendApply>>
+    data class FriendApplyAction(@SerializedName("applicant_id") val applicantId:String = "1",@SerializedName("target_id") val targetId:String = "1",@SerializedName("is_approved") val isApproved:Boolean)
+    @POST("/v1/social/firend/handleFriendApply")
+    suspend fun handleFriendApply(@Body friendApplyAction:FriendApplyAction)
+    data class UpdateFriendStatus(@SerializedName("user_id") val userId:String,@SerializedName("friend_id") val friendId:String,@SerializedName("status")val status:FriendStatus)
+    @PUT("/v1/social/firend/updateFriendStatus")
+    suspend fun updateFriendStatus(@Body updateFriendStatus:UpdateFriendStatus)
+
+    @GET("/v1/social/firend/getFriendList")
+    suspend fun getFriendList(@Query("user_id") userId:String = "1"):ApiResult<DataListWrapper<Friend>>
 
 
 }
