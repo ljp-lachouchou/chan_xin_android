@@ -428,7 +428,13 @@ fun InfoMainScreen(navController:NavHostController,user:User,thisNavController:N
                 .padding(padding)
                 .background(Color.Gray.copy(0.3f))) {
                 Column(modifier = Modifier.background(Color.White)){
-                    UserInfoScreenItem(label = "头像", onClick = {thisNavController.switchTab("avatar")})
+                    UserInfoScreenItem(label = "头像", onClick = {thisNavController.switchTab("avatar")}) {
+                        AsyncImage(model = ImageRequest.Builder(context = LocalContext.current).data(if (user.avatar == "") R.drawable.default_avatar else user.avatar).build(),contentDescription = null, modifier = Modifier
+                            .size(30.dp)
+                            .clip(
+                                RoundedCornerShape(DefaultRoundCircleShapeDp / 2)
+                            ), contentScale = ContentScale.Crop)
+                    }
                     UserInfoScreenItem(label = "昵称", onClick = {
                         thisNavController.switchTab("nickname")
                     }) {
@@ -457,16 +463,6 @@ fun InfoMainScreen(navController:NavHostController,user:User,thisNavController:N
                         BaseText(user.id)
                     }
                 }
-
-                AsyncImage(model = ImageRequest.Builder(context = LocalContext.current).data(if (user.avatar == "") R.drawable.default_avatar else user.avatar).build(),contentDescription = null, modifier = Modifier
-                    .size(30.dp)
-                    .align(
-                        Alignment.TopEnd
-                    )
-                    .offset(width * -0.043f, height * 0.007f)
-                    .clip(
-                        RoundedCornerShape(DefaultRoundCircleShapeDp / 2)
-                    ), contentScale = ContentScale.Crop,)
 
             }
         }
@@ -616,7 +612,7 @@ fun UserScreenItem(imageVector: ImageVector, label:String,tintColor:Color = Icon
     }
 }
 @Composable
-fun UserInfoScreenItem(label:String,onClick:()->Unit,content:@Composable ()->Unit = {}) {
+fun UserInfoScreenItem(label:String,onClick:()->Unit,heightDp: Dp  = DefaultUserScreenItemDp,content:@Composable ()->Unit = {}) {
     Box(modifier = Modifier
         .background(Color.White)
         .clickable {
@@ -624,8 +620,7 @@ fun UserInfoScreenItem(label:String,onClick:()->Unit,content:@Composable ()->Uni
         }) {
         Row(modifier = Modifier
             .fillMaxWidth()
-            .height(DefaultUserScreenItemDp)
-            .padding(DefaultUserPadding)) {
+            .height(heightDp), verticalAlignment = Alignment.CenterVertically) {
             Spacer(modifier = Modifier.width(DefaultUserPadding))
             BaseText(text = label, fontSize = DefaultFontSize)
             Spacer(modifier = Modifier.weight(1f))

@@ -16,6 +16,7 @@ import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -59,6 +60,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.RadioButton
@@ -626,11 +628,13 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel = 
         Scaffold(topBar = {
             TopBarWithBack(navController, action = { Icon(Icons.Filled.Menu,contentDescription = null, tint = Color.Black) })
         }) {
-            Box(modifier = Modifier
+            BaseBox(modifier = Modifier
                 .fillMaxSize()
-                .padding(DefaultUserPadding)) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.padding(horizontal = DefaultUserPadding)) {
+                ) {
+                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(modifier = Modifier
+                        .padding(DefaultUserPadding)
+                        .padding(horizontal = DefaultUserPadding)) {
                         AsyncImage(
                             model = ImageRequest.Builder(AppGlobal.getAppContext())
                                 .data(friend.displayAvatar).build(),
@@ -639,7 +643,10 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel = 
                                 .size(60.dp)
                                 .clip(
                                     RoundedCornerShape(5.dp)
-                                ).clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                                )
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }) {
                                     isSelected = true
                                 },
                             contentScale = ContentScale.Crop
@@ -647,13 +654,70 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel = 
                         Spacer(modifier = Modifier.width(15.dp))
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                BaseText(friend.friendStatus.remark?:"", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                Wrapper {
+                                    BaseText(friend.friendStatus.remark?:"", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                }
                                 Spacer(modifier = Modifier.width(5.dp))
-                                Icon(painterResource(sexPainter),contentDescription = null, modifier = Modifier.size(15.dp))
+                                Wrapper {
+                                    Image(painterResource(sexPainter),contentDescription = null, modifier = Modifier.size(15.dp))
+                                }
                             }
                             BaseText("昵称: ${friend.nickname}", color = PlaceholderColor, fontSize = 12.sp)
                             BaseText("禅信号: ${friend.userId}", color = PlaceholderColor, fontSize = 12.sp)
                         }
+                    }
+                    Spacer(modifier = Modifier.height(DefaultUserPadding*2))
+                    HorizontalDivider(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(DefaultUserPadding), thickness = 0.3.dp, color = DividerColor)
+                   UserInfoScreenItem("朋友资料", onClick = {
+                       //todo:朋友资料详情
+                   })
+                    Spacer(modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .background(color = SurfaceColor))
+                    UserInfoScreenItem("朋友圈", onClick = {
+                        //进入个人朋友圈
+                    }, heightDp = DefaultUserScreenItemDp*1.5f)
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                        .height(
+                            DefaultUserScreenItemDp
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { }) {
+                        Icon(
+                            painterResource(R.drawable.chan_xin),
+                            contentDescription = null,
+                            tint = LittleTextColor,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        BaseText("发消息", color = LittleTextColor)
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        thickness = 0.3.dp,
+                        color = DividerColor
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                        .height(
+                            DefaultUserScreenItemDp
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { }) {
+                        Icon(
+                            Icons.Outlined.Call,
+                            contentDescription = null,
+                            tint = LittleTextColor,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        BaseText("音视频通话", color = LittleTextColor)
                     }
                 }
             }
