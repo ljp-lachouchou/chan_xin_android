@@ -69,6 +69,7 @@ import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyListScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyVerifyScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SearchFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SettingScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoInFriendBySearchScreen
@@ -133,7 +134,8 @@ enum class MainActivityRouteEnum(val route: String) {
     HANDLE_FRIEND_APPLY_LIST("handle_friend_apply_list"),
     APPLY_FRIEND_INFO("apply_friend_info"),
     HANDLE_FRIEND_APPLY_INFO("handle_friend_apply_info"),
-    HANDLE_FRIEND_APPLY_VERIFY("handle_friend_apply_verify")
+    HANDLE_FRIEND_APPLY_VERIFY("handle_friend_apply_verify"),
+    MAIN_FRIEND_INFO("main_friend_info")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -148,12 +150,12 @@ fun MainActivityScreen() {
         Log.e("countc",UserDatabase.getInstance().socialDao().getFriendApplyCount().toString())
     }
     NavHost(navController = rootNavController, startDestination = MainActivityRouteEnum.PARENT.route) {
-        composable(MainActivityRouteEnum.PARENT.route) { MainScreen(rootNavController) }
+        composable(MainActivityRouteEnum.PARENT.route) { MainScreen(rootNavController,svm) }
 
         composable(MainActivityRouteEnum.ABOUT_IN_USER.route) { AboutChanXinScreen(rootNavController) }
         composable(MainActivityRouteEnum.USER_INFO_IN_USER.route) {UserInfoScreen(navController = rootNavController,user=user)}
         composable(MainActivityRouteEnum.SETTING_IN_USER.route) {SettingScreen(navController = rootNavController)}
-
+        composable(MainActivityRouteEnum.MAIN_FRIEND_INFO.route) {MainFriendInfoScreen(rootNavController,svm)}
         composable(MainActivityRouteEnum.FIND_USER_IN_FRIEND.route) { SearchFriendScreen(rootNavController,svm=svm) }
         composable(MainActivityRouteEnum.USER_INFO_IN_FRIEND_BY_SEARCH.route) { UserInfoInFriendBySearchScreen(rootNavController,svm=svm) }
         composable(MainActivityRouteEnum.APPLY_FRIEND_LIST.route) { ApplyFriendScreen(rootNavController,svm=svm) }
@@ -173,7 +175,7 @@ fun MainActivityScreen() {
 }
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MainScreen(rootController:NavHostController) {
+fun MainScreen(rootController:NavHostController,svm:SocialViewModel) {
     val mainController = rememberNavController()
     val screenCache = remember { mutableMapOf<String,@Composable () -> Unit>() }
     Scaffold(bottomBar = { BottomNavBar(mainController) }) { padding->
@@ -195,7 +197,7 @@ fun MainScreen(rootController:NavHostController) {
                 val friendScreen = screenCache.getOrPut(TabEnum.SOCIAL.route) {
                     {
                         FriendScreen(
-                            navController = rootController
+                            navController = rootController,svm=svm
                         )
                     }
                 }

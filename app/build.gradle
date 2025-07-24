@@ -109,5 +109,8 @@ dependencies {
     // Room 对 Kotlin 协程的支持
     implementation libs.androidx.room.ktx
 
+    implementation("androidx.compose.runtime:runtime-tracing:1.0.0-alpha03")
+
+
 
 }

@@ -1,10 +1,13 @@
 package com.software.jetpack.compose.chan_xin_android.entity
 
+import androidx.compose.runtime.Stable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
+import com.software.jetpack.compose.chan_xin_android.R
+
 @Entity("friend_relation")
 data class FriendRelation(
     @PrimaryKey(true) val id: Long,
@@ -12,14 +15,21 @@ data class FriendRelation(
     @ColumnInfo("friend_id") val friendId: String,
     val status: FriendStatus
 )
-
+@Stable
 data class Friend(
-    @SerializedName("user_id") val userId: String,
-    val nickname: String,
-    @SerializedName("avatar_url") val avatarUrl: String,
-    val gender: UInt,
-    @SerializedName("status") val friendStatusInfo: FriendStatusInfo = FriendStatusInfo()
-)
+    @SerializedName("user_id") val userId: String="",
+    val nickname: String="",
+    @SerializedName("avatar_url") val avatarUrl: String="",
+    val gender: Int=0,
+    @SerializedName("status") val friendStatus: FriendStatus = FriendStatus()
+) {
+    val displayName: String
+        get() = friendStatus.remark?.ifEmpty { nickname } ?: ""
+
+    // 预计算头像资源（优先用网络URL，无则用默认图）
+    val displayAvatar: Any // Any 可兼容 String（URL）和 Int（资源ID）
+        get() = avatarUrl.ifEmpty { R.drawable.default_avatar }
+}
 
 data class FriendStatus(
     @SerializedName("is_muted") val isMuted: Boolean? = null,
@@ -29,6 +39,7 @@ data class FriendStatus(
 ){
     constructor():this(false,false,false,"")
 }
+@Stable
 data class FriendStatusInfo(
     @SerializedName("is_muted") val isMuted: Boolean = false,
     @SerializedName("is_topped") val isTopped: Boolean= false,

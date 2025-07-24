@@ -41,6 +41,11 @@ class UserViewmodel @Inject constructor(private val userRepository: UserReposito
         initialValue = User(),
         started = SharingStarted.WhileSubscribed(5000)
     )
+    init {
+        viewModelScope.launch {
+            userRepository.setPhone(AppGlobal.getUserPhone())
+        }
+    }
     var pagedUsers: Flow<PagingData<User>>? = null
     suspend fun login(phone:String,password:String):Boolean {
         if (phone == "" || password == "") {
@@ -98,14 +103,12 @@ class UserViewmodel @Inject constructor(private val userRepository: UserReposito
     }
     suspend fun register(nickname: String, sex: Byte, phone: String, password: String, uri: Uri?):Boolean {
         val apiService = HttpService.getService()
-
-
         if (!TextUtils.isEmpty(StringUtil.validatePassword(password))) {
             Toast.makeText(AppGlobal.getAppContext(), StringUtil.validatePassword(password), Toast.LENGTH_SHORT).show()
             return false
         }
-        val avatar = Oss.uploadFile(
-            System.currentTimeMillis().toString()+"."+ StringUtil.getFileExtensionFromUri(AppGlobal.getAppContext(),uri),uri)
+        val avatar = uri?.run { Oss.uploadFile(
+            System.currentTimeMillis().toString()+"."+ StringUtil.getFileExtensionFromUri(AppGlobal.getAppContext(),this),this) } ?: ""
         Log.e("registerResp",avatar)
         val registerResp =
             apiService.register(ApiService.RegisterReq(phone, password, nickname, sex, avatar.trim()))

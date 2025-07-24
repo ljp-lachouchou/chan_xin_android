@@ -15,6 +15,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -23,6 +24,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -36,6 +38,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -54,6 +57,7 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.HorizontalDivider
@@ -80,8 +84,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.focusRequester
@@ -96,7 +99,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -106,14 +108,11 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withAnnotation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.text.buildSpannedString
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -122,6 +121,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.CachePolicy.*
 import coil.request.ImageRequest
 import com.google.gson.Gson
 import com.software.jetpack.compose.chan_xin_android.R
@@ -130,9 +131,12 @@ import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultPadding
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultPaddingTop
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPadding
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
+import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
+import com.software.jetpack.compose.chan_xin_android.entity.FriendRelation
 import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
 import com.software.jetpack.compose.chan_xin_android.entity.User
+import com.software.jetpack.compose.chan_xin_android.ext.getGroupByFirstLetter
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
 import com.software.jetpack.compose.chan_xin_android.ui.activity.AppTopBar
@@ -143,11 +147,9 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.BaseButton
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseScreenItem
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.base.CanLookImage
-import com.software.jetpack.compose.chan_xin_android.ui.base.LittleText
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
 import com.software.jetpack.compose.chan_xin_android.ui.base.RefreshLazyColumn
 import com.software.jetpack.compose.chan_xin_android.ui.base.selectCharRows
-import com.software.jetpack.compose.chan_xin_android.ui.theme.ChatGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.LittleTextColor
@@ -155,19 +157,18 @@ import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.TextColor
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
+import com.software.jetpack.compose.chan_xin_android.util.PinAYinUtil
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
 import com.software.jetpack.compose.chan_xin_android.util.VibratorHelper
 import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
-import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel_HiltModules
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.internal.wait
 import retrofit2.HttpException
-import java.time.format.TextStyle
+import java.util.UUID
 import kotlin.math.roundToInt
 enum class FriendScreenRouteEnum(val route:String) {
     PARENT("parent")
@@ -183,10 +184,14 @@ fun FriendScreen(navController:NavHostController, uvm:UserViewmodel= hiltViewMod
     }
     val thisNavController = rememberNavController()
     NavHost(navController = thisNavController, startDestination = FriendScreenRouteEnum.PARENT.route) {
-        composable(FriendScreenRouteEnum.PARENT.route) {MainFriendScreen(navController,thisNavController, uvm = uvm, svm = svm)}
+        composable(FriendScreenRouteEnum.PARENT.route) {MainFriendScreen(
+            navController,
+            uvm = uvm,
+            svm = svm
+        )}
     }
-
 }
+//申请好友详情
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter", "StateFlowValueCalledInComposition")
 @Composable
 fun ApplyFriendInfoScreen(navController: NavHostController,svm:SocialViewModel= hiltViewModel()) {
@@ -252,6 +257,7 @@ fun ApplyFriendInfoScreen(navController: NavHostController,svm:SocialViewModel= 
         }
     }
 }
+//添加好友查询进入详情页
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter", "StateFlowValueCalledInComposition")
 @Composable
 fun UserInfoInFriendBySearchScreen(navController: NavHostController, uvm: UserViewmodel= hiltViewModel(), svm:SocialViewModel= hiltViewModel()) {
@@ -429,6 +435,7 @@ fun SearchFriendScreen(navController: NavHostController, uvm:UserViewmodel = hil
 
     }
 }
+//添加好友首页
 @Composable
 fun SearchScreenFirstScreen(isPadding:Boolean = true,onClick: () -> Unit) {
     Column {
@@ -603,12 +610,99 @@ suspend fun findUser(findModel: Int, uvm: UserViewmodel, find: String) {
         return
     }
 }
-
+//好友详情页
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+@Composable
+fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel = hiltViewModel()) {
+    val friend by svm.clickFriend.collectAsState()
+    var isSelected by remember { mutableStateOf(false) }
+    val sexPainter = when(friend.gender) {
+        0->R.drawable.unknow
+        1->R.drawable.man
+        2->R.drawable.woman
+        else->R.drawable.unknow
+    }
+    CanLookImage(data = friend.displayAvatar, isSelected = isSelected, onChange = {isSelected = false}) {
+        Scaffold(topBar = {
+            TopBarWithBack(navController, action = { Icon(Icons.Filled.Menu,contentDescription = null, tint = Color.Black) })
+        }) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(DefaultUserPadding)) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.padding(horizontal = DefaultUserPadding)) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(AppGlobal.getAppContext())
+                                .data(friend.displayAvatar).build(),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clip(
+                                    RoundedCornerShape(5.dp)
+                                ).clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                                    isSelected = true
+                                },
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.width(15.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                BaseText(friend.friendStatus.remark?:"", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Icon(painterResource(sexPainter),contentDescription = null, modifier = Modifier.size(15.dp))
+                            }
+                            BaseText("昵称: ${friend.nickname}", color = PlaceholderColor, fontSize = 12.sp)
+                            BaseText("禅信号: ${friend.userId}", color = PlaceholderColor, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+//好友首页
+@OptIn(ExperimentalFoundationApi::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostController,uvm: UserViewmodel,svm:SocialViewModel) {
-    data class MainFriendScreenState(val isFocus: Boolean = false,val findModel: Int = 0,val find:String = "")
-    var screenState by remember { mutableStateOf(MainFriendScreenState()) }
+fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: SocialViewModel) {
+    var isFocus by remember { mutableStateOf(false) }
+    var findModel by remember { mutableIntStateOf(0) }
+    var find by remember { mutableStateOf("") }
+    var friendList by remember { mutableStateOf(emptyList<Friend>()) }
+    var isLoading by remember { mutableStateOf(false) }
+    val user by uvm.myUser.collectAsState()
+    val listState = rememberLazyListState()
+    var groupedFriends by remember { mutableStateOf(emptyList<Pair<String, List<Friend>>>()) }
+    var showSidebar by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val listCache by svm.friendCacheList.collectAsState()
+    LaunchedEffect(user.id) {
+        if (user.id != "") {
+            withContext(Dispatchers.IO) {
+                val originalList:List<Friend> = if (AppGlobal.isNetworkValid()) {
+                    svm.getFriendList(user.id)
+                }else {
+                    listCache
+                }
+                isLoading = true
+                friendList = originalList
+                withContext(Dispatchers.Default) {
+                    val groups = originalList.groupBy {
+                        if (it.friendStatus.remark!!.isEmpty())
+                            it.nickname.getGroupByFirstLetter()
+                        else
+                            it.friendStatus.remark!!.getGroupByFirstLetter()
+                    }.toList().sortedWith(compareBy(groupComparator) { it.first })
+                    withContext(Dispatchers.Main) {
+                        groupedFriends = groups
+                        isLoading = false
+                        showSidebar = true
+                    }
+                }
+            }
+
+        }
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(topBar = {
                 AppTopBar(title = "朋友", navigationIcon = null, actions = {
@@ -626,56 +720,111 @@ fun MainFriendScreen(navController: NavHostController,thisNavController:NavHostC
                             })
                 })
             }) { padding ->
-            BaseBox {
-                LazyColumn(modifier = Modifier.padding(padding)) {
-                    item {
-                        Wrapper {
-                            AnimatedVisibility(visible = screenState.isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
-                                uvm.pagedUsers = null
-                                SearchFriendFieldScreen(svm = svm, navController=navController,
-                                    isFocus = screenState.isFocus,
-                                    uvm = uvm,
-                                    findModel = screenState.findModel,
-                                    find = screenState.find,
-                                    onValueChange = { screenState = screenState.copy(find = it) },
-                                    findModelChange = { screenState = screenState.copy(findModel = it) },
-                                    onFindEvent = { findModel, uvm,svm, find ->
-
-                                    }) { screenState = screenState.copy(isFocus = false) }
-                            }
-                        }
-                        Wrapper {
-                            AnimatedVisibility(visible = !screenState.isFocus, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
-                                SearchScreenFirstScreen(isPadding = false) { screenState = screenState.copy(isFocus = true) }
-                            }
+            LazyColumn(modifier = Modifier.padding(padding), state = listState) {
+                item(key="search_bar") {
+                    Wrapper {
+                        if (isFocus) {
+                            uvm.pagedUsers = null
+                            SearchFriendFieldScreen(svm = svm, navController=navController,
+                                isFocus = isFocus,
+                                uvm = uvm,
+                                findModel = findModel,
+                                find = find,
+                                onValueChange = { find = it },
+                                findModelChange = { findModel = it },
+                                onFindEvent = { findModel, uvm,svm, find ->
+                                    //todo:查找事件
+                                }) { isFocus = false }
                         }
                     }
-                    item {
-                        FriendScreenItem(data = R.drawable.handle_apply, onClick = {navController.switchTab(MainActivityRouteEnum.APPLY_FRIEND_LIST.route)}) {
-                            //TODO:我请求添加的好友
-                            BaseText("请求列表")
-                        }
-                    }
-                    item {
-                        FriendScreenItem(data = R.drawable.handle_apply, onClick = {
-                            navController.switchTab(MainActivityRouteEnum.HANDLE_FRIEND_APPLY_LIST.route)
-                        }) {
-                            //TODO:别人请求添加我的
-                            BaseText("新的朋友")
+                    Wrapper {
+                        if (!isFocus) {
+                            SearchScreenFirstScreen(isPadding = false) { isFocus = true }
                         }
                     }
                 }
+                item(key = "handle_apply") {
+                    FriendScreenItem(data = R.drawable.handle_apply, onClick = {navController.switchTab(MainActivityRouteEnum.APPLY_FRIEND_LIST.route)}) {
+                        //TODO:我请求添加的好友
+                        BaseText("请求列表")
+                    }
+                }
+                item(key="new_friend") {
+                    FriendScreenItem(data = R.drawable.new_friend, onClick = {
+                        navController.switchTab(MainActivityRouteEnum.HANDLE_FRIEND_APPLY_LIST.route)
+                    }) {
+                        //TODO:别人请求添加我的
+                        BaseText("新的朋友")
+                    }
+                }
+                groupedFriends.forEach{(k,v)->
+                    stickyHeader(key = "header_$k") {
+                        BaseText(color = PlaceholderColor,text=k, modifier = Modifier
+                            .fillMaxWidth()
+                            .background(color = SurfaceColor)
+                            .padding(
+                                DefaultUserPadding
+                            ))
+                    }
+                    itemsIndexed(v,key = {_,item->item.userId}) {_,friend->
+                        FriendScreenItem(friend.displayAvatar, onClick = {
+                            //todo:朋友个人信息查询
+                            svm.loadClickFriend(friend)
+                            navController.switchTab(MainActivityRouteEnum.MAIN_FRIEND_INFO.route)
+                        }) {
+                            BaseText(friend.displayName)
+                        }
+                    }
+                    item(key = "group_divider_$k") {
+                        HorizontalDivider(modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal =
+                                DefaultUserPadding
+                            ), color = PlaceholderColor, thickness = 0.1.dp)
+                    }
+                }
+                item {
+                    Text(
+                        text = "${friendList.size}个朋友",
+                        color = PlaceholderColor, // 醒目颜色
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
-        ContactSideBar(
-            modifier = Modifier
+        if (showSidebar) {
+            ContactSideBar(modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = 15.dp)
-        ) { selectedIndex ->
+                .padding(end = 15.dp)){ selectedIndex ->
+                var targetPosition = 0
+                val offsetItemCount = 3
+                val targetGroupIndex = groupedFriends.indexOfFirst { group ->
+                    if(selectedIndex==26) {
+                        group.first.uppercase()=="#"
+                    }else {
+                        group.first.uppercase() == ('A'+selectedIndex).toString().uppercase()
+                    }
+                }
+                if (targetGroupIndex != -1) {
+                    for (i in 0 until targetGroupIndex) {
+                        val (_,friend) = groupedFriends[i]
+                        targetPosition+=friend.size+1+1
+                    }
+                    scope.launch { listState.animateScrollToItem(index = targetPosition+offsetItemCount) }
+                }
 
+            }
+        }
+        Wrapper(modifier = Modifier.fillMaxSize()) {
+            LoadingDialog(isLoading)
         }
     }
 }
+val groupComparator = compareBy<String> {it == "#"}.thenBy { it }
 @SuppressLint(
     "UnusedMaterialScaffoldPaddingParameter", "CoroutineCreationDuringComposition"
 )
@@ -928,6 +1077,7 @@ fun HandleFriendApplyInfoScreen(navController: NavHostController,svm:SocialViewM
         }
     }
 }
+//验证好友
 @OptIn(ExperimentalTextApi::class)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
@@ -945,6 +1095,9 @@ fun HandleFriendApplyVerifyScreen(navController: NavHostController, uvm: UserVie
                isLoading = true
                svm.handleFriendApply(wantApplyFriend.userId,user.id,true)
                svm.updateFriendStatus(user.id,wantApplyFriend.userId, friendStatus = FriendStatus(false,false,false,remark))
+               UserDatabase.getInstance().socialDao().saveFriendRelation(listOf(FriendRelation(0,user.id,wantApplyFriend.userId,
+                   FriendStatus(false,false,false,remark)),FriendRelation(0,wantApplyFriend.userId,user.id,
+                   FriendStatus())))
                delay(300)
                isLoading = false
                withContext(Dispatchers.Main) {
@@ -1083,7 +1236,10 @@ fun FriendScreenItem( data: Any, onClick: () -> Unit,tailContent:@Composable ()-
     BaseScreenItem(preContent = {
         AsyncImage(
             model = ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),
-            contentDescription = null, modifier = Modifier.size(40.dp), contentScale = ContentScale.Crop
+            contentDescription = null, modifier = Modifier
+                .size(35.dp)
+                .clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop,
+            placeholder = painterResource(R.drawable.default_avatar)
         )
     }, onClick = onClick, tailContent = tailContent) {
         content()
@@ -1110,7 +1266,7 @@ fun Modifier.clickableWithPosition(
 @Composable
 fun ContactSideBar(
     modifier: Modifier = Modifier,
-    letters: List<String> = ('A'..'Z').map { it.toString() },
+    letters: List<String> = ('A'..'Z').map { it.toString() }.toMutableList().apply { add("#") }.toList(),
     topPadding: Dp = DefaultPaddingTop*2,
     itemCircleSize: Float = 12.5f,
     spacerSize: Float = 1.5f,
@@ -1118,11 +1274,11 @@ fun ContactSideBar(
     selectColor: Color = IconGreen,
     commonTextColor: Color = Color.Black,
     selectTextColor: Color = Color.White,
-    vibratorHelper: VibratorHelper = VibratorHelper(AppGlobal.getAppContext()), // 假设这是一个振动帮助类aa，
+    vibratorHelper: VibratorHelper = VibratorHelper(AppGlobal.getAppContext()),
     friendListEvent: (Int) -> Unit
 ) {
     Log.e("SideBarState","SideBarState")
-    // 使用Stable接口确保数据类稳定
+
     @Stable
     data class SideBarState(
         val selectedIndex: Int = -1,
@@ -1134,7 +1290,7 @@ fun ContactSideBar(
         mutableStateOf(SideBarState())
     }
 
-    // 使用derivedStateOf缓存计算结果
+
     val componentPositions = remember { mutableMapOf<Int, Offset>() }
     var sideHeight by remember { mutableFloatStateOf(0f) }
 
@@ -1182,16 +1338,16 @@ fun ContactSideBar(
 
                                     if (sideBarState.selectedIndex != index) {
                                         vibratorHelper.vibrate()
-                                        sideBarState = sideBarState.copy(
-                                            selectedIndex = index,
-                                            animationState = "showing",
-                                            clickCount = sideBarState.clickCount + 1,
-                                            touchY = newTouchY
-                                        )
-                                        friendListEvent(index)
                                     } else if (sideBarState.touchY != newTouchY) {
                                         sideBarState = sideBarState.copy(touchY = newTouchY)
                                     }
+                                    sideBarState = sideBarState.copy(
+                                        selectedIndex = index,
+                                        animationState = "showing",
+                                        clickCount = sideBarState.clickCount + 1,
+                                        touchY = newTouchY
+                                    )
+                                    friendListEvent(index)
                                 }
                                 true
                             }

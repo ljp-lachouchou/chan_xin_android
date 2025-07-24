@@ -33,6 +33,7 @@ interface ApiService {
     data class DataInfoWrapper<T>(val info:T)
     data class DataInfosWrapper<T>(val infos:List<T>)
     data class DataListWrapper<T>(val list:List<T>)
+    data class DataFriendListWrapper<T>(@SerializedName("friend_list") val list:List<T>)
     @GET("v1/user/userinfo")
     suspend fun userInfo(@Header("Authorization") authToken: String? = "",) : ApiResult<DataInfoWrapper<User>>
     @PATCH("v1/user/update")
@@ -62,7 +63,7 @@ interface ApiService {
     suspend fun updateFriendStatus(@Body updateFriendStatus:UpdateFriendStatus)
 
     @GET("/v1/social/firend/getFriendList")
-    suspend fun getFriendList(@Query("user_id") userId:String = "1"):ApiResult<DataListWrapper<Friend>>
+    suspend fun getFriendList(@Query("user_id") userId:String = "1"):ApiResult<DataFriendListWrapper<Friend>>
 
 
 }

@@ -10,13 +10,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.software.jetpack.compose.chan_xin_android.cache.dao.ISocialDao
 import com.software.jetpack.compose.chan_xin_android.cache.dao.IUserDao
 import com.software.jetpack.compose.chan_xin_android.converter.FriendStatusConverter
+import com.software.jetpack.compose.chan_xin_android.converter.FriendStatusInfoConverter
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendRelation
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 internal const val DATABASE_NAME = "chan_xin.db"
 @Database(entities = [User::class,FriendApply::class,FriendRelation::class], version = 5, exportSchema = true)
-@TypeConverters(FriendStatusConverter::class)
+@TypeConverters(FriendStatusConverter::class, FriendStatusInfoConverter::class)
 abstract class UserDatabase:RoomDatabase() {
     abstract fun userDao():IUserDao
     abstract fun socialDao():ISocialDao

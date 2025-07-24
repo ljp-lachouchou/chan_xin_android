@@ -30,10 +30,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SocialViewModel @Inject constructor(private val socialRepository:SocialRepository):ViewModel(){
     private val _wantApplyFriend = MutableStateFlow(FriendApply())
-    private val _friendList = MutableStateFlow(listOf<Friend>())
+    private val _clickFriend = MutableStateFlow(Friend())
     private val apiService = HttpService.getService()
-    val friendList:StateFlow<List<Friend>>
-        get() = _friendList
     val applyFriendList = socialRepository.currentApplyFriendListFlow.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -44,10 +42,20 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+    val friendCacheList = socialRepository.currentFriendListFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
     val wantApplyFriend:StateFlow<FriendApply>
         get() = _wantApplyFriend
+    val clickFriend:StateFlow<Friend>
+        get() = _clickFriend
     fun loadWantApplyFriend(user:FriendApply) {
         _wantApplyFriend.value = user
+    }
+    fun loadClickFriend(friend:Friend) {
+        _clickFriend.value = friend
     }
     suspend fun applyFriend(userId:String="2",targetId:String="1",greetMsg:String="1"): FriendApplyResponse? {
         val applyFriend =
@@ -75,6 +83,7 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
             return emptyList()
         }
     }
+
     suspend fun handleFriendApply(applicantId:String="1",targetId:String="1",isApproved:Boolean) {
         try {
             apiService.handleFriendApply(
@@ -120,6 +129,7 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
     suspend fun getFriendList(uid:String="1"):List<Friend> {
         try {
             val apiResult = apiService.getFriendList(uid)
+            Log.e("apiResult.data?.list",apiResult.data?.list.toString())
             return apiResult.data?.list ?: emptyList()
         }catch (e:Exception) {
             withContext(Dispatchers.Main) {

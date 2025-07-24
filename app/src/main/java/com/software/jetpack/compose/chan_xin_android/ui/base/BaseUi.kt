@@ -702,7 +702,6 @@ fun CanLookImage(data:Any,isSelected:Boolean = false,onChange:()->Unit,content:@
                 }
             }
         }
-
     }
 }
 

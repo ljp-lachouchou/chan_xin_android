@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.lifecycleScope
+import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.lifecycle.MainActivityObserver
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityScreen
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseActivity
@@ -30,7 +31,6 @@ class MainActivity : BaseActivity(),OnBackPressedDispatcherOwner{
         Log.w(TAG, "WARN: onCreate called");
         Log.e(TAG, "ERROR: onCreate called");
         lifecycleScope.launch(Dispatchers.IO) {
-//            UserDatabase.getInstance().socialDao().deleteAll()
             withContext(Dispatchers.Main) {
                 setContent {
                     //拦截返回手势
