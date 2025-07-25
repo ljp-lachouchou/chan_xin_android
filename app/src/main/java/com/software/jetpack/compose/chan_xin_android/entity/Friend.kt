@@ -29,6 +29,13 @@ data class Friend(
     // 预计算头像资源（优先用网络URL，无则用默认图）
     val displayAvatar: Any // Any 可兼容 String（URL）和 Int（资源ID）
         get() = avatarUrl.ifEmpty { R.drawable.default_avatar }
+
+    override fun equals(other: Any?): Boolean {
+        if (other==null) return false
+        if (other !is Friend) return false
+        if (other.userId==userId) return true
+        return false
+    }
 }
 
 data class FriendStatus(

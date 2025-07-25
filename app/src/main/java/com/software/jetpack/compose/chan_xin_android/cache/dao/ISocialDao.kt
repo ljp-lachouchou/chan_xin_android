@@ -19,6 +19,8 @@ interface ISocialDao {
     suspend fun getApplyFriendList2(uid:String):List<FriendApply>
     @Query("DELETE FROM friend_apply")
     suspend fun deleteAll()
+    @Query("DELETE FROM friend_relation WHERE user_id=:userId and friend_id=:friendId")
+    suspend fun deleteOne(userId:String,friendId:String)
     @Query("SELECT * FROM friend_apply")
     suspend fun getAllFriendApplyList():List<FriendApply>
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -30,6 +32,8 @@ interface ISocialDao {
     suspend fun saveFriendRelation(list:List<FriendRelation>):List<Long>
     @Query("SELECT COUNT(1) FROM friend_relation")
     suspend fun getFriendRelationCount():Int
+    @Query("DELETE FROM friend_relation")
+    suspend fun deleteAllFriendRelation()
     @Query("SELECT * FROM friend_relation")
     suspend fun getAllFriendRelationList():List<FriendRelation>
     @Query(

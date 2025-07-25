@@ -10,6 +10,8 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.lifecycleScope
 import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
+import com.software.jetpack.compose.chan_xin_android.entity.FriendRelation
+import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
 import com.software.jetpack.compose.chan_xin_android.lifecycle.MainActivityObserver
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityScreen
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseActivity

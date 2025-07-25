@@ -30,7 +30,9 @@ import javax.inject.Inject
 @HiltViewModel
 class SocialViewModel @Inject constructor(private val socialRepository:SocialRepository):ViewModel(){
     private val _wantApplyFriend = MutableStateFlow(FriendApply())
+    private val _currentFriendList = MutableStateFlow<List<Friend>>(emptyList())
     private val _clickFriend = MutableStateFlow(Friend())
+    private val _currentGroup = MutableStateFlow<List<Pair<String, List<Friend>>>>(emptyList())
     private val apiService = HttpService.getService()
     val applyFriendList = socialRepository.currentApplyFriendListFlow.stateIn(
         scope = viewModelScope,
@@ -47,8 +49,12 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+    val currentGroup: StateFlow<List<Pair<String, List<Friend>>>>
+        get() = _currentGroup
     val wantApplyFriend:StateFlow<FriendApply>
         get() = _wantApplyFriend
+    val currentFriendList:StateFlow<List<Friend>>
+        get() = _currentFriendList
     val clickFriend:StateFlow<Friend>
         get() = _clickFriend
     fun loadWantApplyFriend(user:FriendApply) {
@@ -56,6 +62,12 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
     }
     fun loadClickFriend(friend:Friend) {
         _clickFriend.value = friend
+    }
+    fun loadCurrentGroup(group:List<Pair<String, List<Friend>>>) {
+        _currentGroup.value = group
+    }
+    fun loadCurrentFriendList(list:List<Friend>) {
+        _currentFriendList.value = list
     }
     suspend fun applyFriend(userId:String="2",targetId:String="1",greetMsg:String="1"): FriendApplyResponse? {
         val applyFriend =

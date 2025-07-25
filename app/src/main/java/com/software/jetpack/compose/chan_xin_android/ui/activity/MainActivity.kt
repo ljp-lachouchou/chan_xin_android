@@ -70,6 +70,7 @@ import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApp
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyListScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyVerifyScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendInfoScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendSearchScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SearchFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SettingScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoInFriendBySearchScreen
@@ -135,7 +136,8 @@ enum class MainActivityRouteEnum(val route: String) {
     APPLY_FRIEND_INFO("apply_friend_info"),
     HANDLE_FRIEND_APPLY_INFO("handle_friend_apply_info"),
     HANDLE_FRIEND_APPLY_VERIFY("handle_friend_apply_verify"),
-    MAIN_FRIEND_INFO("main_friend_info")
+    MAIN_FRIEND_INFO("main_friend_info"),
+    MAIN_FRIEND_SEARCH_SCREEN("main_friend_search_screen")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -149,7 +151,10 @@ fun MainActivityScreen() {
     rememberCoroutineScope().launch {
         Log.e("countc",UserDatabase.getInstance().socialDao().getFriendApplyCount().toString())
     }
-    NavHost(navController = rootNavController, startDestination = MainActivityRouteEnum.PARENT.route) {
+    NavHost(navController = rootNavController,
+        startDestination = MainActivityRouteEnum.PARENT.route,
+        enterTransition = { fadeIn(tween(700)) },
+        exitTransition = { fadeOut(tween(200)) }) {
         composable(MainActivityRouteEnum.PARENT.route) { MainScreen(rootNavController,svm) }
 
         composable(MainActivityRouteEnum.ABOUT_IN_USER.route) { AboutChanXinScreen(rootNavController) }
@@ -169,6 +174,9 @@ fun MainActivityScreen() {
         composable(MainActivityRouteEnum.HANDLE_FRIEND_APPLY_VERIFY.route) {
             HandleFriendApplyVerifyScreen(rootNavController, svm = svm)
         }
+        composable(MainActivityRouteEnum.MAIN_FRIEND_SEARCH_SCREEN.route) {
+            MainFriendSearchScreen(rootNavController, svm = svm)
+        }
 
     }
 
@@ -183,8 +191,8 @@ fun MainScreen(rootController:NavHostController,svm:SocialViewModel) {
         NavHost(navController = mainController,
             startDestination = TabEnum.HOME.route,
             modifier = Modifier.padding(padding),
-            enterTransition = { fadeIn(tween(1000)) },
-            exitTransition = { fadeOut(tween(1000)) }) {
+            enterTransition = { fadeIn(tween(700)) },
+            exitTransition = { fadeOut(tween(200)) }) {
             composable(route = TabEnum.HOME.route) {
                 val activity = LocalContext.current as Activity
                 // 拦截返回键，直接退出应用
