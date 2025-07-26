@@ -19,8 +19,10 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.BottomNavigation
 //noinspection UsingMaterialAndMaterial3Libraries
@@ -65,6 +67,8 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.FindMainScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendCircleScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyListScreen
@@ -137,7 +141,8 @@ enum class MainActivityRouteEnum(val route: String) {
     HANDLE_FRIEND_APPLY_INFO("handle_friend_apply_info"),
     HANDLE_FRIEND_APPLY_VERIFY("handle_friend_apply_verify"),
     MAIN_FRIEND_INFO("main_friend_info"),
-    MAIN_FRIEND_SEARCH_SCREEN("main_friend_search_screen")
+    MAIN_FRIEND_SEARCH_SCREEN("main_friend_search_screen"),
+    FRIEND_CIRCLE_SCREEN("friend_circle_screen")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -177,6 +182,9 @@ fun MainActivityScreen() {
         composable(MainActivityRouteEnum.MAIN_FRIEND_SEARCH_SCREEN.route) {
             MainFriendSearchScreen(rootNavController, svm = svm)
         }
+        composable(MainActivityRouteEnum.FRIEND_CIRCLE_SCREEN.route) {
+            FriendCircleScreen(rootNavController)
+        }
 
     }
 
@@ -185,14 +193,15 @@ fun MainActivityScreen() {
 @Composable
 fun MainScreen(rootController:NavHostController,svm:SocialViewModel) {
     val mainController = rememberNavController()
+    val insets = WindowInsets.systemBars
     val screenCache = remember { mutableMapOf<String,@Composable () -> Unit>() }
-    Scaffold(bottomBar = { BottomNavBar(mainController) }) { padding->
+    Scaffold(bottomBar = { BottomNavBar(mainController) }, contentWindowInsets = insets) { padding->
         //设置路由
         NavHost(navController = mainController,
             startDestination = TabEnum.HOME.route,
             modifier = Modifier.padding(padding),
-            enterTransition = { fadeIn(tween(700)) },
-            exitTransition = { fadeOut(tween(200)) }) {
+            enterTransition = { fadeIn(tween(300)) },
+            exitTransition = { fadeOut(tween(300)) }) {
             composable(route = TabEnum.HOME.route) {
                 val activity = LocalContext.current as Activity
                 // 拦截返回键，直接退出应用
@@ -202,33 +211,17 @@ fun MainScreen(rootController:NavHostController,svm:SocialViewModel) {
                 Text("禅信")
             }
             composable(route = TabEnum.SOCIAL.route) {
-                val friendScreen = screenCache.getOrPut(TabEnum.SOCIAL.route) {
-                    {
-                        FriendScreen(
-                            navController = rootController,svm=svm
-                        )
-                    }
-                }
-                friendScreen()
+                FriendScreen(
+                    navController = rootController,svm=svm
+                )
             }
             composable(route = TabEnum.FIND.route) {
-                val activity = LocalContext.current as Activity
-
-                // 拦截返回键，直接退出应用
-                BackHandler(enabled = true) {
-                    activity.moveTaskToBack(true) // 切换到后台
-                }
-                Text("发现")
+                FindMainScreen(rootController)
             }
             composable(route = TabEnum.USER.route) {
-                val userScreen = screenCache.getOrPut(TabEnum.USER.route) {
-                    {
-                        UserScreen(
-                            navController = rootController
-                        )
-                    }
-                }
-                userScreen()
+                UserScreen(
+                    navController = rootController
+                )
             }
         }
     }

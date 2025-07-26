@@ -65,6 +65,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -125,6 +126,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.internal.wait
 import retrofit2.HttpException
 import java.lang.Exception
 
@@ -536,8 +538,8 @@ fun ParentScreen(navController: NavHostController, vm: UserViewmodel= hiltViewMo
                     .height(40.dp)
                     .fillMaxWidth()
                     .background(SurfaceColor))
-                UserScreenItem(imageVector = Icons.Outlined.FavoriteBorder, label = "朋友圈", tintColor = ChatGreen) {
-
+                UserScreenItem(imageVector = painterResource(R.drawable.friend_circle), label = "朋友圈") {
+                    //todo:朋友圈
                 }
                 Spacer(modifier = Modifier
                     .height(40.dp)
@@ -604,6 +606,27 @@ fun UserScreenItem(imageVector: ImageVector, label:String,tintColor:Color = Icon
             .height(DefaultUserScreenItemDp)
             .padding(DefaultUserPadding)) {
             Icon(imageVector,contentDescription = null, tint = tintColor)
+            Spacer(modifier = Modifier.width(DefaultUserPadding))
+            BaseText(text = label, fontSize = DefaultFontSize)
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(imageVector= Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = RightArrowColor)
+        }
+    }
+}
+@Composable
+fun UserScreenItem(imageVector: Painter, label:String,onClick:()->Unit) {
+    LabelScreenItem(imageVector,label) { onClick() }
+}
+@Composable
+fun LabelScreenItem(imageVector: Painter, label:String,defaultSize:Dp = 24.dp,onClick:()->Unit) {
+    Box(modifier = Modifier.fillMaxWidth().background(Color.White).clickable {
+        onClick()
+    }) {
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .height(DefaultUserScreenItemDp)
+            .padding(DefaultUserPadding)) {
+            Image(imageVector,contentDescription = null, modifier = Modifier.size(defaultSize))
             Spacer(modifier = Modifier.width(DefaultUserPadding))
             BaseText(text = label, fontSize = DefaultFontSize)
             Spacer(modifier = Modifier.weight(1f))

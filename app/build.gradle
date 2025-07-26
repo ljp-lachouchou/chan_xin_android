@@ -85,6 +85,7 @@ dependencies {
     debugImplementation libs.androidx.ui.tooling
     debugImplementation libs.androidx.ui.test.manifest
     implementation libs.coil
+    implementation libs.androidx.palette
     implementation 'com.liulishuo.filedownloader:library:1.7.7'
     implementation "com.aliyun.dpa:oss-android-sdk:2.9.21"
     implementation("com.belerweb:pinyin4j:2.5.1")

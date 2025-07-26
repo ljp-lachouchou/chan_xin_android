@@ -201,6 +201,148 @@ fun FriendScreen(navController:NavHostController, uvm:UserViewmodel= hiltViewMod
         )}
     }
 }
+
+
+//好友详情页
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+@Composable
+fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel = hiltViewModel()) {
+    val friend by svm.clickFriend.collectAsState()
+    var isSelected by remember { mutableStateOf(false) }
+    val sexPainter = when(friend.gender) {
+        0->R.drawable.unknow
+        1->R.drawable.man
+        2->R.drawable.woman
+        else->R.drawable.unknow
+    }
+    CanLookImage(data = friend.displayAvatar, isSelected = isSelected, onChange = {isSelected = false}) {
+        Scaffold(topBar = {
+            TopBarWithBack(
+                navController,
+                action = {
+                    Icon(
+                        Icons.Filled.Menu,
+                        contentDescription = null,
+                        tint = Color.Black,
+                        modifier = Modifier.clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }) {
+                            //todo:进入朋友资料设置页面
+                        })
+                })
+        }) {
+            BaseBox(modifier = Modifier
+                .fillMaxSize()
+            ) {
+                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(DefaultUserPadding)
+                        .padding(horizontal = DefaultUserPadding)) {
+                        Wrapper {
+                            AsyncImage(
+                                model = ImageRequest.Builder(AppGlobal.getAppContext())
+                                    .data(friend.displayAvatar).build(),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clip(
+                                        RoundedCornerShape(5.dp)
+                                    )
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }) {
+                                        isSelected = true
+                                    },
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(15.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Wrapper {
+                                    BaseText(friend.friendStatus.remark?:"", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                }
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Wrapper {
+                                    Image(painterResource(sexPainter),contentDescription = null, modifier = Modifier.size(15.dp))
+                                }
+                            }
+                            BaseText("昵称: ${friend.nickname}", color = PlaceholderColor, fontSize = 12.sp)
+                            BaseText("禅信号: ${friend.userId}", color = PlaceholderColor, fontSize = 12.sp)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(DefaultUserPadding*2))
+                    HorizontalDivider(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(DefaultUserPadding), thickness = 0.3.dp, color = DividerColor)
+                    UserInfoScreenItem("朋友资料", onClick = {
+                        //todo:朋友资料详情
+                    })
+                    Spacer(modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .background(color = SurfaceColor))
+                    UserInfoScreenItem("朋友圈", onClick = {
+                        //进入个人朋友圈
+                    }, heightDp = DefaultUserScreenItemDp*1.5f)
+                    Spacer(modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .background(color = SurfaceColor))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                        .height(
+                            DefaultUserScreenItemDp
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            //todo:跳转会话界面
+                        }) {
+                        Icon(
+                            painterResource(R.drawable.chan_xin),
+                            contentDescription = null,
+                            tint = LittleTextColor,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        BaseText("发消息", color = LittleTextColor)
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        thickness = 0.3.dp,
+                        color = DividerColor
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                        .height(
+                            DefaultUserScreenItemDp
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            //todo:跳转音视频通话dialog
+                        }) {
+                        Icon(
+                            Icons.Outlined.Call,
+                            contentDescription = null,
+                            tint = LittleTextColor,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        BaseText("音视频通话", color = LittleTextColor)
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
 //申请好友详情
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter", "StateFlowValueCalledInComposition")
 @Composable
@@ -368,10 +510,10 @@ fun UserInfoInFriendBySearchScreen(navController: NavHostController, uvm: UserVi
 }
 
 @Composable
-fun TopBarWithBack(navController: NavHostController,title :String="",action:@Composable ()->Unit = {}) {
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+fun TopBarWithBack(navController: NavHostController,title :String="",backTint:Color=Color.Black,color: Color=Color.White,action:@Composable ()->Unit = {}) {
+    Box(modifier = Modifier.fillMaxWidth().background(color), contentAlignment = Alignment.Center) {
         Row(modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth().background(color)
             .padding(DefaultUserPadding), horizontalArrangement = Arrangement.SpaceBetween) {
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -379,7 +521,7 @@ fun TopBarWithBack(navController: NavHostController,title :String="",action:@Com
                 modifier = Modifier.clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
-                ) {navController.navigateUp()})
+                ) {navController.navigateUp()}, tint = backTint)
             BaseText(text = title)
             action()
         }
@@ -387,7 +529,12 @@ fun TopBarWithBack(navController: NavHostController,title :String="",action:@Com
     }
 }
 @Composable
-fun MyTopBar(title :String="", preContent:@Composable ()->Unit={ BaseText("你好", color = SurfaceColor) }, defaultColor: Color= SurfaceColor, action:@Composable ()->Unit = {}) {
+fun MyTopBar(
+    title: String = "",
+    preContent: @Composable () -> Unit = { BaseText("你好", color = SurfaceColor) },
+    defaultColor: Color = SurfaceColor,
+    action: @Composable () -> Unit = { BaseText("你好", color = SurfaceColor) }
+) {
     Box(modifier = Modifier
         .fillMaxWidth()
         .background(defaultColor), contentAlignment = Alignment.Center) {
@@ -840,140 +987,7 @@ suspend fun findUser(findModel: Int, uvm: UserViewmodel, find: String) {
     }
 }
 
-//好友详情页
-@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
-@Composable
-fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel = hiltViewModel()) {
-    val friend by svm.clickFriend.collectAsState()
-    var isSelected by remember { mutableStateOf(false) }
-    val sexPainter = when(friend.gender) {
-        0->R.drawable.unknow
-        1->R.drawable.man
-        2->R.drawable.woman
-        else->R.drawable.unknow
-    }
-    CanLookImage(data = friend.displayAvatar, isSelected = isSelected, onChange = {isSelected = false}) {
-        Scaffold(topBar = {
-            TopBarWithBack(
-                navController,
-                action = {
-                    Icon(
-                        Icons.Filled.Menu,
-                        contentDescription = null,
-                        tint = Color.Black,
-                        modifier = Modifier.clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }) {
-                            //todo:进入朋友资料设置页面
-                        })
-                })
-        }) {
-            BaseBox(modifier = Modifier
-                .fillMaxSize()
-                ) {
-                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Row(modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(DefaultUserPadding)
-                        .padding(horizontal = DefaultUserPadding)) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(AppGlobal.getAppContext())
-                                .data(friend.displayAvatar).build(),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(60.dp)
-                                .clip(
-                                    RoundedCornerShape(5.dp)
-                                )
-                                .clickable(
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() }) {
-                                    isSelected = true
-                                },
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(modifier = Modifier.width(15.dp))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Wrapper {
-                                    BaseText(friend.friendStatus.remark?:"", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                                }
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Wrapper {
-                                    Image(painterResource(sexPainter),contentDescription = null, modifier = Modifier.size(15.dp))
-                                }
-                            }
-                            BaseText("昵称: ${friend.nickname}", color = PlaceholderColor, fontSize = 12.sp)
-                            BaseText("禅信号: ${friend.userId}", color = PlaceholderColor, fontSize = 12.sp)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(DefaultUserPadding*2))
-                    HorizontalDivider(modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(DefaultUserPadding), thickness = 0.3.dp, color = DividerColor)
-                   UserInfoScreenItem("朋友资料", onClick = {
-                       //todo:朋友资料详情
-                   })
-                    Spacer(modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp)
-                        .background(color = SurfaceColor))
-                    UserInfoScreenItem("朋友圈", onClick = {
-                        //进入个人朋友圈
-                    }, heightDp = DefaultUserScreenItemDp*1.5f)
-                    HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth(),
-                        thickness = 0.3.dp,
-                        color = DividerColor
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
-                        .height(
-                            DefaultUserScreenItemDp
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            //todo:跳转会话界面
-                        }) {
-                        Icon(
-                            painterResource(R.drawable.chan_xin),
-                            contentDescription = null,
-                            tint = LittleTextColor,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        BaseText("发消息", color = LittleTextColor)
-                    }
-                    HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth(),
-                        thickness = 0.3.dp,
-                        color = DividerColor
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
-                        .height(
-                            DefaultUserScreenItemDp
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            //todo:跳转音视频通话dialog
-                        }) {
-                        Icon(
-                            Icons.Outlined.Call,
-                            contentDescription = null,
-                            tint = LittleTextColor,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        BaseText("音视频通话", color = LittleTextColor)
-                    }
-                }
-            }
-        }
-    }
-}
+
 private suspend fun getGroup(originalList:List<Friend>,mainEvent:(groups: List<Pair<String, List<Friend>>>)->Unit) {
     withContext(Dispatchers.Default) {
         val groups = originalList.groupBy {
@@ -1050,7 +1064,9 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
         }) { padding ->
             LazyColumn(modifier = Modifier.padding(padding), state = listState) {
                 item(key="search_bar") {
-                    SearchScreenFirstScreen(isPadding = false, defaultHeight = 25.dp, defaultColor = Color.White, defaultPadding = 10.dp) { navController.switchTab(MainActivityRouteEnum.MAIN_FRIEND_SEARCH_SCREEN.route) }
+                    Wrapper {
+                        SearchScreenFirstScreen(isPadding = false, defaultHeight = 25.dp, defaultColor = Color.White, defaultPadding = 10.dp) { navController.switchTab(MainActivityRouteEnum.MAIN_FRIEND_SEARCH_SCREEN.route) }
+                    }
                 }
                 item(key = "handle_apply") {
                     FriendScreenItem(data = R.drawable.handle_apply, onClick = {navController.switchTab(MainActivityRouteEnum.APPLY_FRIEND_LIST.route)}) {
@@ -1058,27 +1074,33 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
                     }
                 }
                 item(key="new_friend") {
-                    FriendScreenItem(data = R.drawable.new_friend, onClick = {
-                        navController.switchTab(MainActivityRouteEnum.HANDLE_FRIEND_APPLY_LIST.route)
-                    }) {
-                        BaseText("新的朋友")
+                    Wrapper {
+                        FriendScreenItem(data = R.drawable.new_friend, onClick = {
+                            navController.switchTab(MainActivityRouteEnum.HANDLE_FRIEND_APPLY_LIST.route)
+                        }) {
+                            BaseText("新的朋友")
+                        }
                     }
                 }
                 groupedFriends.forEach{(k,v)->
                     stickyHeader(key = "header_$k") {
-                        BaseText(color = PlaceholderColor,text=k, modifier = Modifier
-                            .fillMaxWidth()
-                            .background(color = SurfaceColor)
-                            .padding(
-                                DefaultUserPadding
-                            ))
+                        Wrapper {
+                            BaseText(color = PlaceholderColor,text=k, modifier = Modifier
+                                .fillMaxWidth()
+                                .background(color = SurfaceColor)
+                                .padding(
+                                    DefaultUserPadding
+                                ))
+                        }
                     }
                     itemsIndexed(v,key = {_,item->item.userId}) {_,friend->
-                        FriendScreenItem(friend.displayAvatar, onClick = {
-                            svm.loadClickFriend(friend)
-                            navController.switchTab(MainActivityRouteEnum.MAIN_FRIEND_INFO.route)
-                        }) {
-                            BaseText(friend.displayName)
+                        Wrapper {
+                            FriendScreenItem(friend.displayAvatar, onClick = {
+                                svm.loadClickFriend(friend)
+                                navController.switchTab(MainActivityRouteEnum.MAIN_FRIEND_INFO.route)
+                            }) {
+                                BaseText(friend.displayName)
+                            }
                         }
                     }
                     item(key = "group_divider_$k") {
@@ -1091,14 +1113,16 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
                     }
                 }
                 item {
-                    Text(
-                        text = "${listCache.size}个朋友",
-                        color = PlaceholderColor, // 醒目颜色
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        textAlign = TextAlign.Center
-                    )
+                    Wrapper {
+                        Text(
+                            text = "${listCache.size}个朋友",
+                            color = PlaceholderColor, // 醒目颜色
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }
@@ -1122,7 +1146,6 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
                     }
                     scope.launch { listState.animateScrollToItem(index = targetPosition+offsetItemCount) }
                 }
-
             }
         }
         Wrapper(modifier = Modifier.fillMaxSize()) {

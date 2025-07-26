@@ -1,17 +1,21 @@
 package com.software.jetpack.compose.chan_xin_android.ui.base
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
 import android.view.MotionEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.BorderStroke
@@ -44,6 +48,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -91,10 +96,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
@@ -133,6 +141,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.coroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.palette.graphics.Palette
+import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.software.jetpack.compose.chan_xin_android.R
@@ -141,6 +151,7 @@ import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPad
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultLittleSize
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultPlaceholderText
+import com.software.jetpack.compose.chan_xin_android.ext.toComposeColor
 import com.software.jetpack.compose.chan_xin_android.ui.activity.AppTopBarBack
 import com.software.jetpack.compose.chan_xin_android.ui.theme.ChatGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
@@ -150,10 +161,14 @@ import com.software.jetpack.compose.chan_xin_android.ui.theme.PressedLittleTextC
 import com.software.jetpack.compose.chan_xin_android.ui.theme.RightArrowColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.TextColor
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.internal.wait
+import java.io.File
+import java.io.FileOutputStream
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.math.abs
 
@@ -925,6 +940,116 @@ fun CustomTextField(
         }
     )
 }
+
+@Composable
+fun GeneratePaletteFromImage(data: Any,onGenerated: (Palette) -> Unit) {
+    val resources = LocalContext.current.resources
+    LaunchedEffect(data) {
+        val bitmap = when(data) {
+            is Int -> {
+                BitmapFactory.decodeResource(resources,data)
+            }
+            else -> {
+                val url = data as String
+                AppGlobal.getBitmapFromUrl(url) ?: BitmapFactory.decodeResource(resources,R.drawable.default_cover)
+            }
+        }
+        Palette.from(bitmap).generate {
+            it?.let { onGenerated(it) }
+        }
+    }
+}
+@Composable
+fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,content:LazyListScope.() -> Unit) {
+    var dominantColor by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
+    var dominantColorReverse by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
+    var alpha by remember { mutableFloatStateOf(1f) }
+    var paletteHeight by remember { mutableFloatStateOf(0f) }
+    var isAnimating by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val paletteHeightAnimate by animateFloatAsState(paletteHeight, animationSpec = tween(400, easing = FastOutSlowInEasing), finishedListener = {
+        scope.launch {
+            delay(100)
+            isAnimating = false
+        }
+    })
+    val alphaAnimate by animateFloatAsState(alpha, animationSpec = tween(400, easing = FastOutSlowInEasing), finishedListener = {
+        scope.launch {
+            delay(100)
+            isAnimating = false
+        }
+    })
+    GeneratePaletteFromImage(data) {palette: Palette ->
+        dominantColor = palette.swatches.map { it.rgb.toComposeColor() }.sortedBy { it.value }.reversed().take(if (palette.swatches.size > 3) 3 else palette.swatches.size)
+        dominantColorReverse = dominantColor.reversed()
+    }
+    Box {
+        LazyColumn {
+            item {
+                Column {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(paletteHeightAnimate.dp)
+                            .background(brush = Brush.verticalGradient(dominantColor))
+                    )
+                    AsyncImage(
+                        model = ImageRequest.Builder(AppGlobal.getAppContext())
+                            .data(data).build(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1.3f)
+                            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                                if (!isAnimating) {
+                                    isAnimating = true
+                                    paletteHeight = if (paletteHeight == 0f) 85f else 0f
+                                    alpha = if (alpha == 0f) 1f else 0f
+                                }
+                            },
+                        contentScale = ContentScale.Crop
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(paletteHeightAnimate.dp)
+                            .background(brush = Brush.verticalGradient(dominantColorReverse))
+                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(85.dp).padding(horizontal = DefaultUserPadding).offset(y = (-55).dp).alpha(alphaAnimate)) {
+                        Spacer(Modifier.weight(1f))
+                        BaseText(
+                            nickname,
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        AsyncImage(
+                            model = ImageRequest.Builder(AppGlobal.getAppContext()).data(displayAvatar)
+                                .build(), contentDescription = null, modifier = Modifier
+                                .size(60.dp)
+                                .clip(
+                                    RoundedCornerShape(5.dp)
+                                ), contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+            content()
+        }
+        if (alpha==0f) {
+            Box(Modifier.fillMaxSize().background(Color.Transparent).clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                if (!isAnimating) {
+                    isAnimating = true
+                    paletteHeight = if (paletteHeight == 0f) 85f else 0f
+                    alpha = if (alpha == 0f) 1f else 0f
+                }
+            })
+        }
+    }
+}
+
 
 
 

@@ -1,9 +1,9 @@
 package com.software.jetpack.compose.chan_xin_android.util
 
 import android.annotation.SuppressLint
-import android.app.Application
-import android.app.usage.NetworkStatsManager
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
@@ -16,9 +16,12 @@ import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.PH
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USERS_FILE
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USER_TOKEN
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USER_TOKEN_EXP
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 
 val Context.userDataStore: DataStore<Preferences> by preferencesDataStore(
     name = USERS_FILE // 传入文件名
@@ -31,6 +34,21 @@ object AppGlobal {
     fun init(appContext: Context) {
         context = appContext.applicationContext
 
+    }
+    suspend fun getBitmapFromUrl(src:String):Bitmap? {
+        try {
+            val url = URL(src)
+            return withContext(Dispatchers.IO) {
+                val connection = url.openConnection() as HttpURLConnection
+                connection.connect()
+                connection.inputStream.use {`is`->
+                    BitmapFactory.decodeStream(`is`)
+                }
+            }
+
+        }catch (e:Exception){
+            return null
+        }
     }
     fun getAppContext():Context {
         return context

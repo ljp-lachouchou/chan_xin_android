@@ -585,7 +585,15 @@ fun RegisterScreen(vm: UserViewmodel, navController: NavHostController) {
                 BaseButton(onClick = {
                     scope.launch(Dispatchers.IO){
                         isUpload = true
-                        register(vm,navController,nickname,sex,phone,password,selectedImageUri)
+                        val string = StringUtil.validatePassword(password)
+                        if (string == null) {
+                            register(vm,navController,nickname,sex,phone,password,selectedImageUri)
+                        }else {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(AppGlobal.getAppContext(),string,Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
                         isUpload = false
                     }
                 }, modifier = Modifier
