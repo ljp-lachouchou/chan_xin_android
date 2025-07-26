@@ -11,8 +11,12 @@ import com.alibaba.sdk.android.oss.common.auth.OSSStsTokenCredentialProvider
 import com.alibaba.sdk.android.oss.model.ObjectMetadata
 import com.alibaba.sdk.android.oss.model.PutObjectRequest
 import com.alibaba.sdk.android.oss.model.PutObjectResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 
 
 object Oss {
@@ -22,7 +26,14 @@ object Oss {
         var accessKeySecret = ""
 
         var securityToken = ""
-        BufferedReader(InputStreamReader(AppGlobal.getAppContext().assets.open("oss.txt"))).use { br ->
+        val url = URL("http://114.215.194.88/oss.txt")
+        val connection = withContext(Dispatchers.IO) {
+            url.openConnection()
+        } as HttpURLConnection
+        withContext(Dispatchers.IO) {
+            connection.connect()
+        }
+        BufferedReader(InputStreamReader(connection.inputStream)).use { br ->
             var line:String? = null
             var count = 0
             while ((br.readLine().also { line = it }) != null) {
@@ -35,8 +46,6 @@ object Oss {
                 count++
             }
         }
-
-
         val region = "cn-beijing"
 
         val credentialProvider: OSSCredentialProvider =
