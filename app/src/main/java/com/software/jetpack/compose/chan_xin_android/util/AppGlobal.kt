@@ -14,12 +14,15 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.PHONE_KEY
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USERS_FILE
+import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USER_COVER_FILE_PATH
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USER_TOKEN
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USER_TOKEN_EXP
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -48,6 +51,15 @@ object AppGlobal {
 
         }catch (e:Exception){
             return null
+        }
+    }
+    suspend fun getBitmapFromFilePath(path:String):Bitmap? {
+        return try {
+            withContext(Dispatchers.IO) {
+                BitmapFactory.decodeFile(path)
+            }
+        }catch (e:Exception) {
+            null
         }
     }
     fun getAppContext():Context {
@@ -99,6 +111,35 @@ object AppGlobal {
             val networkInfo = connectivityManager.activeNetworkInfo
             return networkInfo != null && networkInfo.isConnected
         }
+    }
+
+    suspend fun saveBitmapToFile(src:String,fileName:String):String {
+        val file = File(context.filesDir,fileName)
+        val url = URL(src)
+        val connection = withContext(Dispatchers.IO) {
+            url.openConnection()
+        } as HttpURLConnection
+        withContext(Dispatchers.IO) {
+            connection.connect()
+            // 检查响应状态
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                Log.e("DownloadError", "HTTP 状态码: ${connection.responseCode}")
+                return@withContext null
+            }
+
+            // 下载并保存文件
+            connection.inputStream.use { input ->
+                FileOutputStream(file).use { output ->
+                    input.copyTo(output)
+                }
+            }
+        }
+        return file.absolutePath
+    }
+    suspend fun getFilePath():String {
+        return context.userDataStore.data.map { preferences->
+            preferences[USER_COVER_FILE_PATH] ?:""
+        }.first()
     }
 
 }

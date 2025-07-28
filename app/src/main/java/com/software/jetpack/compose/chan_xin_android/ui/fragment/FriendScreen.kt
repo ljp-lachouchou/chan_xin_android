@@ -540,7 +540,7 @@ fun MyTopBar(
         .background(defaultColor), contentAlignment = Alignment.Center) {
         Row(modifier = Modifier
             .fillMaxWidth()
-            .padding(DefaultUserPadding), horizontalArrangement = Arrangement.SpaceBetween) {
+            .padding(DefaultUserPadding), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             preContent()
             BaseText(text = title)
             action()

@@ -67,6 +67,7 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.CreatePostScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.FindMainScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendCircleScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendScreen
@@ -83,6 +84,7 @@ import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserScreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.NavigationBarColor
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
+import com.software.jetpack.compose.chan_xin_android.vm.DynamicViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 import kotlinx.coroutines.launch
@@ -142,7 +144,8 @@ enum class MainActivityRouteEnum(val route: String) {
     HANDLE_FRIEND_APPLY_VERIFY("handle_friend_apply_verify"),
     MAIN_FRIEND_INFO("main_friend_info"),
     MAIN_FRIEND_SEARCH_SCREEN("main_friend_search_screen"),
-    FRIEND_CIRCLE_SCREEN("friend_circle_screen")
+    FRIEND_CIRCLE_SCREEN("friend_circle_screen"),
+    CREATE_POST_SCREEN("create_post_screen")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -151,6 +154,7 @@ fun MainActivityScreen() {
     val rootNavController = rememberNavController()
     val vm :UserViewmodel = hiltViewModel()
     val svm:SocialViewModel = hiltViewModel()
+    val dvm:DynamicViewModel = hiltViewModel()
     val user by vm.myUser.collectAsState()
     Log.e("users",user.toString())
     rememberCoroutineScope().launch {
@@ -183,8 +187,12 @@ fun MainActivityScreen() {
             MainFriendSearchScreen(rootNavController, svm = svm)
         }
         composable(MainActivityRouteEnum.FRIEND_CIRCLE_SCREEN.route) {
-            FriendCircleScreen(rootNavController)
+            FriendCircleScreen(rootNavController,dvm=dvm)
         }
+        composable(MainActivityRouteEnum.CREATE_POST_SCREEN.route) {
+            CreatePostScreen(rootNavController,dvm,svm)
+        }
+
 
     }
 
@@ -194,7 +202,6 @@ fun MainActivityScreen() {
 fun MainScreen(rootController:NavHostController,svm:SocialViewModel) {
     val mainController = rememberNavController()
     val insets = WindowInsets.systemBars
-    val screenCache = remember { mutableMapOf<String,@Composable () -> Unit>() }
     Scaffold(bottomBar = { BottomNavBar(mainController) }, contentWindowInsets = insets) { padding->
         //设置路由
         NavHost(navController = mainController,

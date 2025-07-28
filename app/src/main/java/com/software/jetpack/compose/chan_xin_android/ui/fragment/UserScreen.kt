@@ -167,7 +167,7 @@ fun UpdateAvatarScreen(navController: NavHostController,user:User,vm:UserViewmod
         selectedUri = uri
     }
     var isLoading  by remember { mutableStateOf(false) }
-    ModalBottomSheetLayout(sheetContent = {AvatarMoreSheet(launcher,scope,sheetState,user)},sheetState = sheetState, sheetShape = RoundedCornerShape(topEnd = 10.dp, topStart = 10.dp)) {
+    ModalBottomSheetLayout(sheetContent = {AvatarMoreSheet(launcher,scope,bottomSheetState=sheetState, user = user)},sheetState = sheetState, sheetShape = RoundedCornerShape(topEnd = 10.dp, topStart = 10.dp)) {
         Scaffold(topBar = { AppTopBar(title = "头像", actions = {
             IconButton(onClick = {
                 scope.launch { sheetState.show() }
@@ -238,6 +238,7 @@ fun UpdateAvatarScreen(navController: NavHostController,user:User,vm:UserViewmod
 fun AvatarMoreSheet(
     launcher: ManagedActivityResultLauncher<String, Uri?>,
     scope: CoroutineScope,
+    canSaveImage:Boolean = true,
     bottomSheetState: ModalBottomSheetState,
     user: User
 ) {
@@ -262,7 +263,7 @@ fun AvatarMoreSheet(
             }, shape = RectangleShape) {
                 BaseText("从手机相册选择", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             }
-            if (user.avatar != "") {
+            if (user.avatar != "" && canSaveImage) {
                 TextButton(onClick = {
                     launch {
                         bottomSheetState.hide()

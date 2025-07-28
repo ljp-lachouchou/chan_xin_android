@@ -4,6 +4,9 @@ import com.google.gson.annotations.SerializedName
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
+import com.software.jetpack.compose.chan_xin_android.entity.Post
+import com.software.jetpack.compose.chan_xin_android.entity.PostContent
+import com.software.jetpack.compose.chan_xin_android.entity.PostMeta
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
@@ -64,6 +67,16 @@ interface ApiService {
 
     @GET("/v1/social/firend/getFriendList")
     suspend fun getFriendList(@Query("user_id") userId:String = "1"):ApiResult<DataFriendListWrapper<Friend>>
+
+
+    data class SetCoverRequest(val userId:String,val coverUrl:String)
+    data class CreatePostRequest(val userId: String,val content:PostContent,val meta:PostMeta)
+    @POST("/v1/dynamics/createPost")
+    suspend fun createPost(@Body createPostRequest:CreatePostRequest):ApiResult<Post>
+
+    @PUT("/v1/dynamics/setCover")
+    suspend fun setCover(@Body setCoverRequest:SetCoverRequest)
+
 
 
 }

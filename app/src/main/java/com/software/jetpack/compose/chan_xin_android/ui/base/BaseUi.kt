@@ -21,6 +21,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Indication
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -96,6 +98,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
@@ -117,6 +120,9 @@ import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -153,6 +159,7 @@ import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultLittleS
 import com.software.jetpack.compose.chan_xin_android.defaultValue.defaultPlaceholderText
 import com.software.jetpack.compose.chan_xin_android.ext.toComposeColor
 import com.software.jetpack.compose.chan_xin_android.ui.activity.AppTopBarBack
+import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.theme.ChatGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.LittleTextColor
@@ -587,22 +594,32 @@ fun BaseScreenItem(
     onClick: () -> Unit,
     tailContent: (@Composable () -> Unit)? = null,
     backgroundColor:Color = Color.White,
+    indication: Indication?= LocalIndication.current,
+    interactionSource: MutableInteractionSource= remember { MutableInteractionSource() },
     content: @Composable () -> Unit
 ) {
     Box(modifier = Modifier
         .fillMaxWidth()
         .height(DefaultUserScreenItemDp)
         .background(backgroundColor)
-        .clickable { onClick();Log.e("iiii", "iiiii") }
+        .clickable(indication = indication, interactionSource = interactionSource) { onClick();Log.e("iiii", "iiiii") }
         .padding(horizontal = 15.dp), contentAlignment = Alignment.Center) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (preContent != null) {
-                preContent()
+                Wrapper {
+                    preContent()
+                }
             }
             Spacer(modifier = Modifier.width(DefaultUserPadding))
-            content()
+            Wrapper {
+                content()
+            }
             Spacer(modifier = Modifier.weight(1f))
-            if (tailContent != null) {tailContent()}
+            if (tailContent != null) {
+                Wrapper{
+                    tailContent()
+                }
+            }
         }
     }
 }
@@ -951,7 +968,7 @@ fun GeneratePaletteFromImage(data: Any,onGenerated: (Palette) -> Unit) {
             }
             else -> {
                 val url = data as String
-                AppGlobal.getBitmapFromUrl(url) ?: BitmapFactory.decodeResource(resources,R.drawable.default_cover)
+                AppGlobal.getBitmapFromFilePath(url) ?: BitmapFactory.decodeResource(resources,R.drawable.default_cover)
             }
         }
         Palette.from(bitmap).generate {
@@ -959,8 +976,9 @@ fun GeneratePaletteFromImage(data: Any,onGenerated: (Palette) -> Unit) {
         }
     }
 }
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,content:LazyListScope.() -> Unit) {
+fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,onChangeCover:()->Unit,onEnterFriendInfoDetail:()->Unit,content:LazyListScope.() -> Unit) {
     var dominantColor by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
     var dominantColorReverse by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
     var alpha by remember { mutableFloatStateOf(1f) }
@@ -973,6 +991,7 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,content:Lazy
             isAnimating = false
         }
     })
+    var changeCoverPosition by remember { mutableStateOf(Offset.Zero) }
     val alphaAnimate by animateFloatAsState(alpha, animationSpec = tween(400, easing = FastOutSlowInEasing), finishedListener = {
         scope.launch {
             delay(100)
@@ -983,7 +1002,28 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,content:Lazy
         dominantColor = palette.swatches.map { it.rgb.toComposeColor() }.sortedBy { it.value }.reversed().take(if (palette.swatches.size > 3) 3 else palette.swatches.size)
         dominantColorReverse = dominantColor.reversed()
     }
-    Box {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .pointerInteropFilter { event ->
+            when (event.action) {
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (alpha == 0f) {
+                        if (!isAnimating) {
+                            isAnimating = true
+                            paletteHeight = if (paletteHeight == 0f) 85f else 0f
+                            alpha = if (alpha == 0f) 1f else 0f
+                        }
+                    }
+                    alpha == 0f && event.rawX !in (changeCoverPosition.x-50..changeCoverPosition.x+50)&& event.rawY !in (changeCoverPosition.y-50..changeCoverPosition.y+50)
+                }
+
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    alpha == 0f && event.rawX !in (changeCoverPosition.x-50..changeCoverPosition.x+50)&& event.rawY !in (changeCoverPosition.y-50..changeCoverPosition.y+50)
+                }
+
+                else -> false
+            }
+        }) {
         LazyColumn {
             item {
                 Column {
@@ -1000,7 +1040,9 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,content:Lazy
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1.3f)
-                            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }) {
                                 if (!isAnimating) {
                                     isAnimating = true
                                     paletteHeight = if (paletteHeight == 0f) 85f else 0f
@@ -1013,10 +1055,35 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,content:Lazy
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(paletteHeightAnimate.dp)
-                            .background(brush = Brush.verticalGradient(dominantColorReverse))
-                    )
+                            .background(brush = Brush.verticalGradient(dominantColorReverse)),
+                        contentAlignment = Alignment.BottomEnd
+                    ) {
+                        Column(Modifier
+                            .height(100.dp)
+                            .padding(DefaultUserPadding)
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }) {
+                                if (alpha == 0f) {
+                                    onChangeCover()
+                                    Log.e("能看见吗", "嫩模刚看见")
+                                }
+                            }
+                            .onGloballyPositioned { layoutCoordinates ->
+                                changeCoverPosition = layoutCoordinates.positionInWindow()
+                            }, horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(painterResource(R.drawable.change_cover),contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp)
 
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(85.dp).padding(horizontal = DefaultUserPadding).offset(y = (-55).dp).alpha(alphaAnimate)) {
+                            )
+                            Text("更换封面", fontSize = 10.sp, color = Color.White)
+                        }
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                        .height(85.dp)
+                        .padding(horizontal = DefaultUserPadding)
+                        .offset(y = (-55).dp)
+                        .alpha(alphaAnimate)) {
                         Spacer(Modifier.weight(1f))
                         BaseText(
                             nickname,
@@ -1029,6 +1096,17 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,content:Lazy
                             model = ImageRequest.Builder(AppGlobal.getAppContext()).data(displayAvatar)
                                 .build(), contentDescription = null, modifier = Modifier
                                 .size(60.dp)
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }) {
+                                    if(alpha == 1f) {
+                                        onEnterFriendInfoDetail()
+                                        Log.e(
+                                            "nengkanjian",
+                                            "ssss"
+                                        )
+                                    }
+                                }
                                 .clip(
                                     RoundedCornerShape(5.dp)
                                 ), contentScale = ContentScale.Crop
@@ -1037,15 +1115,6 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,content:Lazy
                 }
             }
             content()
-        }
-        if (alpha==0f) {
-            Box(Modifier.fillMaxSize().background(Color.Transparent).clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
-                if (!isAnimating) {
-                    isAnimating = true
-                    paletteHeight = if (paletteHeight == 0f) 85f else 0f
-                    alpha = if (alpha == 0f) 1f else 0f
-                }
-            })
         }
     }
 }
