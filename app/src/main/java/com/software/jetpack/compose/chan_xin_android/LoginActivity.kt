@@ -44,7 +44,6 @@ class LoginActivity: BaseActivity() {
            Log.e("isHas", phone)
            withContext(Dispatchers.Main) {
                setContent {
-                   LifecycleComponent()
                    if (phone == "") { //没有历史，用户第一次使用
                        NoPhone()
                    }else {

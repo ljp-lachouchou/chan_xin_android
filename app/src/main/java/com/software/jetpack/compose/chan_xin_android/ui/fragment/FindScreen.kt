@@ -3,6 +3,7 @@ package com.software.jetpack.compose.chan_xin_android.ui.fragment
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -41,6 +42,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TextButton
@@ -92,11 +94,15 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.CanLookImage
 import com.software.jetpack.compose.chan_xin_android.ui.base.CustomTextField
 import com.software.jetpack.compose.chan_xin_android.ui.base.LazyColumnWithCover
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
+import com.software.jetpack.compose.chan_xin_android.ui.base.PlayVideo
+import com.software.jetpack.compose.chan_xin_android.ui.base.extraVideoFrame
+import com.software.jetpack.compose.chan_xin_android.ui.base.rememberVideoFrame
 import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
+import com.software.jetpack.compose.chan_xin_android.util.Location
 import com.software.jetpack.compose.chan_xin_android.util.Oss
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
@@ -217,7 +223,7 @@ fun FriendCircleScreen(navController:NavHostController,uvm:UserViewmodel = hiltV
             uri: Uri? ->
         dvm.loadVideoUri(uri)
         dvm.loadPhotoUris(emptyList())
-        navController.switchTab(MainActivityRouteEnum.CREATE_POST_SCREEN.route)
+        if (uri!=null) navController.switchTab(MainActivityRouteEnum.CREATE_POST_SCREEN.route)
 
     }
     var isLoading by remember { mutableStateOf(false) }
@@ -333,16 +339,55 @@ fun CreatePostScreen(navController: NavHostController,dvm: DynamicViewModel,svm:
             MainCreatePostScreen(navController,thisController,lookModel,location,scopeList,dvm, svm)
         }
         composable(CreatePostEnum.SELECT_LOCATION.route) {
-            SelectLocationToCreatePostScreen(thisController) {
+            SelectLocationToCreatePostScreen(thisController,location) {
                 location = it
             }
         }
         composable(CreatePostEnum.SELECT_SCOPE.route) {
-
+            SelectScopeToCreatePostScreen(thisController,svm, onChangeScopeList = {scopeList = it}) { lookModel = it }
         }
     }
 
 }
+
+@Composable
+fun SelectLocationToCreatePostScreen(thisController: NavHostController,location:String,onChange:(String)->Unit) {
+    var selectLocation by remember { mutableStateOf(location) }
+    CreatePostScaffold("所在位置", onCancel = {thisController.navigateUp()}, onCreate = {onChange(selectLocation);thisController.navigateUp()}) {
+        Column {
+            Wrapper { SexSingleSelect("不显示位置",selectLocation == "所在位置") {selectLocation = "所在位置"} }
+            Wrapper { SexSingleSelect(Location.province,selectLocation == Location.province) {selectLocation = Location.province } }
+            Wrapper { SexSingleSelect(Location.city,selectLocation == Location.city) {selectLocation = Location.city } }
+            Wrapper { SexSingleSelect(Location.address,selectLocation == Location.address) {selectLocation = Location.address } }
+        }
+    }
+}
+@Composable
+fun SelectScopeToCreatePostScreen(thisController: NavHostController,svm:SocialViewModel,onChangeScopeList:(List<String>)->Unit,onChange: (Int) -> Unit) {
+    var selectModel by remember { mutableStateOf(0) }
+    val userViewModel = hiltViewModel<UserViewmodel>()
+    val user by userViewModel.myUser.collectAsState()
+    val friendList by svm.currentFriendList.collectAsState()
+    CreatePostScaffold("谁可以看", onCancel = {thisController.navigateUp()}, onCreate = {onChange(selectModel);thisController.navigateUp()}) {
+        Column {
+            Wrapper { SexSingleSelect("公开",selectModel == 0) { selectModel = 0;onChangeScopeList(friendList.map { it.userId }) } }
+            Wrapper { SexSingleSelect("私密",selectModel == 1) {selectModel = 1;onChangeScopeList(
+                listOf(user.id)
+            ) } }
+            Wrapper { SexSingleSelect("部分可见",selectModel == 2) {selectModel = 2; } }
+            Wrapper {  SexSingleSelect("谁不可看",selectModel == 3) {selectModel = 3; } }
+        }
+    }
+
+}
+@Composable
+fun PlayVideoScreen(uri: Uri,onCancel: () -> Unit) {
+    Box {
+       PlayVideo(uri)
+        Icon(Icons.Filled.Close,contentDescription = null, tint = Color.White, modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onCancel() })
+    }
+}
+
 @Composable
 fun MainCreatePostScreen(navController: NavHostController,thisController:NavHostController,lookModel: Int,location:String,scopeList:List<String>,dvm: DynamicViewModel,svm:SocialViewModel,uvm:UserViewmodel= hiltViewModel()) {
     val user by uvm.myUser.collectAsState()
@@ -364,6 +409,11 @@ fun MainCreatePostScreen(navController: NavHostController,thisController:NavHost
     val size = 85.dp
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
+    var videoBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(Unit) {
+        videoBitmap = extraVideoFrame(AppGlobal.getAppContext(),videoUri?:Uri.Builder().build(),0L)
+    }
+    var isPlay by remember { mutableStateOf(false) }
     Box {
         CreatePostScaffold("发表动态",selectedUri,lookImage&&videoUri==null, onChange = {lookImage = !lookImage;Log.e("lookImage","$lookImage")}, onCancel = {navController.navigateUp()}, onCreate = {
             if (!isLimited) {
@@ -390,22 +440,35 @@ fun MainCreatePostScreen(navController: NavHostController,thisController:NavHost
                 Toast.makeText(AppGlobal.getAppContext(),"字数超过200",Toast.LENGTH_SHORT).show()
             }
         }){
-            Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
-                CustomTextField(
-                    text,
-                    onValueChange = { text = it;textCount=text.length},
-                    placeholder = { BaseText("这一刻的想法...", color = PlaceholderColor, fontSize = 14.sp) },
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(
-                        cursorColor = IconGreen,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent
+            Column(modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp)) {
+                Wrapper {
+                    CustomTextField(
+                        text,
+                        onValueChange = { text = it;textCount=text.length},
+                        placeholder = { BaseText("这一刻的想法...", color = PlaceholderColor, fontSize = 14.sp) },
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(
+                            cursorColor = IconGreen,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent
+                        )
                     )
-                )
+                }
                 if (videoUri != null) {
+                    Wrapper {
+                        if (!isPlay) {
+                            VideoItem(videoBitmap ?: R.drawable.default_cover) {
+                                isPlay = true
+                            }
+                        }else {
+                            PlayVideoScreen(videoUri!!){isPlay = false}
+                        }
+                    }
 
                 }
                 else {
@@ -441,7 +504,6 @@ fun MainCreatePostScreen(navController: NavHostController,thisController:NavHost
                 //谁可以看
                 CreatePostLookItem(R.drawable.user,lookModel) { thisController.switchTab(CreatePostEnum.SELECT_SCOPE.route) }
                 HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.3.dp, color = DividerColor)
-
             }
             Spacer(modifier = Modifier.weight(1f))
             Wrapper(modifier = Modifier.imePadding()) {
@@ -451,13 +513,7 @@ fun MainCreatePostScreen(navController: NavHostController,thisController:NavHost
         LoadingDialog(isLoading)
     }
 }
-@Composable
-fun SelectLocationToCreatePostScreen(thisController: NavHostController,onChange:(String)->Unit) {
-    var location by remember { mutableStateOf("") }
-    CreatePostScaffold("所在位置", onCancel = {thisController.navigateUp()}, onCreate = {onChange(location)}) {
 
-    }
-}
 @Composable
 fun CreatePostItem(icon:Int, title:String, onclick: () -> Unit) {
     BaseScreenItem(preContent = {
@@ -468,6 +524,8 @@ fun CreatePostItem(icon:Int, title:String, onclick: () -> Unit) {
         BaseText(title)
     }
 }
+
+
 @Composable
 fun CreatePostLookItem(icon:Int, lookModel:Int, list:List<String> = emptyList(), onclick: () -> Unit) {
     var title by remember { mutableStateOf("谁可以看") }
@@ -516,9 +574,13 @@ fun CreatePostScaffold(title:String="",selectedUri:Uri=Uri.Builder().build(),loo
                             interactionSource = remember { MutableInteractionSource() }) { onCancel() })
                 },
                 defaultColor = Color.White,
-                action = { BaseButton(onClick =  { onCreate()}, modifier = Modifier
-                    .height(30.dp)
-                    .width(60.dp)) { BaseText("发表", color = Color.White, fontSize = 12.sp) } })
+                action = {
+                    Wrapper {
+                        BaseButton(onClick =  { onCreate()}, modifier = Modifier
+                            .height(30.dp)
+                            .width(60.dp)) { BaseText("发表", color = Color.White, fontSize = 12.sp) }
+                    }
+                })
             content()
         }
     }
@@ -542,6 +604,17 @@ fun ImageItem(data:Any, size: Dp,onDelete:()->Unit={}, onclick:()->Unit) {
                 interactionSource = remember { MutableInteractionSource() }) {
                 onDelete()
             })
+    }
+}
+@Composable
+fun VideoItem(data: Any,onclick:  () -> Unit) {
+    Box(modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onclick() }) {
+        AsyncImage(ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),contentDescription = null, modifier = Modifier
+            .width(100.dp)
+            .height(150.dp), contentScale = ContentScale.Crop)
+        Icon(Icons.Filled.PlayArrow,contentDescription = null, tint = Color.White , modifier = Modifier
+            .align(Alignment.Center).size(50.dp).padding(start = DefaultUserPadding))
+
     }
 }
 @OptIn(ExperimentalMaterialApi::class)
