@@ -77,6 +77,7 @@ import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApp
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendSearchScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SearchFriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.SelectFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SettingScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoInFriendBySearchScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoScreen
@@ -145,7 +146,8 @@ enum class MainActivityRouteEnum(val route: String) {
     MAIN_FRIEND_INFO("main_friend_info"),
     MAIN_FRIEND_SEARCH_SCREEN("main_friend_search_screen"),
     FRIEND_CIRCLE_SCREEN("friend_circle_screen"),
-    CREATE_POST_SCREEN("create_post_screen")
+    CREATE_POST_SCREEN("create_post_screen"),
+    SELECT_FRIEND_SCREEN("select_friend_screen")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -191,6 +193,9 @@ fun MainActivityScreen() {
         }
         composable(MainActivityRouteEnum.CREATE_POST_SCREEN.route) {
             CreatePostScreen(rootNavController,dvm,svm)
+        }
+        composable(MainActivityRouteEnum.SELECT_FRIEND_SCREEN.route) {
+            SelectFriendScreen(rootNavController,svm)
         }
 
 

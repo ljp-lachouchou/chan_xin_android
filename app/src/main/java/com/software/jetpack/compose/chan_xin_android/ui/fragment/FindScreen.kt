@@ -344,7 +344,7 @@ fun CreatePostScreen(navController: NavHostController,dvm: DynamicViewModel,svm:
             }
         }
         composable(CreatePostEnum.SELECT_SCOPE.route) {
-            SelectScopeToCreatePostScreen(thisController,svm, onChangeScopeList = {scopeList = it}) { lookModel = it }
+            SelectScopeToCreatePostScreen(navController,thisController,svm, onChangeScopeList = {scopeList = it}) { lookModel = it }
         }
     }
 
@@ -362,8 +362,10 @@ fun SelectLocationToCreatePostScreen(thisController: NavHostController,location:
         }
     }
 }
+
+
 @Composable
-fun SelectScopeToCreatePostScreen(thisController: NavHostController,svm:SocialViewModel,onChangeScopeList:(List<String>)->Unit,onChange: (Int) -> Unit) {
+fun SelectScopeToCreatePostScreen(navController: NavHostController,thisController: NavHostController,svm:SocialViewModel,onChangeScopeList:(List<String>)->Unit,onChange: (Int) -> Unit) {
     var selectModel by remember { mutableStateOf(0) }
     val userViewModel = hiltViewModel<UserViewmodel>()
     val user by userViewModel.myUser.collectAsState()
@@ -373,8 +375,8 @@ fun SelectScopeToCreatePostScreen(thisController: NavHostController,svm:SocialVi
             Wrapper { SexSingleSelect("公开",selectModel == 0) { selectModel = 0;onChangeScopeList(friendList.map { it.userId }) } }
             Wrapper { SexSingleSelect("私密",selectModel == 1) {selectModel = 1;onChangeScopeList(
                 listOf(user.id)
-            ) } }
-            Wrapper { SexSingleSelect("部分可见",selectModel == 2) {selectModel = 2; } }
+            ); } }
+            Wrapper { SexSingleSelect("部分可见",selectModel == 2) {selectModel = 2;navController.switchTab(MainActivityRouteEnum.SELECT_FRIEND_SCREEN.route) } }
             Wrapper {  SexSingleSelect("谁不可看",selectModel == 3) {selectModel = 3; } }
         }
     }
@@ -426,7 +428,7 @@ fun MainCreatePostScreen(navController: NavHostController,thisController:NavHost
                     }else {
                         listOf(videoUri).map { Oss.uploadFile("${System.currentTimeMillis()}.${StringUtil.getFileExtensionFromUri(AppGlobal.getAppContext(),it)}", uri = it) }
                     }
-                    dvm.createPost(user.id, PostContent(text,urls,""), PostMeta(if (location=="所在位置") "" else location,0,
+                    dvm.createPost(user.id, PostContent(text,urls,""), PostMeta(if (location=="所在位置") "" else location,if (lookModel>1) 2 else lookModel,
                         scopeList
                     ))
                     isLoading = false

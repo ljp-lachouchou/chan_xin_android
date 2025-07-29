@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -156,10 +157,12 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.BaseButton
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseScreenItem
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.base.CanLookImage
+import com.software.jetpack.compose.chan_xin_android.ui.base.ClickableOutlineCircle
 import com.software.jetpack.compose.chan_xin_android.ui.base.CustomTextField
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
 import com.software.jetpack.compose.chan_xin_android.ui.base.RefreshLazyColumn
 import com.software.jetpack.compose.chan_xin_android.ui.base.selectCharRows
+import com.software.jetpack.compose.chan_xin_android.ui.theme.ChatGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.LittleTextColor
@@ -1001,17 +1004,15 @@ private suspend fun getGroup(originalList:List<Friend>,mainEvent:(groups: List<P
         }
     }
 }
-//好友首页
-@OptIn(ExperimentalFoundationApi::class)
+//选择好友页
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: SocialViewModel) {
-    var isLoading by remember { mutableStateOf(false) }
+fun SelectFriendScreen(navController: NavHostController,svm:SocialViewModel) {
+    val uvm:UserViewmodel = hiltViewModel()
     val user by uvm.myUser.collectAsState()
-    val listState = rememberLazyListState()
+    var isLoading by remember { mutableStateOf(false) }
     val groupedFriends by svm.currentGroup.collectAsState()
     var showSidebar by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
     val listCache by svm.friendCacheList.collectAsState()
     LaunchedEffect(user.id) {
         if (user.id != "") {
@@ -1046,7 +1047,54 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
         }
     }
     Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(topBar = {
+        MainFriendListScreen(navController,showSidebar = true, groupedFriends = groupedFriends, canSelected = true)
+        Wrapper { LoadingDialog(isLoading) }
+    }
+}
+//好友首页
+@OptIn(ExperimentalFoundationApi::class)
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: SocialViewModel) {
+    var isLoading by remember { mutableStateOf(false) }
+    val user by uvm.myUser.collectAsState()
+    val groupedFriends by svm.currentGroup.collectAsState()
+    var showSidebar by remember { mutableStateOf(false) }
+    val listCache by svm.friendCacheList.collectAsState()
+    LaunchedEffect(user.id) {
+        if (user.id != "") {
+            withContext(Dispatchers.IO) {
+                val originalList:List<Friend> = if (AppGlobal.isNetworkValid()) {
+                    svm.getFriendList(user.id)
+                }else {
+                    listCache
+                }
+                svm.loadCurrentFriendList(originalList)
+                if (originalList.sortedBy { it.userId }==listCache.sortedBy { it.userId }) {
+                    if (groupedFriends.isEmpty()) {
+                        isLoading = true
+                        getGroup(listCache){groups ->
+                            svm.loadCurrentGroup(groups)
+                            isLoading = false
+                            showSidebar = true
+                        }
+                    }
+                    showSidebar = true
+                    Log.e("hhhssss","ssss")
+                    return@withContext
+                }
+                isLoading = true
+                getGroup(originalList){groups ->
+                    svm.loadCurrentGroup(groups)
+                    isLoading = false
+                    showSidebar = true
+                }
+            }
+
+        }
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        MainFriendListScreen(navController,groupedFriends,showSidebar, topBar = {
             MyTopBar(title = "朋友", action = {
                 Icon(
                     painterResource(R.drawable.apply_friend),
@@ -1061,27 +1109,58 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
                             )
                         })
             })
-        }) { padding ->
+        }, preContent = {
+            item(key = "handle_apply") {
+                FriendScreenItem(data = R.drawable.handle_apply, onClick = {navController.switchTab(MainActivityRouteEnum.APPLY_FRIEND_LIST.route)}) {
+                    BaseText("请求列表")
+                }
+            }
+            item(key="new_friend") {
+                Wrapper {
+                    FriendScreenItem(data = R.drawable.new_friend, onClick = {
+                        navController.switchTab(MainActivityRouteEnum.HANDLE_FRIEND_APPLY_LIST.route)
+                    }) {
+                        BaseText("新的朋友")
+                    }
+                }
+            }
+        }, sufContent = {
+            item {
+                Wrapper {
+                    Text(
+                        text = "${listCache.size}个朋友",
+                        color = PlaceholderColor, // 醒目颜色
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }) {friend->
+            svm.loadClickFriend(friend)
+            navController.switchTab(MainActivityRouteEnum.MAIN_FRIEND_INFO.route)
+        }
+        Wrapper(modifier = Modifier.fillMaxSize()) {
+            LoadingDialog(isLoading)
+        }
+    }
+}
+@RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun MainFriendListScreen(navController: NavHostController,groupedFriends:List<Pair<String, List<Friend>>>,showSidebar:Boolean,canSelected: Boolean=false,topBar:@Composable () -> Unit = {},preContent: LazyListScope.() -> Unit={},sufContent:LazyListScope.()->Unit={},onClick: ((Friend) -> Unit)? = null) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(topBar = topBar) { padding ->
             LazyColumn(modifier = Modifier.padding(padding), state = listState) {
                 item(key="search_bar") {
                     Wrapper {
                         SearchScreenFirstScreen(isPadding = false, defaultHeight = 25.dp, defaultColor = Color.White, defaultPadding = 10.dp) { navController.switchTab(MainActivityRouteEnum.MAIN_FRIEND_SEARCH_SCREEN.route) }
                     }
                 }
-                item(key = "handle_apply") {
-                    FriendScreenItem(data = R.drawable.handle_apply, onClick = {navController.switchTab(MainActivityRouteEnum.APPLY_FRIEND_LIST.route)}) {
-                        BaseText("请求列表")
-                    }
-                }
-                item(key="new_friend") {
-                    Wrapper {
-                        FriendScreenItem(data = R.drawable.new_friend, onClick = {
-                            navController.switchTab(MainActivityRouteEnum.HANDLE_FRIEND_APPLY_LIST.route)
-                        }) {
-                            BaseText("新的朋友")
-                        }
-                    }
-                }
+                preContent()
                 groupedFriends.forEach{(k,v)->
                     stickyHeader(key = "header_$k") {
                         Wrapper {
@@ -1095,9 +1174,8 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
                     }
                     itemsIndexed(v,key = {_,item->item.userId}) {_,friend->
                         Wrapper {
-                            FriendScreenItem(friend.displayAvatar, onClick = {
-                                svm.loadClickFriend(friend)
-                                navController.switchTab(MainActivityRouteEnum.MAIN_FRIEND_INFO.route)
+                            FriendScreenItem(friend.displayAvatar, canSelected = canSelected, onClick = {
+                                if (onClick==null) null else onClick(friend)
                             }) {
                                 BaseText(friend.displayName)
                             }
@@ -1112,18 +1190,7 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
                             ), color = PlaceholderColor, thickness = 0.1.dp)
                     }
                 }
-                item {
-                    Wrapper {
-                        Text(
-                            text = "${listCache.size}个朋友",
-                            color = PlaceholderColor, // 醒目颜色
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+                sufContent()
             }
         }
         if (showSidebar) {
@@ -1147,9 +1214,6 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
                     scope.launch { listState.animateScrollToItem(index = targetPosition+offsetItemCount) }
                 }
             }
-        }
-        Wrapper(modifier = Modifier.fillMaxSize()) {
-            LoadingDialog(isLoading)
         }
     }
 }
@@ -1583,16 +1647,30 @@ fun HandleFriendApplyVerifyUI(scope:CoroutineScope,navController:NavHostControll
 }
 
 @Composable
-fun FriendScreenItem( data: Any, onClick: () -> Unit,tailContent:@Composable ()->Unit={},content: @Composable () -> Unit) {
+fun FriendScreenItem(data: Any, onClick: (() -> Unit)?=null,canSelected:Boolean=false,tailContent:@Composable ()->Unit={},content: @Composable () -> Unit) {
+    var selected by remember { mutableStateOf(false) }
     BaseScreenItem(preContent = {
-        AsyncImage(
-            model = ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),
-            contentDescription = null, modifier = Modifier
-                .size(35.dp)
-                .clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop,
-            placeholder = painterResource(R.drawable.default_avatar)
-        )
-    }, onClick = onClick, tailContent = tailContent) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (canSelected) {
+                ClickableOutlineCircle(fillColor = if (selected) ChatGreen else Color.Transparent) { selected =  !selected }
+                Spacer(modifier = Modifier.width(10.dp))
+            }
+            AsyncImage(
+                model = ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),
+                contentDescription = null, modifier = Modifier
+                    .size(35.dp)
+                    .clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop,
+                placeholder = painterResource(R.drawable.default_avatar)
+            )
+        }
+    }, onClick = {
+        Log.e("你好","你好")
+        if (onClick==null && canSelected) {selected=!selected} else {
+            if (onClick != null) {
+                onClick()
+            }
+        }
+    }, tailContent = tailContent) {
         content()
     }
 }

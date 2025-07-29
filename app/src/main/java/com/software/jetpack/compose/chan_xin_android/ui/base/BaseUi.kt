@@ -1118,6 +1118,51 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,onChangeCove
         }
     }
 }
+@Composable
+fun ClickableOutlineCircle(
+    diameter: Dp = 20.dp,
+    outlineColor: Color = Color.Black,
+    outlineWidth: Dp = 0.5.dp,
+    fillColor: Color = Color.Transparent,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(diameter)
+            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        val outlineWidthPx = with(LocalDensity.current) { outlineWidth.toPx() }
+
+        Canvas(modifier = Modifier.size(diameter)) {
+            val canvasSize = size.minDimension
+
+            // 绘制填充色
+            drawCircle(
+                color = fillColor,
+                radius = (canvasSize - outlineWidthPx) / 2,
+                center = Offset(size.width / 2, size.height / 2)
+            )
+
+            // 绘制轮廓
+            drawCircle(
+                color = outlineColor,
+                radius = canvasSize / 2,
+                style = Stroke(width = outlineWidthPx),
+                center = Offset(size.width / 2, size.height / 2)
+            )
+        }
+    }
+}
+@Preview
+@Composable
+fun ClickableOutlineCirclePreview() {
+    var isFilled by remember { mutableStateOf(false) }
+    ClickableOutlineCircle(
+        fillColor = if (isFilled) ChatGreen else Color.Transparent,
+        onClick = { isFilled = !isFilled }
+    )
+}
 
 
 
