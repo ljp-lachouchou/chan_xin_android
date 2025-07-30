@@ -56,6 +56,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +67,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -347,7 +349,6 @@ fun CreatePostScreen(navController: NavHostController,dvm: DynamicViewModel,svm:
             SelectScopeToCreatePostScreen(navController,thisController,svm, onChangeScopeList = {scopeList = it}) { lookModel = it }
         }
     }
-
 }
 
 @Composable
@@ -366,18 +367,52 @@ fun SelectLocationToCreatePostScreen(thisController: NavHostController,location:
 
 @Composable
 fun SelectScopeToCreatePostScreen(navController: NavHostController,thisController: NavHostController,svm:SocialViewModel,onChangeScopeList:(List<String>)->Unit,onChange: (Int) -> Unit) {
-    var selectModel by remember { mutableStateOf(0) }
+    var selectModel by rememberSaveable { mutableIntStateOf(0) }
     val userViewModel = hiltViewModel<UserViewmodel>()
     val user by userViewModel.myUser.collectAsState()
     val friendList by svm.currentFriendList.collectAsState()
-    CreatePostScaffold("谁可以看", onCancel = {thisController.navigateUp()}, onCreate = {onChange(selectModel);thisController.navigateUp()}) {
-        Column {
-            Wrapper { SexSingleSelect("公开",selectModel == 0) { selectModel = 0;onChangeScopeList(friendList.map { it.userId }) } }
-            Wrapper { SexSingleSelect("私密",selectModel == 1) {selectModel = 1;onChangeScopeList(
+    val selectFriendList by svm.currentSelectFriendList.collectAsState()
+    val abandonList by svm.currentAbandonFriendList.collectAsState()
+    val sb1 by remember { mutableStateOf(StringBuilder()) }
+    LaunchedEffect(selectFriendList) {
+        sb1.append(selectFriendList.map { it.displayName })
+    }
+    val sb2 by remember { mutableStateOf(StringBuilder()) }
+    LaunchedEffect(abandonList) {
+        sb2.append(abandonList.map { it.displayName })
+    }
+    CreatePostScaffold("谁可以看", onCancel = {thisController.navigateUp()}, onCreate = {
+        if (selectModel==2 && selectFriendList.isEmpty()) {
+            Toast.makeText(AppGlobal.getAppContext(),"至少选择一个好友",Toast.LENGTH_SHORT).show()
+            return@CreatePostScaffold
+        }
+        onChange(selectModel)
+        onChangeScopeList(when(selectModel) {
+            0-> {
+                friendList.map { it.userId }
+            }
+            1-> {
                 listOf(user.id)
-            ); } }
-            Wrapper { SexSingleSelect("部分可见",selectModel == 2) {selectModel = 2;navController.switchTab(MainActivityRouteEnum.SELECT_FRIEND_SCREEN.route) } }
-            Wrapper {  SexSingleSelect("谁不可看",selectModel == 3) {selectModel = 3; } }
+            }
+            2->{
+                selectFriendList.map { it.userId }
+            }
+            3-> {
+                (friendList - abandonList).map { it.userId }
+            }
+            else -> {emptyList()}
+        })
+        thisController.navigateUp()}) {
+        Column {
+            Wrapper { SexSingleSelect("公开",selectModel == 0) { selectModel = 0 } }
+            Wrapper { SexSingleSelect("私密",selectModel == 1) {selectModel = 1 } }
+            Wrapper { SexSingleSelect("部分可见 $sb1",selectModel == 2) {selectModel = 2
+                svm.loadCurrentSelectFriendList(emptyList())
+                navController.switchTab(MainActivityRouteEnum.SELECT_FRIEND_SCREEN.route) } }
+            Wrapper {  SexSingleSelect("谁不可看 $sb2",selectModel == 3) {
+                selectModel = 3
+                navController.switchTab(MainActivityRouteEnum.ABANDON_FRIEND_SCREEN.route)
+            } }
         }
     }
 
@@ -504,7 +539,7 @@ fun MainCreatePostScreen(navController: NavHostController,thisController:NavHost
                 CreatePostItem(R.drawable.location,location) { thisController.switchTab(CreatePostEnum.SELECT_LOCATION.route) }
                 HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.3.dp, color = DividerColor)
                 //谁可以看
-                CreatePostLookItem(R.drawable.user,lookModel) { thisController.switchTab(CreatePostEnum.SELECT_SCOPE.route) }
+                CreatePostLookItem(R.drawable.user,lookModel, svm = svm) { thisController.switchTab(CreatePostEnum.SELECT_SCOPE.route) }
                 HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.3.dp, color = DividerColor)
             }
             Spacer(modifier = Modifier.weight(1f))
@@ -529,13 +564,21 @@ fun CreatePostItem(icon:Int, title:String, onclick: () -> Unit) {
 
 
 @Composable
-fun CreatePostLookItem(icon:Int, lookModel:Int, list:List<String> = emptyList(), onclick: () -> Unit) {
+fun CreatePostLookItem(icon:Int, lookModel:Int,
+    svm: SocialViewModel, onclick: () -> Unit) {
     var title by remember { mutableStateOf("谁可以看") }
     val isCanLook by remember(lookModel) { derivedStateOf { lookModel==3 } }
-    val sb = StringBuilder()
-    list.forEach {displayName->
-        sb.append("$displayName ")
+    val selectFriendList by svm.currentSelectFriendList.collectAsState()
+    val abandonList by svm.currentAbandonFriendList.collectAsState()
+    val sb1 by remember { mutableStateOf(StringBuilder()) }
+    LaunchedEffect(selectFriendList) {
+        sb1.append(selectFriendList.map { it.displayName })
     }
+    val sb2 by remember { mutableStateOf(StringBuilder()) }
+    LaunchedEffect(abandonList) {
+        sb2.append(abandonList.map { it.displayName })
+    }
+    val sb = if (lookModel==2) sb1 else sb2
     Column{
         BaseScreenItem(preContent = {
             Icon(painterResource(icon),contentDescription = null, tint = PlaceholderColor, modifier = Modifier.size(24.dp))
@@ -557,7 +600,7 @@ fun CreatePostLookItem(icon:Int, lookModel:Int, list:List<String> = emptyList(),
             BaseText(title, color = if(isCanLook) Color.Red else Color.Black)
         }
         if (lookModel>1) {
-            BaseText("-朋友:$sb", color = PlaceholderColor, fontSize = 10.sp, modifier = Modifier.padding(start = DefaultUserPadding))
+            BaseText("-朋友: $sb", color = PlaceholderColor, fontSize = 10.sp, modifier = Modifier.padding(start = DefaultUserPadding), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

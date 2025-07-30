@@ -73,10 +73,12 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -408,7 +410,7 @@ fun SexSingleSelect(title:String="",selected:Boolean,onClick: () -> Unit) {
         .clickable(
             indication = null,
             interactionSource = remember { MutableInteractionSource() }) { onClick() }) {
-        BaseText(text = title, fontSize = DefaultFontSize)
+        BaseText(text = title, fontSize = DefaultFontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Spacer(modifier = Modifier.weight(1f))
         if (selected) Icon(imageVector= Icons.Filled.Check, contentDescription = null, tint = IconGreen)
     }

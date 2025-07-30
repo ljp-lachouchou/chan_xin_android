@@ -64,6 +64,7 @@ import androidx.navigation.compose.rememberNavController
 import com.software.jetpack.compose.chan_xin_android.R
 import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.AbandonFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendScreen
@@ -147,7 +148,8 @@ enum class MainActivityRouteEnum(val route: String) {
     MAIN_FRIEND_SEARCH_SCREEN("main_friend_search_screen"),
     FRIEND_CIRCLE_SCREEN("friend_circle_screen"),
     CREATE_POST_SCREEN("create_post_screen"),
-    SELECT_FRIEND_SCREEN("select_friend_screen")
+    SELECT_FRIEND_SCREEN("select_friend_screen"),
+    ABANDON_FRIEND_SCREEN("abandon_friend_screen")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -196,6 +198,9 @@ fun MainActivityScreen() {
         }
         composable(MainActivityRouteEnum.SELECT_FRIEND_SCREEN.route) {
             SelectFriendScreen(rootNavController,svm)
+        }
+        composable(MainActivityRouteEnum.ABANDON_FRIEND_SCREEN.route) {
+            AbandonFriendScreen(rootNavController,svm)
         }
 
 

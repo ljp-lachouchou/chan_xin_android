@@ -1156,7 +1156,93 @@ fun SelectFriendScreen(navController: NavHostController,svm:SocialViewModel) {
         }
         Wrapper { LoadingDialog(isLoading) }
     }
+}
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun AbandonFriendScreen(navController: NavHostController,svm:SocialViewModel) {
+    val uvm:UserViewmodel = hiltViewModel()
+    val user by uvm.myUser.collectAsState()
+    var isLoading by remember { mutableStateOf(false) }
+    val groupedFriends by svm.currentGroup.collectAsState()
+    var showSidebar by remember { mutableStateOf(false) }
+    val listCache by svm.friendCacheList.collectAsState()
+    val abandonList by svm.currentAbandonFriendList.collectAsState()
+    val canSelectedState by remember(abandonList) { mutableStateOf(CanSelectedState(true,abandonList)) }
+    LaunchedEffect(user.id) {
+        if (user.id != "") {
+            withContext(Dispatchers.IO) {
+                val originalList:List<Friend> = if (AppGlobal.isNetworkValid()) {
+                    svm.getFriendList(user.id)
+                }else {
+                    listCache
+                }
+                svm.loadCurrentFriendList(originalList)
+                if (originalList.sortedBy { it.userId }==listCache.sortedBy { it.userId }) {
+                    if (groupedFriends.isEmpty()) {
+                        isLoading = true
+                        getGroup(listCache){groups ->
+                            svm.loadCurrentGroup(groups)
+                            isLoading = false
+                            showSidebar = true
+                        }
+                    }
+                    showSidebar = true
+                    Log.e("hhhssss","ssss")
+                    return@withContext
+                }
+                isLoading = true
+                getGroup(originalList){groups ->
+                    svm.loadCurrentGroup(groups)
+                    isLoading = false
+                    showSidebar = true
+                }
+            }
 
+        }
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Wrapper {
+            MainFriendListScreen(navController,showSidebar = true, groupedFriends = groupedFriends, canSelectedState = canSelectedState) {selected,friend ->
+                if (selected) {
+                    svm.loadCurrentAbandonFriendList(abandonList+friend)
+                }else {
+                    svm.loadCurrentAbandonFriendList(abandonList-friend)
+                }
+            }
+        }
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .background(color = SurfaceColor)
+            .align(Alignment.BottomCenter)
+            .padding(
+                DefaultUserPadding
+            ), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Wrapper(modifier = Modifier.weight(1f)) {
+                LazyRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    items(abandonList, key = {i: Friend -> i.userId }) { item: Friend ->
+                        AsyncImage(
+                            model = ImageRequest.Builder(AppGlobal.getAppContext())
+                                .data(item.displayAvatar).build(),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(DefaultUserScreenItemDp)
+                                .clip(
+                                    RoundedCornerShape(5.dp)
+                                ),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+            BaseButton(onClick = { navController.navigateUp() }) {
+                BaseText("选择", color = Color.White)
+            }
+        }
+        Wrapper { LoadingDialog(isLoading) }
+    }
 }
 //好友首页
 @OptIn(ExperimentalFoundationApi::class)
