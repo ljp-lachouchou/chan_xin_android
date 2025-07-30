@@ -25,11 +25,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,6 +37,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -50,20 +49,31 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.ExperimentalMaterialApi
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Icon
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.ModalBottomSheetLayout
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.ModalBottomSheetState
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.ModalBottomSheetValue
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Scaffold
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Surface
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Search
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.RadioButton
@@ -149,7 +159,6 @@ import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.getGroupByFirstLetter
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
-import com.software.jetpack.compose.chan_xin_android.ui.activity.AppTopBar
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityRouteEnum
 import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
@@ -181,7 +190,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
-import java.util.UUID
 import kotlin.math.roundToInt
 enum class FriendScreenRouteEnum(val route:String) {
     PARENT("parent")
@@ -514,9 +522,12 @@ fun UserInfoInFriendBySearchScreen(navController: NavHostController, uvm: UserVi
 
 @Composable
 fun TopBarWithBack(navController: NavHostController,title :String="",backTint:Color=Color.Black,color: Color=Color.White,action:@Composable ()->Unit = {}) {
-    Box(modifier = Modifier.fillMaxWidth().background(color), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier
+        .fillMaxWidth()
+        .background(color), contentAlignment = Alignment.Center) {
         Row(modifier = Modifier
-            .fillMaxWidth().background(color)
+            .fillMaxWidth()
+            .background(color)
             .padding(DefaultUserPadding), horizontalArrangement = Arrangement.SpaceBetween) {
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -554,7 +565,7 @@ fun MyTopBar(
 
 suspend fun applyFriend(aId: String, tId: String, greetMsg: String,svm:SocialViewModel) {
     try {
-        val friendApplyResponse = svm.applyFriend(aId,tId,greetMsg)
+        svm.applyFriend(aId,tId,greetMsg)
         withContext(Dispatchers.Main) {
             Toast.makeText(AppGlobal.getAppContext(),"申请成功，请耐心等待对方通过",Toast.LENGTH_SHORT).show()
         }
@@ -1004,7 +1015,48 @@ private suspend fun getGroup(originalList:List<Friend>,mainEvent:(groups: List<P
         }
     }
 }
+//选择好友页sheet
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter", "StateFlowValueCalledInComposition")
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun SelectFriendScreenSheet(sheetState: ModalBottomSheetState,svm:SocialViewModel) {
+    val selectFriendList by svm.currentSelectFriendList.collectAsState()
+    val friendList = svm.friendCacheList.value
+    val scope = rememberCoroutineScope()
+    var isAll by remember { mutableStateOf(true) }
+    scope.apply {
+        Scaffold(topBar = {
+            MyTopBar(preContent = {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft,contentDescription = null, modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { launch { sheetState.hide() } })
+            }, defaultColor = Color.White, action = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                    isAll = !isAll
+                    if (!isAll) svm.loadCurrentSelectFriendList(emptyList()) else svm.loadCurrentSelectFriendList(friendList)
+                }) {
+                    ClickableOutlineCircle(fillColor = if (isAll) ChatGreen else Color.Transparent) { isAll = !isAll }
+                    BaseText("全选")
+                }
+            })
+        }) {
+            LazyColumn {
+                items(selectFriendList, key = {item: Friend -> item.userId }) {item: Friend ->
+                    FriendScreenItem(item.displayAvatar, onClick = {isSelected->
+                        if (isSelected) {
+                            svm.loadCurrentSelectFriendList(selectFriendList+item)
+                        }else {
+                            svm.loadCurrentSelectFriendList(selectFriendList-item)
+
+                        }
+                    }, canSelected = true,initValue = true) {
+                        BaseText(item.displayName)
+                    }
+                }
+            }
+        }
+    }
+}
 //选择好友页
+@OptIn(ExperimentalMaterialApi::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun SelectFriendScreen(navController: NavHostController,svm:SocialViewModel) {
@@ -1014,6 +1066,10 @@ fun SelectFriendScreen(navController: NavHostController,svm:SocialViewModel) {
     val groupedFriends by svm.currentGroup.collectAsState()
     var showSidebar by remember { mutableStateOf(false) }
     val listCache by svm.friendCacheList.collectAsState()
+    val selectFriendList by svm.currentSelectFriendList.collectAsState()
+    val sheetState = rememberModalBottomSheetState(ModalBottomSheetValue.Hidden)
+    val scope = rememberCoroutineScope()
+    val canSelectedState by remember(selectFriendList) { mutableStateOf(CanSelectedState(true,selectFriendList)) }
     LaunchedEffect(user.id) {
         if (user.id != "") {
             withContext(Dispatchers.IO) {
@@ -1047,9 +1103,60 @@ fun SelectFriendScreen(navController: NavHostController,svm:SocialViewModel) {
         }
     }
     Box(modifier = Modifier.fillMaxSize()) {
-        MainFriendListScreen(navController,showSidebar = true, groupedFriends = groupedFriends, canSelected = true)
+        Wrapper {
+            ModalBottomSheetLayout(sheetState = sheetState, sheetContent = {
+                SelectFriendScreenSheet(sheetState,svm)
+            }) {
+                MainFriendListScreen(navController,showSidebar = true, groupedFriends = groupedFriends, canSelectedState = canSelectedState) {selected,friend ->
+                    if (selected) {
+                        svm.loadCurrentSelectFriendList(selectFriendList + friend)
+                    }else {
+                        svm.loadCurrentSelectFriendList(selectFriendList - friend)
+                    }
+                }
+            }
+        }
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .background(color = SurfaceColor)
+            .align(Alignment.BottomCenter)
+            .padding(
+                DefaultUserPadding
+            ), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Wrapper {
+                Icon(Icons.Filled.KeyboardArrowUp,contentDescription = null, tint = Color.Gray, modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                    scope.launch {
+                        sheetState.show()
+                    }
+                })
+            }
+            Wrapper(modifier = Modifier.weight(1f)) {
+                LazyRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    items(selectFriendList, key = {i: Friend -> i.userId }) { item: Friend ->
+                        AsyncImage(
+                            model = ImageRequest.Builder(AppGlobal.getAppContext())
+                                .data(item.displayAvatar).build(),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(DefaultUserScreenItemDp)
+                                .clip(
+                                    RoundedCornerShape(5.dp)
+                                ),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+            BaseButton(onClick = { navController.navigateUp() }) {
+                BaseText("选择", color = Color.White)
+            }
+        }
         Wrapper { LoadingDialog(isLoading) }
     }
+
 }
 //好友首页
 @OptIn(ExperimentalFoundationApi::class)
@@ -1137,7 +1244,7 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
                     )
                 }
             }
-        }) {friend->
+        }) {_,friend->
             svm.loadClickFriend(friend)
             navController.switchTab(MainActivityRouteEnum.MAIN_FRIEND_INFO.route)
         }
@@ -1146,10 +1253,12 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
         }
     }
 }
+@Stable
+data class CanSelectedState(val canSelected: Boolean=false,val list: List<Friend> = emptyList())
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MainFriendListScreen(navController: NavHostController,groupedFriends:List<Pair<String, List<Friend>>>,showSidebar:Boolean,canSelected: Boolean=false,topBar:@Composable () -> Unit = {},preContent: LazyListScope.() -> Unit={},sufContent:LazyListScope.()->Unit={},onClick: ((Friend) -> Unit)? = null) {
+fun MainFriendListScreen(navController: NavHostController, groupedFriends:List<Pair<String, List<Friend>>>, showSidebar:Boolean, canSelectedState: CanSelectedState= CanSelectedState(), topBar:@Composable () -> Unit = {}, preContent: LazyListScope.() -> Unit={}, sufContent:LazyListScope.()->Unit={}, onClick: (Boolean, Friend) -> Unit) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1174,9 +1283,9 @@ fun MainFriendListScreen(navController: NavHostController,groupedFriends:List<Pa
                     }
                     itemsIndexed(v,key = {_,item->item.userId}) {_,friend->
                         Wrapper {
-                            FriendScreenItem(friend.displayAvatar, canSelected = canSelected, onClick = {
-                                if (onClick==null) null else onClick(friend)
-                            }) {
+                            FriendScreenItem(friend.displayAvatar, canSelected = canSelectedState.canSelected, onClick = {selected->
+                                onClick(selected,friend)
+                            }, initValue = canSelectedState.list.contains(friend)) {
                                 BaseText(friend.displayName)
                             }
                         }
@@ -1229,9 +1338,13 @@ fun MainFriendSearchScreen(navController: NavHostController,svm: SocialViewModel
         textFieldHeight = 25f,
         isFocus = isFocus,
         list = list.filter { friend: Friend ->
-            find != "" && friend.userId.contains(find) or PinAYinUtil.getFirstLetter(
-                friend.nickname
-            ).contains(find) or PinAYinUtil.getFirstLetter(friend.displayName).contains(find)
+            find != "" && (
+                    friend.userId.contains(find) or PinAYinUtil.toHanYuPinYin(
+                friend.displayName
+            ).lowercase().contains(find.lowercase()) or PinAYinUtil.toHanYuPinYin(
+                            friend.nickname
+                            ).lowercase().contains(find.lowercase()) or PinAYinUtil.getFirstLetter(friend.displayName).contains(find) or friend.displayName.contains(find)
+                    )
         },
         uvm = uvm,
         findModel = findModel,
@@ -1413,7 +1526,7 @@ fun HandleFriendApplyInfoScreen(navController: NavHostController,svm:SocialViewM
         1->"已同意"
         else->""
     }
-    val enabled by remember(wantApplyFriend.status) { derivedStateOf { if (wantApplyFriend.status==0){true}else false } }
+    val enabled by remember(wantApplyFriend.status) { derivedStateOf { wantApplyFriend.status==0 } }
     var selectedImage by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     Scaffold(topBar = {TopBarWithBack(navController)}) {
@@ -1647,8 +1760,11 @@ fun HandleFriendApplyVerifyUI(scope:CoroutineScope,navController:NavHostControll
 }
 
 @Composable
-fun FriendScreenItem(data: Any, onClick: (() -> Unit)?=null,canSelected:Boolean=false,tailContent:@Composable ()->Unit={},content: @Composable () -> Unit) {
-    var selected by remember { mutableStateOf(false) }
+fun FriendScreenItem(data: Any, onClick: (Boolean) -> Unit={},canSelected:Boolean=false,initValue:Boolean=false,tailContent:@Composable ()->Unit={},content: @Composable () -> Unit) {
+    var selected by remember { mutableStateOf(initValue) }
+    LaunchedEffect(initValue) {
+        selected = initValue
+    }
     BaseScreenItem(preContent = {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (canSelected) {
@@ -1665,29 +1781,15 @@ fun FriendScreenItem(data: Any, onClick: (() -> Unit)?=null,canSelected:Boolean=
         }
     }, onClick = {
         Log.e("你好","你好")
-        if (onClick==null && canSelected) {selected=!selected} else {
-            if (onClick != null) {
-                onClick()
-            }
+        if (canSelected){
+            selected=!selected
         }
+        onClick(selected)
     }, tailContent = tailContent) {
         content()
     }
 }
 
-
-@SuppressLint("ModifierFactoryUnreferencedReceiver", "UnnecessaryComposedModifier")
-fun Modifier.clickableWithPosition(
-    onClick: (Offset) -> Unit
-): Modifier = composed {
-    pointerInput(Unit) {
-        detectTapGestures(
-            onTap = { offset ->
-                onClick(offset)
-            }
-        )
-    }
-}
 
 @OptIn(ExperimentalComposeUiApi::class)
 @SuppressLint("UnusedTransitionTargetStateParameter", "RememberReturnType")

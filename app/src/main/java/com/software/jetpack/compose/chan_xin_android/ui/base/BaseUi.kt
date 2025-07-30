@@ -29,6 +29,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.indication
@@ -99,6 +100,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.MotionDurationScale
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
@@ -1124,7 +1126,7 @@ fun ClickableOutlineCircle(
     outlineColor: Color = Color.Black,
     outlineWidth: Dp = 0.5.dp,
     fillColor: Color = Color.Transparent,
-    onClick: () -> Unit
+    onClick: () -> Unit={}
 ) {
     Box(
         modifier = Modifier
@@ -1162,6 +1164,18 @@ fun ClickableOutlineCirclePreview() {
         fillColor = if (isFilled) ChatGreen else Color.Transparent,
         onClick = { isFilled = !isFilled }
     )
+}
+@SuppressLint("ModifierFactoryUnreferencedReceiver", "UnnecessaryComposedModifier")
+fun Modifier.clickableWithPosition(
+    onClick: (Offset) -> Unit
+): Modifier = composed {
+    pointerInput(Unit) {
+        detectTapGestures(
+            onTap = { offset ->
+                onClick(offset)
+            }
+        )
+    }
 }
 
 
