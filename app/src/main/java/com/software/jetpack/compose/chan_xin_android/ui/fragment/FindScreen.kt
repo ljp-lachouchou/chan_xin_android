@@ -121,7 +121,6 @@ import kotlinx.coroutines.withContext
 @Composable
 fun FindMainScreen(navController:NavHostController) {
     val activity = LocalContext.current as Activity
-
     // 拦截返回键，直接退出应用
     BackHandler(enabled = true) {
         activity.moveTaskToBack(true) // 切换到后台
@@ -325,11 +324,19 @@ fun FriendCircleScreen(navController:NavHostController,uvm:UserViewmodel = hiltV
         }
     }
 }
+
+
+
+
+
+
 enum class CreatePostEnum(val route:String) {
     MAIN_CREATE("main_create"),
     SELECT_LOCATION("select_location"),
     SELECT_SCOPE("select_scope")
 }
+
+
 @Composable
 fun CreatePostScreen(navController: NavHostController,dvm: DynamicViewModel,svm:SocialViewModel) {
     val thisController = rememberNavController()
@@ -667,6 +674,7 @@ fun VideoItem(data: Any,onclick:  () -> Unit) {
 fun DynamicCreateSheet(scope: CoroutineScope,bottomSheetState: ModalBottomSheetState,onClickPhoto:()->Unit,onClickVideo:()->Unit){
     val context = LocalContext.current
     val intent = Intent(context, CameraActivity::class.java)
+    intent.putExtra("camera_model",1)
     scope.apply {
         Column(modifier = Modifier
             .fillMaxWidth()

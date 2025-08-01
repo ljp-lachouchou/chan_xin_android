@@ -508,6 +508,7 @@ fun SettingScreen(navController:NavHostController) {
                 scope.launch { AppGlobal.saveUserRela(PreferencesFileName.USER_TOKEN,"") }
                 scope.launch { AppGlobal.saveUserRela(PreferencesFileName.USER_TOKEN_EXP,0) }
                 val intent = Intent(context,LoginActivity::class.java)
+                intent.putExtra("camera_model",0)
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)

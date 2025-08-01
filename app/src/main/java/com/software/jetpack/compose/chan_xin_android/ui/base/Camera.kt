@@ -6,6 +6,8 @@ import android.media.MediaMetadataRetriever
 import android.media.browse.MediaBrowser.MediaItem
 import android.net.Uri
 import android.util.Log
+import androidx.annotation.OptIn
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,7 +17,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.MediaSource
@@ -27,7 +33,10 @@ import io.sanghun.compose.video.uri.VideoPlayerMediaItem
 
 
 @Composable
-fun PlayVideo(videoUri:Uri) {
+fun PlayVideo(videoUri:Uri,defaultHeight:Dp = 150.dp,defaultAspectRatio:Float = 0f) {
+    var modifier = Modifier.fillMaxWidth()
+    modifier = if (defaultAspectRatio!= 0f) modifier.aspectRatio(defaultAspectRatio)
+    else modifier.height(defaultHeight)
     VideoPlayer(
         mediaItems = listOf(
             VideoPlayerMediaItem.StorageMediaItem(
@@ -53,7 +62,7 @@ fun PlayVideo(videoUri:Uri) {
             controllerAutoShow = true,
             showFullScreenButton = false,
         ),
-        volume = 0.5f,  // volume 0.0f to 1.0f
+        volume = 1f,  // volume 0.0f to 1.0f
         repeatMode = RepeatMode.NONE,       // or RepeatMode.ALL, RepeatMode.ONE
         onCurrentTimeChanged = { // long type, current player time (millisec)
             Log.e("CurrentTime", it.toString())
@@ -62,12 +71,34 @@ fun PlayVideo(videoUri:Uri) {
             addAnalyticsListener(
                 object : AnalyticsListener {
                     // player logger
+                    @OptIn(UnstableApi::class)
+                    override fun onTracksChanged(
+                        eventTime: AnalyticsListener.EventTime,
+                        tracks: Tracks
+                    ) {
+                        super.onTracksChanged(eventTime, tracks)
+
+                        for (i in 0 until tracks.groups.size) {
+                            val group = tracks.groups[i]
+                            for (j in 0 until group.length) {
+                                val format = group.getTrackFormat(j)
+                                Log.d("VideoPlayer", "轨道类型：${format.sampleMimeType}，是否音频：${format.sampleMimeType?.startsWith("audio/")}")
+                            }
+                        }
+                    }
+
+                    @OptIn(UnstableApi::class)
+                    override fun onPlayerError(
+                        eventTime: AnalyticsListener.EventTime,
+                        error: PlaybackException
+                    ) {
+                        super.onPlayerError(eventTime, error)
+                        Log.e("VideoPlayerError", "播放错误：${error.message}")
+                    }
                 }
             )
         },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(150.dp),
+        modifier = modifier,
     )
 }
 @Composable

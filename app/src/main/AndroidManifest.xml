@@ -43,6 +43,10 @@
     <!--允许写设备缓存，用于问题排查-->
     <uses-permission android:name="android.permission.WRITE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
+    <uses-feature android:name="android.hardware.camera"  android:required="false" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
 
 
 
