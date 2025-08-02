@@ -2,8 +2,8 @@ package com.software.jetpack.compose.chan_xin_android.entity
 
 import com.google.gson.Gson
 
-data class Post(val postId:String,val userId:String,val content:PostContent,val meta:PostMeta,val isPinned:Boolean) {
-    constructor():this("","",PostContent(),PostMeta(),false)
+data class Post(val postId:String,val userId:String,val content:PostContent,val meta:PostMeta,val isPinned:Boolean,val createTime:Long) {
+    constructor():this("","",PostContent(),PostMeta(),false,0)
 }
 data class PostContent(val text:String,val imageUrls:List<String>?,val emoji:String) {
     constructor():this("", emptyList(),"")

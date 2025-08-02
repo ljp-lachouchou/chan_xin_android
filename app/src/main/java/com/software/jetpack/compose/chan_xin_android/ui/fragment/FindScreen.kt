@@ -13,6 +13,7 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -50,7 +51,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TextButton
@@ -104,7 +108,9 @@ import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScr
 import com.software.jetpack.compose.chan_xin_android.entity.Post
 import com.software.jetpack.compose.chan_xin_android.entity.PostContent
 import com.software.jetpack.compose.chan_xin_android.entity.PostMeta
+import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
+import com.software.jetpack.compose.chan_xin_android.ext.toTime
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityRouteEnum
 import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
@@ -138,6 +144,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URLEncoder
+import java.sql.Timestamp
 import java.util.UUID
 
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
@@ -227,6 +234,7 @@ fun FindMainScreen(navController:NavHostController) {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterialApi::class)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
@@ -246,6 +254,7 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
 }
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottomSheetState,filePath:String,dvm: DynamicViewModel,svm:SocialViewModel,uvm:UserViewmodel = hiltViewModel(),posts:LazyPagingItems<Post>,onFilePathChange:(String)->Unit,enterDetail:(String)->Unit) {
@@ -432,8 +441,9 @@ fun NoMoreItem() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun PostItem(post:Post,isScrolling:Boolean = true,onclick: (Uri) -> Unit) {
+fun PostItem(post:Post,isScrolling:Boolean = true,uvm: UserViewmodel = hiltViewModel(),onclick: (Uri) -> Unit) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val configuration = LocalConfiguration.current
     val screenWidthPx = configuration.screenWidthDp * LocalDensity.current.density
@@ -442,80 +452,105 @@ fun PostItem(post:Post,isScrolling:Boolean = true,onclick: (Uri) -> Unit) {
     val offset = 100 * LocalDensity.current.density
     val centerX = screenWidthPx / 2
     val centerY = screenHeightPx / 2
-    Row(modifier = Modifier
-        .fillMaxWidth()
-        .padding(DefaultUserPadding)
-        .onGloballyPositioned { layoutCoordinates ->
-            val position = layoutCoordinates.positionInWindow()
-            val componentCenterX = position.x + (layoutCoordinates.size.width / 2)
-            val componentCenterY = position.y + (layoutCoordinates.size.height / 2)
-            isAtTargetPosition = (
-                    componentCenterX >= centerX - offset &&
-                            componentCenterX <= centerX + offset &&
-                            componentCenterY >= centerY - offset &&
-                            componentCenterY <= centerY + offset
-                    )
+    val users = uvm.pagedUsers?.collectAsLazyPagingItems()
+    val user by remember(users) { derivedStateOf {
+        if (users?.itemCount==0) {
+            User()
+        }else {
+            users?.get(0) ?: User()
         }
-    ) {
-        Wrapper {
-            AsyncImage(model = ImageRequest.Builder(AppGlobal.getAppContext()).data(R.drawable.default_cover).allowHardware(true).lifecycle(lifecycle
-            ).build(),contentDescription = null, modifier = Modifier.size(50.dp).clip(
-                RoundedCornerShape(5.dp)
-            ), contentScale = ContentScale.Crop)
-        }
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Wrapper {
-                BaseText(post.userId, color = LittleTextColor)
+    } }
+    LaunchedEffect(Unit) {
+        uvm.findUser(ids = StringUtil.listToString(
+            listOf(post.userId)
+        ))
+    }
+    Column(modifier = Modifier.fillMaxWidth().padding(DefaultUserPadding)) {
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(DefaultUserPadding)
+            .onGloballyPositioned { layoutCoordinates ->
+                val position = layoutCoordinates.positionInWindow()
+                val componentCenterX = position.x + (layoutCoordinates.size.width / 2)
+                val componentCenterY = position.y + (layoutCoordinates.size.height / 2)
+                isAtTargetPosition = (
+                        componentCenterX >= centerX - offset &&
+                                componentCenterX <= centerX + offset &&
+                                componentCenterY >= centerY - offset &&
+                                componentCenterY <= centerY + offset
+                        )
             }
+        ) {
             Wrapper {
-                BaseText(post.content.text)
-            }
-            Wrapper {
-                if (post.content.imageUrls != null){
-                    val firstUrl = post.content.imageUrls[0]
-                    val encodedUrl = URLEncoder.encode(firstUrl, "UTF-8")
-                    val videoEncodedUri = Uri.parse(encodedUrl)
-                    val videoUri = Uri.parse(firstUrl)
-                    if (firstUrl.contains("mp4")) {
-                        val bitmap by rememberVideoFrame(videoEncodedUri)
-                        Box(modifier = Modifier.width(100.dp).height(150.dp)) {
-                            if (!isScrolling && isAtTargetPosition) {
-                                PlayVideo(videoUri, defaultWidth = 100.dp)
-                                Box(modifier = Modifier.width(100.dp).height(150.dp).clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
-                                    onclick(videoUri)
-                                })
-                            }else if (!isScrolling)  {
-                                VideoItem( bitmap?: R.drawable.default_cover) {
-                                    onclick(videoUri)
-                                }
-                            }
-                        }
-                    }else {
-                        LazyVerticalGrid(columns = GridCells.Fixed(3), verticalArrangement = Arrangement.spacedBy(5.dp), horizontalArrangement = Arrangement.spacedBy(5.dp),modifier = Modifier.height(((post.content.imageUrls.size + 2) / 3 * 80).dp)) {
+                AsyncImage(model = ImageRequest.Builder(AppGlobal.getAppContext()).data(user.displayAvatar).allowHardware(true).lifecycle(lifecycle
+                ).build(),contentDescription = null, modifier = Modifier.size(50.dp).clip(
+                    RoundedCornerShape(5.dp)
+                ), contentScale = ContentScale.Crop)
 
-                            items(post.content.imageUrls.indices.toList(), key = {it}) {index->
-                                val shouldLoad = !isScrolling
-                                if (shouldLoad) {
-                                    val imageUrl = post.content.imageUrls[index]
-                                    val imageRequest = remember(imageUrl) { // 仅在 url 变化时重新创建
-                                        ImageRequest.Builder(AppGlobal.getAppContext()).data(imageUrl).allowHardware(true).lifecycle(lifecycle
-                                        ).build()
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Wrapper {
+                    BaseText(user.nickname, color = LittleTextColor)
+                }
+                Wrapper {
+                    BaseText(post.content.text)
+                }
+                Wrapper {
+                    if (post.content.imageUrls != null){
+                        val firstUrl = post.content.imageUrls[0]
+                        val encodedUrl = URLEncoder.encode(firstUrl, "UTF-8")
+                        val videoEncodedUri = Uri.parse(encodedUrl)
+                        val videoUri = Uri.parse(firstUrl)
+                        if (firstUrl.contains("mp4")) {
+                            val bitmap by rememberVideoFrame(videoEncodedUri)
+                            Box(modifier = Modifier.width(100.dp).height(150.dp)) {
+                                if (!isScrolling && isAtTargetPosition) {
+                                    PlayVideo(videoUri, defaultWidth = 100.dp)
+                                    Box(modifier = Modifier.width(100.dp).height(150.dp).clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                                        onclick(videoUri)
+                                    })
+                                }else if (!isScrolling)  {
+                                    VideoItem( bitmap?: R.drawable.default_cover) {
+                                        onclick(videoUri)
                                     }
-                                    AsyncImage(
-                                        model = imageRequest,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(75.dp),
-                                        contentScale = ContentScale.Crop
-                                    )
                                 }
                             }
+                        }else {
+                            LazyVerticalGrid(columns = GridCells.Fixed(3), verticalArrangement = Arrangement.spacedBy(5.dp), horizontalArrangement = Arrangement.spacedBy(5.dp),modifier = Modifier.height(((post.content.imageUrls.size + 2) / 3 * 80).dp)) {
 
+                                items(post.content.imageUrls.indices.toList(), key = {it}) {index->
+                                    val shouldLoad = !isScrolling
+                                    if (shouldLoad) {
+                                        val imageUrl = post.content.imageUrls[index]
+                                        val imageRequest = remember(imageUrl) { // 仅在 url 变化时重新创建
+                                            ImageRequest.Builder(AppGlobal.getAppContext()).data(imageUrl).allowHardware(true).lifecycle(lifecycle
+                                            ).build()
+                                        }
+                                        AsyncImage(
+                                            model = imageRequest,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(75.dp),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+                                }
+
+                            }
                         }
                     }
                 }
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    BaseText(post.createTime.toTime(), color = PlaceholderColor)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(Icons.Filled.ThumbUp,contentDescription = null, tint = LittleTextColor, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Icon(Icons.Filled.MailOutline,contentDescription = null, tint = LittleTextColor, modifier = Modifier.size(14.dp))
+                }
             }
         }
+
+        HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.3.dp)
     }
 }
 
