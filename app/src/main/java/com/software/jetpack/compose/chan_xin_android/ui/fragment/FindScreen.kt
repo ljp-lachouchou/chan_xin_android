@@ -5,10 +5,13 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,6 +34,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.ModalBottomSheetLayout
@@ -60,11 +68,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -77,12 +91,17 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.software.jetpack.compose.chan_xin_android.CameraActivity
 import com.software.jetpack.compose.chan_xin_android.R
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPadding
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
+import com.software.jetpack.compose.chan_xin_android.entity.Post
 import com.software.jetpack.compose.chan_xin_android.entity.PostContent
 import com.software.jetpack.compose.chan_xin_android.entity.PostMeta
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
@@ -101,9 +120,11 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.extraVideoFrame
 import com.software.jetpack.compose.chan_xin_android.ui.base.rememberVideoFrame
 import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
+import com.software.jetpack.compose.chan_xin_android.ui.theme.LittleTextColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
+import com.software.jetpack.compose.chan_xin_android.util.CameraUtil
 import com.software.jetpack.compose.chan_xin_android.util.Location
 import com.software.jetpack.compose.chan_xin_android.util.Oss
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName
@@ -116,6 +137,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.URLEncoder
+import java.util.UUID
 
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
@@ -207,18 +230,65 @@ fun FindMainScreen(navController:NavHostController) {
 @OptIn(ExperimentalMaterialApi::class)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
-fun FriendCircleScreen(navController:NavHostController,uvm:UserViewmodel = hiltViewModel(),dvm:DynamicViewModel = hiltViewModel()) {
+fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm: SocialViewModel) {
     var filePath by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         filePath = AppGlobal.getFilePath()
     }
-    val user by uvm.myUser.collectAsState()
+    val posts = dvm.pagingDataFlow.collectAsLazyPagingItems()
+    Log.e("postsws","${posts.itemCount} $posts")
     val sheetState = rememberModalBottomSheetState(ModalBottomSheetValue.Hidden)
+    FriendCircleScreenUI(navController,sheetState,filePath,dvm,posts=posts,svm = svm,onFilePathChange = {
+        filePath = it
+    }) {
+
+    }
+}
+
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottomSheetState,filePath:String,dvm: DynamicViewModel,svm:SocialViewModel,uvm:UserViewmodel = hiltViewModel(),posts:LazyPagingItems<Post>,onFilePathChange:(String)->Unit,enterDetail:(String)->Unit) {
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
+    val scope = rememberCoroutineScope()
     var urisSize by remember { mutableIntStateOf(0) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
-        uri: Uri? ->
+            uri: Uri? ->
         selectedUri = uri
+    }
+    val clickFriend by svm.clickFriend.collectAsState()
+    val activityLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {result->
+        if (result.resultCode==CameraUtil.IMAGE_URI_CODE) {
+            val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                result.data?.getParcelableExtra(CameraUtil.IMAGE_URI,Uri::class.java)
+
+            }else {
+                result.data?.getParcelableExtra<Uri>(CameraUtil.IMAGE_URI)
+            }
+            if (uri != null) {
+                dvm.loadPhotoUris(listOf(uri))
+                navController.switchTab(MainActivityRouteEnum.CREATE_POST_SCREEN.route)
+            }
+        }
+        if (result.resultCode == CameraUtil.VIDEO_URI_CODE) {
+            val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                result.data?.getParcelableExtra(CameraUtil.VIDEO_URI,Uri::class.java)
+
+            }else {
+                result.data?.getParcelableExtra<Uri>(CameraUtil.VIDEO_URI)
+            }
+            dvm.loadVideoUri(uri)
+            navController.switchTab(MainActivityRouteEnum.CREATE_POST_SCREEN.route)
+
+        }
+    }
+    val mutableLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        urisSize = uris.size
+        if (urisSize <= 9) {
+            dvm.loadPhotoUris(uris)
+            dvm.loadVideoUri(null)
+            navController.switchTab(MainActivityRouteEnum.CREATE_POST_SCREEN.route)
+        }
     }
     val videoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
             uri: Uri? ->
@@ -228,107 +298,226 @@ fun FriendCircleScreen(navController:NavHostController,uvm:UserViewmodel = hiltV
 
     }
     var isLoading by remember { mutableStateOf(false) }
-
-    val mutableLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        urisSize = uris.size
-        if (urisSize <= 9) {
-            dvm.loadPhotoUris(uris)
-            dvm.loadVideoUri(null)
-            navController.switchTab(MainActivityRouteEnum.CREATE_POST_SCREEN.route)
-        }
-    }
+    val user by uvm.myUser.collectAsState()
+    val scrollState = rememberLazyListState()
+    val isScrolling by remember { derivedStateOf { scrollState.isScrollInProgress } }
+    var selectedVideoUri by remember { mutableStateOf<Uri?>(null) }
     if (urisSize>9) {
         Toast.makeText(AppGlobal.getAppContext(),"图片选择超出限制",Toast.LENGTH_SHORT).show()
     }
-    val scope = rememberCoroutineScope()
-    ModalBottomSheetLayout(sheetState = sheetState, sheetContent = { DynamicCreateSheet(scope,sheetState, onClickPhoto={
-        mutableLauncher.launch("image/*")
-    },onClickVideo = {
-        videoLauncher.launch("video/*")
-    }) }) {
-        Box {
-            if (selectedUri != null) {
-                BackHandler {
-                    selectedUri = null
-                }
-                Box(contentAlignment = Alignment.Center, modifier = Modifier
-                    .fillMaxSize()
-                    .background(color = Color.Black)) {
-                    Wrapper {
-                        AsyncImage(model = ImageRequest.Builder(AppGlobal.getAppContext()).data(selectedUri).build(),contentDescription = null, modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f), contentScale = ContentScale.Crop)
+    LaunchedEffect(posts.itemCount) {
+        isLoading = posts.itemCount==0
+    }
+    if (selectedVideoUri == null) {
+        ModalBottomSheetLayout(sheetState = sheetState, sheetContent = { DynamicCreateSheet(scope,activityLauncher,sheetState, onClickPhoto={
+            mutableLauncher.launch("image/*")
+        },onClickVideo = {
+            videoLauncher.launch("video/*")
+        }) }) {
+            Box {
+                //if——选择封面,else朋友圈界面
+                if (selectedUri != null) {
+                    BackHandler {
+                        selectedUri = null
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            start = DefaultUserScreenItemDp,
-                            end = DefaultUserScreenItemDp,
-                            bottom = DefaultUserScreenItemDp * 1.5f
-                        )
-                        .align(Alignment.BottomCenter), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier
+                        .fillMaxSize()
+                        .background(color = Color.Black)) {
                         Wrapper {
-                            Text(
-                                "取消",
-                                color = Color.White,
-                                modifier = Modifier.clickable(
+                            AsyncImage(model = ImageRequest.Builder(AppGlobal.getAppContext()).data(selectedUri).build(),contentDescription = null, modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f), contentScale = ContentScale.Crop)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                start = DefaultUserScreenItemDp,
+                                end = DefaultUserScreenItemDp,
+                                bottom = DefaultUserScreenItemDp * 1.5f
+                            )
+                            .align(Alignment.BottomCenter), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Wrapper {
+                                Text(
+                                    "取消",
+                                    color = Color.White,
+                                    modifier = Modifier.clickable(
+                                        indication = null,
+                                        interactionSource = remember {
+                                            MutableInteractionSource()
+                                        }) { selectedUri = null;dvm.loadPhotoUris(emptyList());dvm.loadVideoUri(null) })
+                            }
+                            Wrapper {
+                                Text("完成",color=Color.White,modifier = Modifier.clickable(
                                     indication = null,
                                     interactionSource = remember {
                                         MutableInteractionSource()
-                                    }) { selectedUri = null })
-                        }
-                        Wrapper {
-                            Text("完成",color=Color.White,modifier = Modifier.clickable(
-                                indication = null,
-                                interactionSource = remember {
-                                    MutableInteractionSource()
-                                }) {
-                                scope.launch(Dispatchers.IO) {
-                                    isLoading = true
-                                    val coverUrl = Oss.uploadFile("${System.currentTimeMillis()}.${StringUtil.getFileExtensionFromUri(AppGlobal.getAppContext(),selectedUri)}",selectedUri)
-                                    dvm.setCover(user.id,coverUrl)
-                                    val path = AppGlobal.saveBitmapToFile(coverUrl,System.currentTimeMillis().toString())
-                                    AppGlobal.saveUserRela(PreferencesFileName.USER_COVER_FILE_PATH,path)
-                                    filePath = path
-                                    delay(100)
-                                    selectedUri = null
-                                    isLoading = false
-                                }
-                            })
+                                    }) {
+                                    scope.launch(Dispatchers.IO) {
+                                        isLoading = true
+                                        val coverUrl = Oss.uploadFile("${System.currentTimeMillis()}.${StringUtil.getFileExtensionFromUri(AppGlobal.getAppContext(),selectedUri)}",selectedUri)
+                                        dvm.setCover(user.id,coverUrl)
+                                        val path = AppGlobal.saveBitmapToFile(coverUrl,System.currentTimeMillis().toString())
+                                        AppGlobal.saveUserRela(PreferencesFileName.USER_COVER_FILE_PATH,path)
+                                        onFilePathChange(path)
+                                        delay(100)
+                                        selectedUri = null
+                                        isLoading = false
+                                    }
+                                })
+                            }
                         }
                     }
+                }else {
+                    LazyColumnWithCover(if (filePath=="") R.drawable.default_cover else filePath,user.nickname,user.displayAvatar, listState = scrollState,onChangeCover = {
+                        launcher.launch("image/*")
+                    }, onEnterFriendInfoDetail = {
+                        enterDetail(clickFriend.userId)
+                    }) {
+                        items(posts.itemCount, key = {posts[it]?.postId ?:UUID.randomUUID().toString()}) {i->
+                            val post = posts[i] ?: Post()
+                            Wrapper {
+                                PostItem(post,isScrolling) {
+                                    selectedVideoUri = it
+                                }
+                            }
+                        }
+                        when(posts.loadState.append) {
+                            is LoadState.Loading -> {
+                                item { LoadingMoreItem() }
+                            }
+                            is LoadState.NotLoading -> {
+                                item { NoMoreItem() }
+                            }
+                            else -> {}
+                        }
+                    }
+                    TopBarWithBack(navController, action = {
+                        Icon(
+                            painterResource(R.drawable.photo),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }) {
+                                    scope.launch { sheetState.show() }
+                                })
+                    }, color = Color.Transparent, backTint = Color.White)
                 }
-            }else {
-                LazyColumnWithCover(if (filePath=="") R.drawable.default_cover else filePath,user.nickname,user.displayAvatar, onChangeCover = {
-                    launcher.launch("image/*")
-                }, onEnterFriendInfoDetail = {
-                    //todo:进入朋友详情页
-                }) {
-
-                }
-                TopBarWithBack(navController, action = {
-                    Icon(
-                        painterResource(R.drawable.photo),
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable(
-                                indication = null,
-                                interactionSource = remember { MutableInteractionSource() }) {
-                                scope.launch { sheetState.show() }
-                            })
-                }, color = Color.Transparent, backTint = Color.White)
+                LoadingDialog(isLoading)
             }
-            LoadingDialog(isLoading)
+        }
+    }else {
+        BackHandler {
+            selectedVideoUri = null
+        }
+        Box(modifier = Modifier.fillMaxSize().background(color = Color.Black), contentAlignment = Alignment.Center) {
+            PlayVideo(selectedVideoUri!!, defaultAspectRatio = 1f)
         }
     }
 }
 
+@Composable
+fun LoadingMoreItem() {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+        BaseText("加载更多", color = PlaceholderColor)
+        CircularProgressIndicator(color = IconGreen)
+    }
+}
+@Composable
+fun NoMoreItem() {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+        BaseText("没有更多了", color = PlaceholderColor)
+    }
+}
 
+@Composable
+fun PostItem(post:Post,isScrolling:Boolean = true,onclick: (Uri) -> Unit) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val configuration = LocalConfiguration.current
+    val screenWidthPx = configuration.screenWidthDp * LocalDensity.current.density
+    val screenHeightPx = configuration.screenHeightDp * LocalDensity.current.density
+    var isAtTargetPosition by remember { mutableStateOf(false) }
+    val offset = 100 * LocalDensity.current.density
+    val centerX = screenWidthPx / 2
+    val centerY = screenHeightPx / 2
+    Row(modifier = Modifier
+        .fillMaxWidth()
+        .padding(DefaultUserPadding)
+        .onGloballyPositioned { layoutCoordinates ->
+            val position = layoutCoordinates.positionInWindow()
+            val componentCenterX = position.x + (layoutCoordinates.size.width / 2)
+            val componentCenterY = position.y + (layoutCoordinates.size.height / 2)
+            isAtTargetPosition = (
+                    componentCenterX >= centerX - offset &&
+                            componentCenterX <= centerX + offset &&
+                            componentCenterY >= centerY - offset &&
+                            componentCenterY <= centerY + offset
+                    )
+        }
+    ) {
+        Wrapper {
+            AsyncImage(model = ImageRequest.Builder(AppGlobal.getAppContext()).data(R.drawable.default_cover).allowHardware(true).lifecycle(lifecycle
+            ).build(),contentDescription = null, modifier = Modifier.size(50.dp).clip(
+                RoundedCornerShape(5.dp)
+            ), contentScale = ContentScale.Crop)
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Wrapper {
+                BaseText(post.userId, color = LittleTextColor)
+            }
+            Wrapper {
+                BaseText(post.content.text)
+            }
+            Wrapper {
+                if (post.content.imageUrls != null){
+                    val firstUrl = post.content.imageUrls[0]
+                    val encodedUrl = URLEncoder.encode(firstUrl, "UTF-8")
+                    val videoEncodedUri = Uri.parse(encodedUrl)
+                    val videoUri = Uri.parse(firstUrl)
+                    if (firstUrl.contains("mp4")) {
+                        val bitmap by rememberVideoFrame(videoEncodedUri)
+                        Box(modifier = Modifier.width(100.dp).height(150.dp)) {
+                            if (!isScrolling && isAtTargetPosition) {
+                                PlayVideo(videoUri, defaultWidth = 100.dp)
+                                Box(modifier = Modifier.width(100.dp).height(150.dp).clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                                    onclick(videoUri)
+                                })
+                            }else if (!isScrolling)  {
+                                VideoItem( bitmap?: R.drawable.default_cover) {
+                                    onclick(videoUri)
+                                }
+                            }
+                        }
+                    }else {
+                        LazyVerticalGrid(columns = GridCells.Fixed(3), verticalArrangement = Arrangement.spacedBy(5.dp), horizontalArrangement = Arrangement.spacedBy(5.dp),modifier = Modifier.height(((post.content.imageUrls.size + 2) / 3 * 80).dp)) {
 
+                            items(post.content.imageUrls.indices.toList(), key = {it}) {index->
+                                val shouldLoad = !isScrolling
+                                if (shouldLoad) {
+                                    val imageUrl = post.content.imageUrls[index]
+                                    val imageRequest = remember(imageUrl) { // 仅在 url 变化时重新创建
+                                        ImageRequest.Builder(AppGlobal.getAppContext()).data(imageUrl).allowHardware(true).lifecycle(lifecycle
+                                        ).build()
+                                    }
+                                    AsyncImage(
+                                        model = imageRequest,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(75.dp),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                            }
 
-
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 enum class CreatePostEnum(val route:String) {
     MAIN_CREATE("main_create"),
@@ -665,13 +854,15 @@ fun VideoItem(data: Any,onclick:  () -> Unit) {
             .width(100.dp)
             .height(150.dp), contentScale = ContentScale.Crop)
         Icon(Icons.Filled.PlayArrow,contentDescription = null, tint = Color.White , modifier = Modifier
-            .align(Alignment.Center).size(50.dp).padding(start = DefaultUserPadding))
+            .align(Alignment.Center)
+            .size(50.dp)
+            .padding(start = DefaultUserPadding))
 
     }
 }
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun DynamicCreateSheet(scope: CoroutineScope,bottomSheetState: ModalBottomSheetState,onClickPhoto:()->Unit,onClickVideo:()->Unit){
+fun DynamicCreateSheet(scope: CoroutineScope, launcher: ManagedActivityResultLauncher<Intent, ActivityResult>, bottomSheetState: ModalBottomSheetState, onClickPhoto:()->Unit, onClickVideo:()->Unit){
     val context = LocalContext.current
     val intent = Intent(context, CameraActivity::class.java)
     intent.putExtra("camera_model",1)
@@ -682,7 +873,7 @@ fun DynamicCreateSheet(scope: CoroutineScope,bottomSheetState: ModalBottomSheetS
         ) {
             TextButton(onClick = {
                 launch { bottomSheetState.hide() }
-                context.startActivity(intent)
+                launcher.launch(intent)
             }, shape = RectangleShape) {
                 BaseText("拍照", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             }

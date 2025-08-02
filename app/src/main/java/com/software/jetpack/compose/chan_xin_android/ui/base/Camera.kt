@@ -7,12 +7,17 @@ import android.media.browse.MediaBrowser.MediaItem
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,11 +35,13 @@ import io.sanghun.compose.video.RepeatMode
 import io.sanghun.compose.video.VideoPlayer
 import io.sanghun.compose.video.controller.VideoPlayerControllerConfig
 import io.sanghun.compose.video.uri.VideoPlayerMediaItem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 
 @Composable
-fun PlayVideo(videoUri:Uri,defaultHeight:Dp = 150.dp,defaultAspectRatio:Float = 0f) {
-    var modifier = Modifier.fillMaxWidth()
+fun PlayVideo(videoUri:Uri,defaultHeight:Dp = 150.dp,defaultAspectRatio:Float = 0f,defaultWidth:Dp? = null,autoPlay:Boolean = true,onClick:(Uri)->Unit={}) {
+    var modifier = if (defaultWidth == null) Modifier.fillMaxWidth() else Modifier.width(defaultWidth)
     modifier = if (defaultAspectRatio!= 0f) modifier.aspectRatio(defaultAspectRatio)
     else modifier.height(defaultHeight)
     VideoPlayer(
@@ -44,9 +51,9 @@ fun PlayVideo(videoUri:Uri,defaultHeight:Dp = 150.dp,defaultAspectRatio:Float = 
             ),
         ),
         handleLifecycle = true,
-        autoPlay = true,
+        autoPlay = autoPlay,
         usePlayerController = true,
-        enablePip = true,
+        enablePip = false,
         handleAudioFocus = true,
         controllerConfig = VideoPlayerControllerConfig(
             showSpeedAndPitchOverlay = false,
@@ -98,7 +105,9 @@ fun PlayVideo(videoUri:Uri,defaultHeight:Dp = 150.dp,defaultAspectRatio:Float = 
                 }
             )
         },
-        modifier = modifier,
+        modifier = modifier.clickable (indication = null, interactionSource = remember { MutableInteractionSource() }){
+            onClick(videoUri)
+        },
     )
 }
 @Composable
@@ -112,7 +121,21 @@ fun extraVideoFrame(context:Context,videoUri:Uri,timeUs:Long):Bitmap? {
             retriever.getFrameAtTime(timeUs,MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
         }
     }catch (e:Exception) {
+        Log.e("fuck_extraVideoFrame",e.message.toString())
         e.printStackTrace()
         null
+    }
+}
+@Composable
+fun rememberVideoFrame(videoUri: Uri): State<Bitmap?> {
+    // produceState：在后台线程执行任务，结果通过State暴露给UI
+    return produceState<Bitmap?>(
+        initialValue = null, // 初始值为null（加载中）
+        key1 = videoUri // 当videoUri变化时，重新执行
+    ) {
+        // 在IO线程执行耗时操作（视频解码）
+        value = withContext(Dispatchers.IO) {
+            extraVideoFrame(AppGlobal.getAppContext(), videoUri, 0)
+        }
     }
 }

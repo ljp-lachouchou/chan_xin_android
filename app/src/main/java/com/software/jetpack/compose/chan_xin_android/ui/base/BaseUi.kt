@@ -28,6 +28,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollableDefaults
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -980,7 +981,7 @@ fun GeneratePaletteFromImage(data: Any,onGenerated: (Palette) -> Unit) {
 }
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,onChangeCover:()->Unit,onEnterFriendInfoDetail:()->Unit,content:LazyListScope.() -> Unit) {
+fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,listState:LazyListState,onChangeCover:()->Unit,onEnterFriendInfoDetail:()->Unit,content:LazyListScope.() -> Unit) {
     var dominantColor by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
     var dominantColorReverse by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
     var alpha by remember { mutableFloatStateOf(1f) }
@@ -1026,7 +1027,7 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,onChangeCove
                 else -> false
             }
         }) {
-        LazyColumn {
+        LazyColumn (state = listState){
             item {
                 Column {
                     Box(

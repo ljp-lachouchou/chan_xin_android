@@ -92,6 +92,7 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
 import com.software.jetpack.compose.chan_xin_android.ui.base.PlayVideo
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
+import com.software.jetpack.compose.chan_xin_android.util.CameraUtil
 import com.software.jetpack.compose.chan_xin_android.util.Oss
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
@@ -361,12 +362,17 @@ fun CameraX(cameraModel:Int,vm:UserViewmodel= hiltViewModel()) {
                                 }
                             }
                             1->{
+                                val activity = context as Activity
+                                val resultIntent = Intent()
                                 if (uri != null) {
-
+                                    resultIntent.putExtra(CameraUtil.IMAGE_URI, uri)
+                                    activity.setResult(CameraUtil.IMAGE_URI_CODE,resultIntent)
                                 }
                                 if (videoUri != null) {
-
+                                    resultIntent.putExtra(CameraUtil.VIDEO_URI,videoUri)
+                                    activity.setResult(CameraUtil.VIDEO_URI_CODE,resultIntent)
                                 }
+                                activity.finish()
                             }
                         }
                             }, color = Color.White)

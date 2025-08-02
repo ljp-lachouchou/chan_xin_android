@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
+import com.software.jetpack.compose.chan_xin_android.entity.Pagination
 import com.software.jetpack.compose.chan_xin_android.entity.Post
 import com.software.jetpack.compose.chan_xin_android.entity.PostContent
 import com.software.jetpack.compose.chan_xin_android.entity.PostMeta
@@ -17,6 +18,7 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Query
+import retrofit2.http.QueryMap
 import java.util.UUID
 
 interface ApiService {
@@ -76,6 +78,13 @@ interface ApiService {
 
     @PUT("/v1/dynamics/setCover")
     suspend fun setCover(@Body setCoverRequest:SetCoverRequest)
+    data class PostListResponse(val posts:List<Post>,val nextPageToken:String)
+
+    @GET("/v1/dynamics/listVisiblePosts")
+    suspend fun listVisiblePosts(
+        @Query("viewerId") viewerId: String, @Query("pageSize") pageSize: Int,
+        @Query("pageToken") pageToken: String
+    ): ApiResult<PostListResponse>
 
 
 

@@ -191,7 +191,7 @@ fun MainActivityScreen() {
             MainFriendSearchScreen(rootNavController, svm = svm)
         }
         composable(MainActivityRouteEnum.FRIEND_CIRCLE_SCREEN.route) {
-            FriendCircleScreen(rootNavController,dvm=dvm)
+            FriendCircleScreen(rootNavController,dvm=dvm,svm)
         }
         composable(MainActivityRouteEnum.CREATE_POST_SCREEN.route) {
             CreatePostScreen(rootNavController,dvm,svm)
