@@ -12,6 +12,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
+import com.software.jetpack.compose.chan_xin_android.http.service.HttpService
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.PHONE_KEY
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USERS_FILE
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName.USER_COVER_FILE_PATH
@@ -137,9 +138,19 @@ object AppGlobal {
         return file.absolutePath
     }
     suspend fun getFilePath(uid:String):String {
-        return context.userDataStore.data.map { preferences->
+        val apiService = HttpService.getService()
+        val localFilePath = context.userDataStore.data.map { preferences->
             preferences[USER_COVER_FILE_PATH(uid)] ?:""
         }.first()
+        return if (localFilePath != "") {
+            localFilePath
+        }else {
+            try {
+                apiService.getCover(uid).data?.cover ?: ""
+            }catch (e:Exception) {
+                ""
+            }
+        }
     }
 
 }

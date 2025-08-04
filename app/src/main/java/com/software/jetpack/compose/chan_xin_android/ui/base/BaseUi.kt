@@ -79,16 +79,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.pullrefresh.PullRefreshDefaults
 import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -979,22 +982,35 @@ fun GeneratePaletteFromImage(data: Any,onGenerated: (Palette) -> Unit) {
         }
     }
 }
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterialApi::class,
+    ExperimentalMaterial3Api::class
+)
 @Composable
-fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,listState:LazyListState,modifier: Modifier = Modifier,onChangeCover:()->Unit,onEnterFriendInfoDetail:()->Unit,content:LazyListScope.() -> Unit) {
+fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,listState:LazyListState,modifier: Modifier = Modifier,onChangeCover:()->Unit,onEnterFriendInfoDetail:()->Unit,onRefresh:suspend ()->Unit,content:LazyListScope.() -> Unit) {
     var dominantColor by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
     var dominantColorReverse by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
     var alpha by remember { mutableFloatStateOf(1f) }
     var paletteHeight by remember { mutableFloatStateOf(0f) }
     var isAnimating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    var refreshing by remember {
+        mutableStateOf(false)
+    }
+    val state = rememberPullRefreshState(
+        refreshing = refreshing,
+        onRefresh = {
+            scope.launch(Dispatchers.IO) {
+                refreshing = true
+                onRefresh()
+                refreshing = false
+            }
+        })
     val paletteHeightAnimate by animateFloatAsState(paletteHeight, animationSpec = tween(400, easing = FastOutSlowInEasing), finishedListener = {
         scope.launch {
             delay(100)
             isAnimating = false
         }
     })
-    var changeCoverPosition by remember { mutableStateOf(Offset.Zero) }
     val alphaAnimate by animateFloatAsState(alpha, animationSpec = tween(400, easing = FastOutSlowInEasing), finishedListener = {
         scope.launch {
             delay(100)
@@ -1007,114 +1023,94 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,listState:La
     }
     Box(modifier = Modifier
         .fillMaxSize()
-        .pointerInteropFilter { event ->
-            when (event.action) {
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (alpha == 0f) {
-                        if (!isAnimating) {
-                            isAnimating = true
-                            paletteHeight = if (paletteHeight == 0f) 85f else 0f
-                            alpha = if (alpha == 0f) 1f else 0f
-                        }
-                    }
-                    alpha == 0f && event.rawX !in (changeCoverPosition.x-50..changeCoverPosition.x+50)&& event.rawY !in (changeCoverPosition.y-50..changeCoverPosition.y+50)
-                }
-
-                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                    alpha == 0f && event.rawX !in (changeCoverPosition.x-50..changeCoverPosition.x+50)&& event.rawY !in (changeCoverPosition.y-50..changeCoverPosition.y+50)
-                }
-
-                else -> false
-            }
-        }
+        .pullRefresh(state)
     ) {
         LazyColumn (state = listState, modifier = modifier){
             item {
-                Column {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(paletteHeightAnimate.dp)
-                            .background(brush = Brush.verticalGradient(dominantColor))
-                    )
-                    AsyncImage(
-                        model = ImageRequest.Builder(AppGlobal.getAppContext())
-                            .data(data).build(),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1.3f)
-                            .clickable(
-                                indication = null,
-                                interactionSource = remember { MutableInteractionSource() }) {
-                                if (!isAnimating) {
-                                    isAnimating = true
-                                    paletteHeight = if (paletteHeight == 0f) 85f else 0f
-                                    alpha = if (alpha == 0f) 1f else 0f
-                                }
-                            },
-                        contentScale = ContentScale.Crop
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(paletteHeightAnimate.dp)
-                            .background(brush = Brush.verticalGradient(dominantColorReverse)),
-                        contentAlignment = Alignment.BottomEnd
-                    ) {
-                        Column(Modifier
-                            .height(100.dp)
-                            .padding(DefaultUserPadding)
-                            .clickable(
-                                indication = null,
-                                interactionSource = remember { MutableInteractionSource() }) {
-                                if (alpha == 0f) {
-                                    onChangeCover()
-                                    Log.e("能看见吗", "嫩模刚看见")
-                                }
-                            }
-                            .onGloballyPositioned { layoutCoordinates ->
-                                changeCoverPosition = layoutCoordinates.positionInWindow()
-                            }, horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(painterResource(R.drawable.change_cover),contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp)
-
-                            )
-                            Text("更换封面", fontSize = 10.sp, color = Color.White)
-                        }
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
-                        .height(85.dp)
-                        .padding(horizontal = DefaultUserPadding)
-                        .offset(y = (-55).dp)
-                        .alpha(alphaAnimate)) {
-                        Spacer(Modifier.weight(1f))
-                        BaseText(
-                            nickname,
-                            color = Color.White,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                Wrapper {
+                    Column {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(paletteHeightAnimate.dp)
+                                .background(brush = Brush.verticalGradient(dominantColor))
                         )
-                        Spacer(Modifier.width(10.dp))
                         AsyncImage(
-                            model = ImageRequest.Builder(AppGlobal.getAppContext()).data(displayAvatar)
-                                .build(), contentDescription = null, modifier = Modifier
-                                .size(60.dp)
+                            model = ImageRequest.Builder(AppGlobal.getAppContext())
+                                .data(data).build(),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1.3f)
                                 .clickable(
                                     indication = null,
                                     interactionSource = remember { MutableInteractionSource() }) {
-                                    if(alpha == 1f) {
-                                        onEnterFriendInfoDetail()
-                                        Log.e(
-                                            "nengkanjian",
-                                            "ssss"
-                                        )
+                                    if (!isAnimating) {
+                                        isAnimating = true
+                                        paletteHeight = if (paletteHeight == 0f) 85f else 0f
+                                        alpha = if (alpha == 0f) 1f else 0f
                                     }
-                                }
-                                .clip(
-                                    RoundedCornerShape(5.dp)
-                                ), contentScale = ContentScale.Crop
+                                },
+                            contentScale = ContentScale.Crop
                         )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(paletteHeightAnimate.dp)
+                                .background(brush = Brush.verticalGradient(dominantColorReverse)),
+                            contentAlignment = Alignment.BottomEnd
+                        ) {
+                            Column(Modifier
+                                .height(100.dp)
+                                .padding(DefaultUserPadding)
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }) {
+                                    if (alpha == 0f) {
+                                        onChangeCover()
+                                        Log.e("能看见吗", "嫩模刚看见")
+                                    }
+                                }, horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(painterResource(R.drawable.change_cover),contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp)
+
+                                )
+                                Text("更换封面", fontSize = 10.sp, color = Color.White)
+                            }
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                            .height(85.dp)
+                            .padding(horizontal = DefaultUserPadding)
+                            .offset(y = (-55).dp)
+                            .alpha(alphaAnimate)) {
+                            Spacer(Modifier.weight(1f))
+                            BaseText(
+                                nickname,
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            AsyncImage(
+                                model = ImageRequest.Builder(AppGlobal.getAppContext()).data(displayAvatar)
+                                    .build(), contentDescription = null, modifier = Modifier
+                                    .size(60.dp)
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }) {
+                                        if(alpha == 1f) {
+                                            onEnterFriendInfoDetail()
+                                            Log.e(
+                                                "nengkanjian",
+                                                "ssss"
+                                            )
+                                        }
+                                    }
+                                    .clip(
+                                        RoundedCornerShape(5.dp)
+                                    ), contentScale = ContentScale.Crop
+                            )
+                        }
                     }
                 }
             }

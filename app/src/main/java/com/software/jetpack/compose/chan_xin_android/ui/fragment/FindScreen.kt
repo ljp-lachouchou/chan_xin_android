@@ -58,6 +58,7 @@ import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -372,6 +373,7 @@ fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottom
     val scrollState = rememberLazyListState()
     val isScrolling by remember { derivedStateOf { scrollState.isScrollInProgress } }
     var selectedVideoUri by remember { mutableStateOf<Uri?>(null) }
+    var isRefresh by remember { mutableStateOf(false) }
     if (urisSize>9) {
         Toast.makeText(AppGlobal.getAppContext(),"图片选择超出限制",Toast.LENGTH_SHORT).show()
     }
@@ -438,48 +440,70 @@ fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottom
                         }
                     }
                 }else {
-                    LazyColumnWithCover(if (filePath=="") R.drawable.default_cover else filePath,user.nickname,user.displayAvatar, modifier = modifier,listState = scrollState,onChangeCover = {
-                        launcher.launch("image/*")
-                    }, onEnterFriendInfoDetail = {
-                        enterDetail(clickFriend.userId)
-                    }) {
-                        items(posts.itemCount, key = {posts[it]?.postId ?:it.toString()}) {i->
-                            val post = posts[i]
-                            Wrapper {
-                                if (post != null) {
-                                    PostItem(post,isScrolling, mid = user.id,svm = svm, onDelete = {
-                                        onDelete(post.postId)
-                                    }) {
-                                        selectedVideoUri = it
+                    Wrapper {
+                        LazyColumnWithCover(if (filePath=="") R.drawable.default_cover else filePath,user.nickname,user.displayAvatar, modifier = modifier,listState = scrollState, onRefresh = {
+                            isRefresh = true
+                            dvm.setCurrentUid(user.id)
+                            delay(1000)
+                            isRefresh = false
+                        },onChangeCover = {
+                            launcher.launch("image/*")
+                        }, onEnterFriendInfoDetail = {
+                            enterDetail(clickFriend.userId)
+                        }) {
+                            items(posts.itemCount, key = {posts[it]?.postId ?:it.toString()}) {i->
+                                val post = posts[i]
+                                Wrapper {
+                                    if (post != null) {
+                                        PostItem(post,isScrolling, mid = user.id,svm = svm, onDelete = {
+                                            onDelete(post.postId)
+                                        }) {
+                                            selectedVideoUri = it
+                                        }
+
                                     }
-
                                 }
-                            }
 
-                        }
-                        when(posts.loadState.append) {
-                            is LoadState.Loading -> {
-                                item { LoadingMoreItem() }
                             }
-                            is LoadState.NotLoading -> {
-                                item { NoMoreItem() }
+                            when(posts.loadState.append) {
+                                is LoadState.Loading -> {
+                                    item { LoadingMoreItem() }
+                                }
+                                is LoadState.NotLoading -> {
+                                    item { NoMoreItem() }
+                                }
+                                else -> {}
                             }
-                            else -> {}
                         }
                     }
-                    TopBarWithBack(navController, action = {
-                        Icon(
-                            painterResource(R.drawable.photo),
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable(
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() }) {
-                                    scope.launch { sheetState.show() }
-                                })
-                    }, color = Color.Transparent, backTint = Color.White)
+                    Wrapper {
+                        MyTopBar(title = "", preContent = {
+                            if (isRefresh) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = IconGreen)
+                            }else {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                    contentDescription = null,
+                                    modifier = Modifier.clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) {navController.navigateUp()}, tint = Color.White)
+                            }
+                        }, action = {
+                            Icon(
+                                painterResource(R.drawable.photo),
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }) {
+                                        scope.launch { sheetState.show() }
+                                    })
+                        }, defaultColor = Color.Transparent)
+                    }
+
                 }
                 LoadingDialog(isLoading)
             }
@@ -516,12 +540,11 @@ fun PostItem(
     mid:String,
     modifier: Modifier = Modifier,
     svm: SocialViewModel,
+    dvm: DynamicViewModel = hiltViewModel(),
     onDelete: (String) -> Unit,
     onClick: (Uri) -> Unit
 
 ) {
-    val dvm = hiltViewModel<DynamicViewModel>()
-    val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
@@ -597,7 +620,7 @@ fun PostItem(
                     }
                     ExpandableLikeAndContent(
                         onLikeClick = {
-                            //todo；點讚
+//                            dvm.toggleLike(post.postId,mid,true)
                         },
                         onContentClick = {
                             //todo：評論

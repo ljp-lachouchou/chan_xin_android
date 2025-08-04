@@ -76,6 +76,14 @@ interface ApiService {
 
     data class SetCoverRequest(val userId:String,val coverUrl:String)
     data class CreatePostRequest(val userId: String,val content:PostContent,val meta:PostMeta)
+
+    data class LikeAction(val postId: String,val likerId:String,val isCancel:Boolean)
+    data class GetCoverResp(val cover:String)
+
+    @GET("/v1/dynamics/getCover")
+    suspend fun getCover(@Query("userId") userId:String):ApiResult<GetCoverResp>
+    @POST("/v1/dynamics/toggleLike")
+    suspend fun toggleLike(@Body likeAction:LikeAction)
     @POST("/v1/dynamics/createPost")
     suspend fun createPost(@Body createPostRequest:CreatePostRequest):ApiResult<Post>
     @DELETE("/v1/dynamics/deletePost")

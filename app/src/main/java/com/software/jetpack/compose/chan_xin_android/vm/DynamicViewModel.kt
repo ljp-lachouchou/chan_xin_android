@@ -100,6 +100,13 @@ class DynamicViewModel @Inject constructor(userDao: IUserDao):ViewModel() {
             Log.e("dynamic_delete_post_fuck",e.toString())
         }
     }
+    suspend fun toggleLike(postId: String,likerId:String,isCancel:Boolean) {
+        try {
+            apiService.toggleLike(ApiService.LikeAction(postId,likerId,isCancel))
+        }catch (e:Exception) {
+            Log.e("dynamic_toggle_like_fuck",e.toString())
+        }
+    }
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
