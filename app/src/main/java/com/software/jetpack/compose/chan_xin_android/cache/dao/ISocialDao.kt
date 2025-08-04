@@ -50,4 +50,20 @@ interface ISocialDao {
         """
     )
     fun getFriendList(uid: String): Flow<List<Friend>>
+    @Query(
+        """
+        SELECT 
+            u.id AS userId,
+            u.nickname AS nickname,
+            u.avatar AS avatarUrl,
+            u.sex AS gender,
+            f.status AS friendStatus
+        FROM friend_relation f
+        LEFT JOIN users u ON f.friend_id = u.id
+        WHERE f.user_id = :uid and f.friend_id = :friendId
+        """
+    )
+    fun getFriendInfo(uid: String,friendId: String): Flow<Friend>
+    @Query("SELECT COUNT(1) FROM friend_relation WHERE user_id = :uid and friend_id = :friendId")
+    suspend fun getFriendHas(uid: String,friendId: String): Int
 }

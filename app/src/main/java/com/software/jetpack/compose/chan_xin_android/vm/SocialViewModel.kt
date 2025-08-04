@@ -2,10 +2,14 @@ package com.software.jetpack.compose.chan_xin_android.vm
 
 import android.util.Log
 import android.widget.Toast
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.LOGGER
 import com.google.gson.Gson
+import com.software.jetpack.compose.chan_xin_android.cache.dao.ISocialDao
+import com.software.jetpack.compose.chan_xin_android.cache.dao.IUserDao
+import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
@@ -19,10 +23,22 @@ import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.count
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import javax.inject.Inject
@@ -160,6 +176,79 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
                 Toast.makeText(AppGlobal.getAppContext(),"网络异常,获取好友列表失败",Toast.LENGTH_SHORT).show()
             }
             return emptyList()
+        }
+    }
+
+    private val friendInfoCache = mutableMapOf<Pair<String, String>, StateFlow<Friend>>()
+
+    /**
+     * 获取好友信息（返回StateFlow，避免UI抖动）
+     * @param uid 当前用户ID
+     * @param friendId 好友ID
+     */
+    fun getFriendInfo(uid: String, friendId: String): StateFlow<Friend> {
+        val cacheKey = uid to friendId
+        val userDao = UserDatabase.getInstance().userDao()
+        val socialDao = UserDatabase.getInstance().socialDao()
+        return friendInfoCache.getOrPut(cacheKey) {
+            // 创建StateFlow的源头Flow
+            val sourceFlow = if (uid == friendId) {
+                getUserSelfInfoFlow(userDao)
+            } else {
+                getRemoteFriendInfoFlow(uid, friendId,socialDao)
+            }
+
+            sourceFlow
+                .catch { e ->
+                    Log.e("FriendVM", "获取好友信息异常", e)
+                    emit(Friend())
+                }
+                .flowOn(Dispatchers.IO)
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5000),
+                    initialValue = Friend()
+                )
+        }
+    }
+
+    /**
+     * 获取当前用户自己的信息（Flow）
+     */
+    private fun getUserSelfInfoFlow(userDao:IUserDao) = flow {
+        val userPhone = AppGlobal.getUserPhone()
+        val user = userDao.getUserInfoByPhone(userPhone).first()
+        emit(
+            Friend(
+                userId = user.id,
+                nickname = user.nickname,
+                avatarUrl = user.avatar,
+                gender = user.sex.toInt()
+            )
+        )
+    }
+
+    /**
+     * 获取好友信息（本地+网络）
+     */
+    private fun getRemoteFriendInfoFlow(uid: String, friendId: String,socialDao:ISocialDao) = flow {
+        // 先发射本地缓存（立即响应UI）
+        val localFriend = socialDao.getFriendInfo(uid, friendId).firstOrNull()// 获取当前缓存
+        if (localFriend != null) {
+            emit(localFriend) // 标记为非加载状态
+        }
+
+        // 网络可用时请求最新数据
+        if (AppGlobal.isNetworkValid()) {
+            val remoteFriend = apiService.getFriendInfo(uid, friendId).data
+                ?: throw NullPointerException("服务器返回数据为空")
+
+            emit(remoteFriend)
+        } else {
+            // 无网络且无本地缓存，发射默认值
+            if (localFriend == null) {
+                emit(Friend())
+            }
         }
     }
 

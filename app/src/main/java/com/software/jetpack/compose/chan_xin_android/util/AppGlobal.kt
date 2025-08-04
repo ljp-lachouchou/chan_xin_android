@@ -136,9 +136,9 @@ object AppGlobal {
         }
         return file.absolutePath
     }
-    suspend fun getFilePath():String {
+    suspend fun getFilePath(uid:String):String {
         return context.userDataStore.data.map { preferences->
-            preferences[USER_COVER_FILE_PATH] ?:""
+            preferences[USER_COVER_FILE_PATH(uid)] ?:""
         }.first()
     }
 

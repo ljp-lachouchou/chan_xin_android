@@ -12,6 +12,7 @@ import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PATCH
@@ -56,6 +57,8 @@ interface ApiService {
     class Empty()
     @POST("/v1/social/firend/applyFriend")
     suspend fun applyFriend(@Body friendApplyRequest: FriendApplyRequest):ApiResult<FriendApplyResponse>
+    @GET("/v1/social/firend/getFriendInfo")
+    suspend fun getFriendInfo(@Query("user_id") userId: String,@Query("friend_id") friendId: String):ApiResult<Friend>
     @GET("/v1/social/firend/getFriendApplyList")
     suspend fun getFriendApplyList(@Query("user_id") uid:String):ApiResult<DataListWrapper<FriendApply>>
     @GET("/v1/social/firend/getHandleFriendApplyList")
@@ -75,6 +78,8 @@ interface ApiService {
     data class CreatePostRequest(val userId: String,val content:PostContent,val meta:PostMeta)
     @POST("/v1/dynamics/createPost")
     suspend fun createPost(@Body createPostRequest:CreatePostRequest):ApiResult<Post>
+    @DELETE("/v1/dynamics/deletePost")
+    suspend fun deletePost(@Query("userId") userId: String,@Query("postId") postId: String)
 
     @PUT("/v1/dynamics/setCover")
     suspend fun setCover(@Body setCoverRequest:SetCoverRequest)

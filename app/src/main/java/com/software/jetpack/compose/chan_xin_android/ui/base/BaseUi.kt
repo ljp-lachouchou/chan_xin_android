@@ -979,9 +979,9 @@ fun GeneratePaletteFromImage(data: Any,onGenerated: (Palette) -> Unit) {
         }
     }
 }
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterialApi::class)
 @Composable
-fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,listState:LazyListState,onChangeCover:()->Unit,onEnterFriendInfoDetail:()->Unit,content:LazyListScope.() -> Unit) {
+fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,listState:LazyListState,modifier: Modifier = Modifier,onChangeCover:()->Unit,onEnterFriendInfoDetail:()->Unit,content:LazyListScope.() -> Unit) {
     var dominantColor by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
     var dominantColorReverse by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
     var alpha by remember { mutableFloatStateOf(1f) }
@@ -1026,8 +1026,9 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,listState:La
 
                 else -> false
             }
-        }) {
-        LazyColumn (state = listState){
+        }
+    ) {
+        LazyColumn (state = listState, modifier = modifier){
             item {
                 Column {
                     Box(

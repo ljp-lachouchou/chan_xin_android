@@ -41,10 +41,14 @@ class DynamicViewModel @Inject constructor(userDao: IUserDao):ViewModel() {
     private val _photoUris = MutableStateFlow<List<Uri>>(emptyList())
     private val pagingConfig = PagingConfig(
         pageSize = 6, // 每页加载数量
-        prefetchDistance = 3,
-        initialLoadSize = 6,
+        initialLoadSize = 4,
         enablePlaceholders = false // 不启用占位符（适合网络数据）
     )
+    data class UidWithVersion(val uid: String, val version: Int)
+
+    // 初始化 StateFlow
+    private var version = 0
+    private val _currentUid = MutableStateFlow(UidWithVersion("初始uid", version))
     val videoUri:StateFlow<Uri?>
         get() = _videoUri
     val photoUris:StateFlow<List<Uri>>
@@ -89,7 +93,14 @@ class DynamicViewModel @Inject constructor(userDao: IUserDao):ViewModel() {
         }
     }
 
-    private val _currentUid = MutableStateFlow("")
+    suspend fun deletePost(userId: String,postId:String) {
+        try {
+            apiService.deletePost(userId,postId)
+        }catch (e:Exception) {
+            Log.e("dynamic_delete_post_fuck",e.toString())
+        }
+    }
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             val phone = AppGlobal.getUserPhone()
@@ -101,7 +112,8 @@ class DynamicViewModel @Inject constructor(userDao: IUserDao):ViewModel() {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val pagingDataFlow: Flow<PagingData<Post>> = _currentUid.flatMapLatest { uid ->
+    val pagingDataFlow: Flow<PagingData<Post>> = _currentUid.flatMapLatest { (uid,_) ->
+        Log.e("oooooo_fuck",uid)
         Pager(
             config = pagingConfig,
             pagingSourceFactory = { TokenPagingSource(viewerId = uid) }).flow.cachedIn(
@@ -134,6 +146,8 @@ class DynamicViewModel @Inject constructor(userDao: IUserDao):ViewModel() {
     }
     inner class NoMoreDataException(message:String):Exception(message)
     fun setCurrentUid(uid:String) {
-        _currentUid.value = uid
+        version++
+        Log.e("oooooo_fuck1",uid)
+        _currentUid.value = UidWithVersion(uid,version)
     }
 }

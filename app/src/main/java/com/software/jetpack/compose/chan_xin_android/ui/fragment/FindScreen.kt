@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import android.widget.Button
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -14,8 +15,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +29,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,7 +44,12 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.ModalBottomSheetLayout
@@ -50,6 +60,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.PlayArrow
@@ -64,6 +75,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,12 +96,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavHost
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -105,12 +120,14 @@ import com.software.jetpack.compose.chan_xin_android.CameraActivity
 import com.software.jetpack.compose.chan_xin_android.R
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPadding
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
+import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.Post
 import com.software.jetpack.compose.chan_xin_android.entity.PostContent
 import com.software.jetpack.compose.chan_xin_android.entity.PostMeta
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.ext.toTime
+import com.software.jetpack.compose.chan_xin_android.ui.activity.IconButton
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityRouteEnum
 import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
@@ -119,6 +136,7 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.BaseScreenItem
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.base.CanLookImage
 import com.software.jetpack.compose.chan_xin_android.ui.base.CustomTextField
+import com.software.jetpack.compose.chan_xin_android.ui.base.ExpandRowMenu
 import com.software.jetpack.compose.chan_xin_android.ui.base.LazyColumnWithCover
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
 import com.software.jetpack.compose.chan_xin_android.ui.base.PlayVideo
@@ -146,7 +164,12 @@ import kotlinx.coroutines.withContext
 import java.net.URLEncoder
 import java.sql.Timestamp
 import java.util.UUID
-
+private val DEFAULT_USER_PADDING = 8.dp
+private val AVATAR_SIZE = 50.dp
+private val IMAGE_GRID_SPACING = 5.dp
+private val IMAGE_GRID_ITEM_SIZE = 75.dp
+private val VIDEO_THUMBNAIL_SIZE = 100.dp to 150.dp // 宽x高
+private val TARGET_OFFSET_DP = 100.dp // 使用dp避免密度计算
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun FindMainScreen(navController:NavHostController) {
@@ -239,16 +262,54 @@ fun FindMainScreen(navController:NavHostController) {
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm: SocialViewModel) {
+    val uvm  = hiltViewModel<UserViewmodel>()
+    val user by uvm.myUser.collectAsState()
     var filePath by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) {
-        filePath = AppGlobal.getFilePath()
+    LaunchedEffect(user.id) {
+        if (user.id != "") {
+            filePath = AppGlobal.getFilePath(user.id)
+        }
     }
+    var isDelete by remember { mutableStateOf(false) }
     val posts = dvm.pagingDataFlow.collectAsLazyPagingItems()
-    Log.e("postsws","${posts.itemCount} $posts")
     val sheetState = rememberModalBottomSheetState(ModalBottomSheetValue.Hidden)
-    FriendCircleScreenUI(navController,sheetState,filePath,dvm,posts=posts,svm = svm,onFilePathChange = {
-        filePath = it
-    }) {
+    var deletePostId by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    Box {
+        FriendCircleScreenUI(navController,sheetState,filePath,dvm,posts=posts,svm = svm,onFilePathChange = {
+            filePath = it
+        }, onDelete = {
+            deletePostId = it
+            isDelete = true
+        }) {
+            //todo:進入被點擊的好友的詳情頁面
+        }
+        if (isDelete) {
+            AlertDialog(onDismissRequest = {}, title = {
+                BaseText("是否刪除此動態", color = LittleTextColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            }, text = {
+                BaseText("點擊刪除之後你的這條動態會被刪除")
+            },confirmButton = {
+                TextButton(onClick = {
+                    isDelete = false
+                    scope.launch(Dispatchers.IO) {
+                        dvm.deletePost(userId = user.id,deletePostId)
+                        withContext(Dispatchers.Main) {
+                            dvm.setCurrentUid(user.id)
+                        }
+                    }
+                    
+                }) {
+                    BaseText("刪除", color = Color.Red)
+                }
+            }, dismissButton = {
+                TextButton(onClick = {
+                    isDelete = false
+                }) {
+                    BaseText("取消")
+                }
+            })
+        }
 
     }
 }
@@ -257,7 +318,7 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottomSheetState,filePath:String,dvm: DynamicViewModel,svm:SocialViewModel,uvm:UserViewmodel = hiltViewModel(),posts:LazyPagingItems<Post>,onFilePathChange:(String)->Unit,enterDetail:(String)->Unit) {
+fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottomSheetState,filePath:String,dvm: DynamicViewModel,svm:SocialViewModel,uvm:UserViewmodel = hiltViewModel(),posts:LazyPagingItems<Post>,modifier: Modifier = Modifier,onFilePathChange:(String)->Unit,onDelete: (String) -> Unit,enterDetail:(String)->Unit) {
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
     val scope = rememberCoroutineScope()
     var urisSize by remember { mutableIntStateOf(0) }
@@ -366,7 +427,7 @@ fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottom
                                         val coverUrl = Oss.uploadFile("${System.currentTimeMillis()}.${StringUtil.getFileExtensionFromUri(AppGlobal.getAppContext(),selectedUri)}",selectedUri)
                                         dvm.setCover(user.id,coverUrl)
                                         val path = AppGlobal.saveBitmapToFile(coverUrl,System.currentTimeMillis().toString())
-                                        AppGlobal.saveUserRela(PreferencesFileName.USER_COVER_FILE_PATH,path)
+                                        AppGlobal.saveUserRela(PreferencesFileName.USER_COVER_FILE_PATH(user.id),path)
                                         onFilePathChange(path)
                                         delay(100)
                                         selectedUri = null
@@ -377,18 +438,24 @@ fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottom
                         }
                     }
                 }else {
-                    LazyColumnWithCover(if (filePath=="") R.drawable.default_cover else filePath,user.nickname,user.displayAvatar, listState = scrollState,onChangeCover = {
+                    LazyColumnWithCover(if (filePath=="") R.drawable.default_cover else filePath,user.nickname,user.displayAvatar, modifier = modifier,listState = scrollState,onChangeCover = {
                         launcher.launch("image/*")
                     }, onEnterFriendInfoDetail = {
                         enterDetail(clickFriend.userId)
                     }) {
-                        items(posts.itemCount, key = {posts[it]?.postId ?:UUID.randomUUID().toString()}) {i->
-                            val post = posts[i] ?: Post()
+                        items(posts.itemCount, key = {posts[it]?.postId ?:it.toString()}) {i->
+                            val post = posts[i]
                             Wrapper {
-                                PostItem(post,isScrolling) {
-                                    selectedVideoUri = it
+                                if (post != null) {
+                                    PostItem(post,isScrolling, mid = user.id,svm = svm, onDelete = {
+                                        onDelete(post.postId)
+                                    }) {
+                                        selectedVideoUri = it
+                                    }
+
                                 }
                             }
+
                         }
                         when(posts.loadState.append) {
                             is LoadState.Loading -> {
@@ -443,114 +510,294 @@ fun NoMoreItem() {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun PostItem(post:Post,isScrolling:Boolean = true,uvm: UserViewmodel = hiltViewModel(),onclick: (Uri) -> Unit) {
+fun PostItem(
+    post: Post,
+    isScrolling: Boolean = true,
+    mid:String,
+    modifier: Modifier = Modifier,
+    svm: SocialViewModel,
+    onDelete: (String) -> Unit,
+    onClick: (Uri) -> Unit
+
+) {
+    val dvm = hiltViewModel<DynamicViewModel>()
+    val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val configuration = LocalConfiguration.current
-    val screenWidthPx = configuration.screenWidthDp * LocalDensity.current.density
-    val screenHeightPx = configuration.screenHeightDp * LocalDensity.current.density
-    var isAtTargetPosition by remember { mutableStateOf(false) }
-    val offset = 100 * LocalDensity.current.density
-    val centerX = screenWidthPx / 2
-    val centerY = screenHeightPx / 2
-    val users = uvm.pagedUsers?.collectAsLazyPagingItems()
-    val user by remember(users) { derivedStateOf {
-        if (users?.itemCount==0) {
-            User()
-        }else {
-            users?.get(0) ?: User()
-        }
-    } }
-    LaunchedEffect(Unit) {
-        uvm.findUser(ids = StringUtil.listToString(
-            listOf(post.userId)
-        ))
+    val density = LocalDensity.current
+    val targetOffsetPx = with(density) { TARGET_OFFSET_DP.toPx() } // 只计算一次密度转换
+
+    // 屏幕中心坐标
+    val (screenCenterX, screenCenterY) = remember(configuration) {
+        val widthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+        val heightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+        Pair(widthPx / 2, heightPx / 2)
     }
-    Column(modifier = Modifier.fillMaxWidth().padding(DefaultUserPadding)) {
-        Row(modifier = Modifier
+    val friend by svm.getFriendInfo(mid,post.userId).collectAsState(Friend())
+    Log.e("friend_ss",friend.toString())
+    var isAtTargetPosition by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = modifier
             .fillMaxWidth()
-            .padding(DefaultUserPadding)
-            .onGloballyPositioned { layoutCoordinates ->
-                val position = layoutCoordinates.positionInWindow()
-                val componentCenterX = position.x + (layoutCoordinates.size.width / 2)
-                val componentCenterY = position.y + (layoutCoordinates.size.height / 2)
-                isAtTargetPosition = (
-                        componentCenterX >= centerX - offset &&
-                                componentCenterX <= centerX + offset &&
-                                componentCenterY >= centerY - offset &&
-                                componentCenterY <= centerY + offset
-                        )
-            }
+            .padding(DEFAULT_USER_PADDING)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(DEFAULT_USER_PADDING)
+                .onGloballyPositioned { layoutCoordinates ->
+                    val componentCenterX = layoutCoordinates.positionInWindow().x +
+                            (layoutCoordinates.size.width / 2)
+                    val componentCenterY = layoutCoordinates.positionInWindow().y +
+                            (layoutCoordinates.size.height / 2)
+
+                    isAtTargetPosition = componentCenterX in (screenCenterX - targetOffsetPx)..(screenCenterX + targetOffsetPx) &&
+                            componentCenterY in (screenCenterY - targetOffsetPx)..(screenCenterY + targetOffsetPx)
+                }
         ) {
-            Wrapper {
-                AsyncImage(model = ImageRequest.Builder(AppGlobal.getAppContext()).data(user.displayAvatar).allowHardware(true).lifecycle(lifecycle
-                ).build(),contentDescription = null, modifier = Modifier.size(50.dp).clip(
-                    RoundedCornerShape(5.dp)
-                ), contentScale = ContentScale.Crop)
+            // 头像区域
+            UserAvatar(displayAvatar = friend.displayAvatar, lifecycle = lifecycle)
 
-            }
             Spacer(modifier = Modifier.width(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Wrapper {
-                    BaseText(user.nickname, color = LittleTextColor)
-                }
-                Wrapper {
-                    BaseText(post.content.text)
-                }
-                Wrapper {
-                    if (post.content.imageUrls != null){
-                        val firstUrl = post.content.imageUrls[0]
-                        val encodedUrl = URLEncoder.encode(firstUrl, "UTF-8")
-                        val videoEncodedUri = Uri.parse(encodedUrl)
-                        val videoUri = Uri.parse(firstUrl)
-                        if (firstUrl.contains("mp4")) {
-                            val bitmap by rememberVideoFrame(videoEncodedUri)
-                            Box(modifier = Modifier.width(100.dp).height(150.dp)) {
-                                if (!isScrolling && isAtTargetPosition) {
-                                    PlayVideo(videoUri, defaultWidth = 100.dp)
-                                    Box(modifier = Modifier.width(100.dp).height(150.dp).clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
-                                        onclick(videoUri)
-                                    })
-                                }else if (!isScrolling)  {
-                                    VideoItem( bitmap?: R.drawable.default_cover) {
-                                        onclick(videoUri)
-                                    }
-                                }
-                            }
-                        }else {
-                            LazyVerticalGrid(columns = GridCells.Fixed(3), verticalArrangement = Arrangement.spacedBy(5.dp), horizontalArrangement = Arrangement.spacedBy(5.dp),modifier = Modifier.height(((post.content.imageUrls.size + 2) / 3 * 80).dp)) {
 
-                                items(post.content.imageUrls.indices.toList(), key = {it}) {index->
-                                    val shouldLoad = !isScrolling
-                                    if (shouldLoad) {
-                                        val imageUrl = post.content.imageUrls[index]
-                                        val imageRequest = remember(imageUrl) { // 仅在 url 变化时重新创建
-                                            ImageRequest.Builder(AppGlobal.getAppContext()).data(imageUrl).allowHardware(true).lifecycle(lifecycle
-                                            ).build()
-                                        }
-                                        AsyncImage(
-                                            model = imageRequest,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(75.dp),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
-                                }
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f) // 占据剩余宽度，避免内容挤压
+            ) {
+                // 用户名
+                BaseText(text = friend.displayName, color = LittleTextColor)
 
-                            }
+                // 帖子内容
+                BaseText(text = post.content.text)
+
+                // 媒体内容（图片/视频）
+                MediaContent(
+                    postContent = post.content,
+                    isScrolling = isScrolling,
+                    isAtTargetPosition = isAtTargetPosition,
+                    lifecycle = lifecycle,
+                    onClick = onClick
+                )
+
+                // 时间和交互区
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BaseText(text = post.createTime.toTime(), color = PlaceholderColor)
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (post.userId == mid) {
+                        LittleButton(modifier=Modifier.width(20.dp),onclick = {
+                            onDelete(post.postId)
+                        }) {
+                            Icon(Icons.Filled.Delete,contentDescription = null, tint = LittleTextColor, modifier = Modifier.size(13.dp))
                         }
+                        Spacer(modifier.width(10.dp))
+                    }
+                    ExpandableLikeAndContent(
+                        onLikeClick = {
+                            //todo；點讚
+                        },
+                        onContentClick = {
+                            //todo：評論
+                        }
+                    )
+                }
+            }
+        }
+
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            thickness = 0.3.dp,
+            color = Color.Gray // 显式指定颜色，避免依赖主题默认值
+        )
+    }
+
+}
+// 提取用户头像子组件
+@Composable
+private fun UserAvatar(
+    displayAvatar: Any,
+    lifecycle: Lifecycle,
+    modifier: Modifier = Modifier
+) {
+    Wrapper {
+        AsyncImage(
+            model = ImageRequest.Builder(AppGlobal.getAppContext())
+                .data(displayAvatar)
+                .allowHardware(true)
+                .lifecycle(lifecycle)
+                .build(),
+            contentDescription = "用户头像", // 完善无障碍描述
+            modifier = modifier
+                .size(AVATAR_SIZE)
+                .clip(RoundedCornerShape(5.dp)),
+            contentScale = ContentScale.Crop
+        )
+    }
+}
+
+// 提取媒体内容（图片/视频）子组件
+@Composable
+private fun MediaContent(
+    postContent: PostContent, // 传递Content对象，减少参数数量
+    isScrolling: Boolean,
+    isAtTargetPosition: Boolean,
+    lifecycle: Lifecycle,
+    onClick: (Uri) -> Unit
+) {
+    Wrapper {
+        val imageUrls = postContent.imageUrls ?: return@Wrapper // 空安全处理：无图片直接返回
+
+        if (imageUrls.isNotEmpty() && imageUrls[0].contains("mp4")) {
+            // 视频处理
+            val videoUrl = imageUrls[0]
+            val videoUri = remember(videoUrl) { Uri.parse(videoUrl) }
+            val encodedUrl = remember(videoUrl) {
+                URLEncoder.encode(videoUrl, "UTF-8")
+            }
+            val encodedUri = remember(encodedUrl) { Uri.parse(encodedUrl) }
+            val bitmap by rememberVideoFrame(encodedUri)
+
+            Box(
+                modifier = Modifier
+                    .width(VIDEO_THUMBNAIL_SIZE.first)
+                    .height(VIDEO_THUMBNAIL_SIZE.second)
+            ) {
+                when {
+                    !isScrolling && isAtTargetPosition -> {
+                        PlayVideo(
+                            videoUri = videoUri,
+                            defaultWidth = VIDEO_THUMBNAIL_SIZE.first
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) { onClick(videoUri) }
+                        )
+                    }
+                    !isScrolling -> {
+                        VideoItem(
+                            bitmap ?: R.drawable.default_cover,
+                        ) { onClick(videoUri)}
+                    }
+                    else -> {
+                        LoadingPlaceholder(
+                            width = VIDEO_THUMBNAIL_SIZE.first,
+                            height = VIDEO_THUMBNAIL_SIZE.second
+                        )
                     }
                 }
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    BaseText(post.createTime.toTime(), color = PlaceholderColor)
-                    Spacer(modifier = Modifier.weight(1f))
-                    Icon(Icons.Filled.ThumbUp,contentDescription = null, tint = LittleTextColor, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Icon(Icons.Filled.MailOutline,contentDescription = null, tint = LittleTextColor, modifier = Modifier.size(14.dp))
+            }
+        } else {
+            // 图片网格处理
+            val gridHeight = remember(imageUrls.size) {
+                // 计算网格高度：每行3个，每行高度80dp
+                ((imageUrls.size + 2) / 3 * 80).dp
+            }
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                verticalArrangement = Arrangement.spacedBy(IMAGE_GRID_SPACING),
+                horizontalArrangement = Arrangement.spacedBy(IMAGE_GRID_SPACING),
+                modifier = Modifier.height(gridHeight)
+            ) {
+                items(
+                    items = imageUrls,
+                    key = { it } // 使用图片URL作为key（比索引更稳定）
+                ) { imageUrl ->
+                    if (!isScrolling) {
+                        AsyncImage(
+                            model = remember(imageUrl, lifecycle) { // 依赖lifecycle变化
+                                ImageRequest.Builder(AppGlobal.getAppContext())
+                                    .data(imageUrl)
+                                    .allowHardware(true)
+                                    .lifecycle(lifecycle)
+                                    .build()
+                            },
+                            contentDescription = "帖子图片",
+                            modifier = Modifier.size(IMAGE_GRID_ITEM_SIZE),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        LoadingPlaceholder(
+                            width = IMAGE_GRID_ITEM_SIZE,
+                            height = IMAGE_GRID_ITEM_SIZE
+                        )
+                    }
                 }
             }
         }
+    }
+}
 
-        HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.3.dp)
+// 提取加载占位符子组件（复用）
+@Composable
+private fun LoadingPlaceholder(
+    width: Dp,
+    height: Dp,
+    backgroundColor: Color = SurfaceColor,
+    textColor: Color = PlaceholderColor
+) {
+    Box(
+        modifier = Modifier
+            .size(width = width, height = height)
+            .background(color = backgroundColor),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp
+            )
+            BaseText(
+                text = "加载中",
+                fontSize = 12.sp,
+                color = textColor
+            )
+        }
+    }
+}
+@Composable
+fun ExpandableLikeAndContent(onLikeClick:()->Unit,onContentClick:()->Unit) {
+    var isExpand by remember { mutableStateOf(false) }
+    Row {
+        ExpandRowMenu(expanded = isExpand, onDismissRequest = {isExpand = false}, offset = DpOffset(-35.dp,-25.dp),modifier = Modifier.height(35.dp).width(150.dp).background(color = Color.Black.copy(0.4f))) {
+            DropdownMenuItem(onClick = {
+                isExpand = false
+                onLikeClick()
+            },modifier = Modifier.height(35.dp).width(75.dp)) {
+                BaseText("点赞", color = Color.White, fontSize = 12.sp)
+                Spacer(modifier = Modifier.width(3.dp))
+                Icon(Icons.Filled.ThumbUp,contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+            }
+            DropdownMenuItem(onClick = {
+                isExpand = false
+                onContentClick()
+            }, modifier = Modifier.height(35.dp).width(75.dp)) {
+                BaseText("评论", color = Color.White, fontSize = 12.sp)
+                Spacer(modifier = Modifier.width(3.dp))
+                Icon(Icons.Filled.MailOutline,contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+            }
+        }
+        LittleButton(onclick = {
+            isExpand = !isExpand
+        }) {
+            Icon(painterResource(R.drawable.more),contentDescription = null, tint = LittleTextColor, modifier = Modifier.size(13.dp))
+        }
+    }
+}
+@Composable
+fun LittleButton(modifier: Modifier = Modifier,onclick: () -> Unit,backgroundColor: Color = SurfaceColor,content: @Composable () -> Unit) {
+    Box(modifier = modifier.defaultMinSize(minHeight = 15.dp, minWidth = 35.dp).background(backgroundColor).clickable { onclick() }, contentAlignment = Alignment.Center) {
+        content()
     }
 }
 
@@ -563,10 +810,18 @@ enum class CreatePostEnum(val route:String) {
 
 @Composable
 fun CreatePostScreen(navController: NavHostController,dvm: DynamicViewModel,svm:SocialViewModel) {
+    val uvm = hiltViewModel<UserViewmodel>()
+    val user by uvm.myUser.collectAsState()
     val thisController = rememberNavController()
     var lookModel by remember { mutableIntStateOf(0) }
     var location by remember { mutableStateOf("所在位置") }
     var scopeList by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(user.id) {
+        if (user.id != "") {
+            scopeList = svm.getFriendList(user.id).map { it.userId }
+        }
+    }
+    Log.e("scopeList_f",scopeList.toString())
     NavHost(navController=thisController, startDestination = CreatePostEnum.MAIN_CREATE.route) {
         composable(CreatePostEnum.MAIN_CREATE.route){
             MainCreatePostScreen(navController,thisController,lookModel,location,scopeList,dvm, svm)
@@ -605,6 +860,12 @@ fun SelectScopeToCreatePostScreen(navController: NavHostController,thisControlle
     val selectFriendList by svm.currentSelectFriendList.collectAsState()
     val abandonList by svm.currentAbandonFriendList.collectAsState()
     val sb1 by remember { mutableStateOf(StringBuilder()) }
+    var allList by remember { mutableStateOf(friendList) }
+    LaunchedEffect(user.id) {
+        if (user.id != "") {
+            allList = svm.getFriendList(user.id)
+        }
+    }
     LaunchedEffect(selectFriendList) {
         sb1.append(selectFriendList.map { it.displayName })
     }
@@ -620,7 +881,7 @@ fun SelectScopeToCreatePostScreen(navController: NavHostController,thisControlle
         onChange(selectModel)
         onChangeScopeList(when(selectModel) {
             0-> {
-                friendList.map { it.userId }
+                allList.map { it.userId }
             }
             1-> {
                 listOf(user.id)
