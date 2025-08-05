@@ -88,10 +88,17 @@ interface ApiService {
     suspend fun createPost(@Body createPostRequest:CreatePostRequest):ApiResult<Post>
     @DELETE("/v1/dynamics/deletePost")
     suspend fun deletePost(@Query("userId") userId: String,@Query("postId") postId: String)
+    data class Ids(val ids: List<String>)
+    @GET("v1/dynamics/listLikeByPostId")
+    suspend fun listLikeByPostId(@Query("postId") postId: String):ApiResult<Ids>
 
     @PUT("/v1/dynamics/setCover")
     suspend fun setCover(@Body setCoverRequest:SetCoverRequest)
     data class PostListResponse(val posts:List<Post>,val nextPageToken:String)
+    data class UserLikedPostResp(val isLiked:Boolean)
+    @GET("/v1/dynamics/userLikedPost")
+    suspend fun userLikedPost(@Query("userId") userId: String, @Query("postId") postId: String):ApiResult<UserLikedPostResp>
+
 
     @GET("/v1/dynamics/listVisiblePosts")
     suspend fun listVisiblePosts(

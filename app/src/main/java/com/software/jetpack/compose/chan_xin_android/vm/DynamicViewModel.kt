@@ -108,6 +108,15 @@ class DynamicViewModel @Inject constructor(userDao: IUserDao):ViewModel() {
         }
     }
 
+    suspend fun userLikedPost(userId: String,postId: String):Boolean {
+        return try {
+            val userLikedPost = apiService.userLikedPost(userId,postId)
+            userLikedPost.data?.isLiked ?: false
+        }catch (e:Exception) {
+            false
+        }
+    }
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             val phone = AppGlobal.getUserPhone()

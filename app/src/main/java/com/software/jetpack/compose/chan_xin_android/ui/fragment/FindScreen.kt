@@ -557,9 +557,14 @@ fun PostItem(
         Pair(widthPx / 2, heightPx / 2)
     }
     val friend by svm.getFriendInfo(mid,post.userId).collectAsState(Friend())
+    val scope = rememberCoroutineScope()
     Log.e("friend_ss",friend.toString())
     var isAtTargetPosition by remember { mutableStateOf(false) }
-
+    var isLiked by remember { mutableStateOf(false) }
+    LaunchedEffect(post.postId, mid) {
+        isLiked = dvm.userLikedPost(mid,post.postId)
+    }
+    Log.e("isLiked_postItem",isLiked.toString())
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -621,6 +626,10 @@ fun PostItem(
                     ExpandableLikeAndContent(
                         onLikeClick = {
 //                            dvm.toggleLike(post.postId,mid,true)
+                            isLiked = !isLiked
+                            scope.launch(Dispatchers.IO) {
+                                dvm.toggleLike(post.postId,mid,!isLiked)
+                            }
                         },
                         onContentClick = {
                             //todo：評論
