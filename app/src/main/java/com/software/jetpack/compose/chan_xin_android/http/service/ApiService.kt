@@ -100,11 +100,15 @@ interface ApiService {
     suspend fun userLikedPost(@Query("userId") userId: String, @Query("postId") postId: String):ApiResult<UserLikedPostResp>
 
 
+
     @GET("/v1/dynamics/listVisiblePosts")
     suspend fun listVisiblePosts(
         @Query("viewerId") viewerId: String, @Query("pageSize") pageSize: Int,
         @Query("pageToken") pageToken: String
     ): ApiResult<PostListResponse>
+
+    @GET("/v1/dynamics/listCommentByPostId")
+    suspend fun listCommentByPostId()
 
 
 

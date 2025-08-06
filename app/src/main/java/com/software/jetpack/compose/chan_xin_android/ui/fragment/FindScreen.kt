@@ -7,7 +7,6 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.util.Log
-import android.widget.Button
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -15,11 +14,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,15 +36,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
@@ -56,16 +47,15 @@ import androidx.compose.material.ModalBottomSheetLayout
 import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.HorizontalDivider
@@ -76,7 +66,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,7 +78,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -106,7 +95,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
-import androidx.navigation.NavHost
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -114,7 +102,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
-import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.software.jetpack.compose.chan_xin_android.CameraActivity
@@ -125,10 +112,8 @@ import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.Post
 import com.software.jetpack.compose.chan_xin_android.entity.PostContent
 import com.software.jetpack.compose.chan_xin_android.entity.PostMeta
-import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.ext.toTime
-import com.software.jetpack.compose.chan_xin_android.ui.activity.IconButton
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityRouteEnum
 import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
@@ -163,8 +148,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URLEncoder
-import java.sql.Timestamp
-import java.util.UUID
+
 private val DEFAULT_USER_PADDING = 8.dp
 private val AVATAR_SIZE = 50.dp
 private val IMAGE_GRID_SPACING = 5.dp
@@ -545,6 +529,7 @@ fun PostItem(
     onClick: (Uri) -> Unit
 
 ) {
+
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
@@ -556,13 +541,19 @@ fun PostItem(
         val heightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
         Pair(widthPx / 2, heightPx / 2)
     }
-    val friend by svm.getFriendInfo(mid,post.userId).collectAsState(Friend())
+    val postId by remember(post) { derivedStateOf { post.postId } }
+    val ids by dvm.listLikeByPostId(postId).collectAsState()
+    val postOwnerId by remember(post) { derivedStateOf { post.userId } }
+    val content by remember(post) { derivedStateOf { post.content } }
+    val createTime by remember(post) { derivedStateOf { post.createTime } }
+    val friend by svm.getFriendInfo(mid,postOwnerId).collectAsState(Friend())
     val scope = rememberCoroutineScope()
     Log.e("friend_ss",friend.toString())
     var isAtTargetPosition by remember { mutableStateOf(false) }
     var isLiked by remember { mutableStateOf(false) }
-    LaunchedEffect(post.postId, mid) {
-        isLiked = dvm.userLikedPost(mid,post.postId)
+
+    LaunchedEffect(postId, mid) {
+        isLiked = dvm.userLikedPost(mid,postId)
     }
     Log.e("isLiked_postItem",isLiked.toString())
     Column(
@@ -591,17 +582,17 @@ fun PostItem(
 
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f) // 占据剩余宽度，避免内容挤压
+                modifier = Modifier.weight(1f)
             ) {
                 // 用户名
                 BaseText(text = friend.displayName, color = LittleTextColor)
 
                 // 帖子内容
-                BaseText(text = post.content.text)
+                BaseText(text = content.text)
 
                 // 媒体内容（图片/视频）
                 MediaContent(
-                    postContent = post.content,
+                    postContent = content,
                     isScrolling = isScrolling,
                     isAtTargetPosition = isAtTargetPosition,
                     lifecycle = lifecycle,
@@ -613,11 +604,11 @@ fun PostItem(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    BaseText(text = post.createTime.toTime(), color = PlaceholderColor)
+                    BaseText(text = createTime.toTime(), color = PlaceholderColor)
                     Spacer(modifier = Modifier.weight(1f))
-                    if (post.userId == mid) {
+                    if (postOwnerId == mid) {
                         LittleButton(modifier=Modifier.width(20.dp),onclick = {
-                            onDelete(post.postId)
+                            onDelete(postId)
                         }) {
                             Icon(Icons.Filled.Delete,contentDescription = null, tint = LittleTextColor, modifier = Modifier.size(13.dp))
                         }
@@ -625,26 +616,51 @@ fun PostItem(
                     }
                     ExpandableLikeAndContent(
                         onLikeClick = {
-//                            dvm.toggleLike(post.postId,mid,true)
                             isLiked = !isLiked
-                            scope.launch(Dispatchers.IO) {
-                                dvm.toggleLike(post.postId,mid,!isLiked)
-                            }
+                            if (isLiked) { dvm.addLikeId(postId,mid) }else { dvm.removeLikeId(postId,mid) }
                         },
                         onContentClick = {
                             //todo：評論
                         }
                     )
+
                 }
+                LikeAndCommentArea(mid,ids,svm = svm)
             }
         }
-
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
             thickness = 0.3.dp,
-            color = Color.Gray // 显式指定颜色，避免依赖主题默认值
+            color = DividerColor
         )
     }
+
+}
+@Composable
+fun LikeAndCommentArea(mId:String, ids:List<String>, svm:SocialViewModel, uvm: UserViewmodel= hiltViewModel()) {
+    val user by uvm.myUser.collectAsState()
+    val friendList by svm.friendCacheList.collectAsState()
+    val friendMap by remember(friendList) {
+        derivedStateOf { friendList.associateBy { it.userId } }
+    }
+    val displayNames by remember(ids,friendMap) {
+        derivedStateOf { ids.map {
+            if (it == mId) user.nickname
+            else friendMap[it]?.displayName ?: "11"
+
+        } }
+    }
+    val like by remember(displayNames) { derivedStateOf { displayNames.joinToString(separator = ", ") } }
+    Surface(color = SurfaceColor, shape = RoundedCornerShape(5.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            key(like) { BaseText("♡ $like", color = LittleTextColor, fontWeight = FontWeight.Bold) }
+            HorizontalDivider(modifier = Modifier.fillMaxWidth(), color = DividerColor, thickness = 0.5.dp)
+            BaseText("hello", color = LittleTextColor, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+@Composable
+fun CommentItem() {
 
 }
 // 提取用户头像子组件
@@ -728,7 +744,6 @@ private fun MediaContent(
         } else {
             // 图片网格处理
             val gridHeight = remember(imageUrls.size) {
-                // 计算网格高度：每行3个，每行高度80dp
                 ((imageUrls.size + 2) / 3 * 80).dp
             }
 

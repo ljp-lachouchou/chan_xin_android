@@ -1,8 +1,39 @@
 package com.software.jetpack.compose.chan_xin_android.entity
 
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import com.google.gson.Gson
-
-data class Post(val postId:String,val userId:String,val content:PostContent,val meta:PostMeta,val isPinned:Boolean,val createTime:Long) {
+@Entity(tableName = "post")
+data class Post(
+    @PrimaryKey
+    @ColumnInfo("post_id")
+    val postId: String,
+    @ColumnInfo("user_id")
+    val userId: String,
+    val content: PostContent,
+    val meta: PostMeta,
+    @ColumnInfo("is_pinned")
+    val isPinned: Boolean,
+    @ColumnInfo("create_time")
+    val createTime: Long
+) {
+    constructor():this("","",PostContent(),PostMeta(),false,0)
+}
+@Entity(tableName = "friend_feed")
+data class FriendFeed(
+    @PrimaryKey
+    @ColumnInfo("post_id")
+    val postId: String,
+    @ColumnInfo("user_id")
+    val userId: String,
+    val content: PostContent,
+    val meta: PostMeta,
+    @ColumnInfo("is_pinned")
+    val isPinned: Boolean,
+    @ColumnInfo("create_time")
+    val createTime: Long
+) {
     constructor():this("","",PostContent(),PostMeta(),false,0)
 }
 data class PostContent(val text:String,val imageUrls:List<String>?,val emoji:String) {

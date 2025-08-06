@@ -7,20 +7,32 @@ import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.software.jetpack.compose.chan_xin_android.cache.dao.IDynamicDao
 import com.software.jetpack.compose.chan_xin_android.cache.dao.ISocialDao
 import com.software.jetpack.compose.chan_xin_android.cache.dao.IUserDao
 import com.software.jetpack.compose.chan_xin_android.converter.FriendStatusConverter
 import com.software.jetpack.compose.chan_xin_android.converter.FriendStatusInfoConverter
+import com.software.jetpack.compose.chan_xin_android.converter.PostContentConverter
+import com.software.jetpack.compose.chan_xin_android.converter.PostMetaConverter
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
+import com.software.jetpack.compose.chan_xin_android.entity.FriendFeed
 import com.software.jetpack.compose.chan_xin_android.entity.FriendRelation
+import com.software.jetpack.compose.chan_xin_android.entity.Post
+import com.software.jetpack.compose.chan_xin_android.entity.PostLike
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 internal const val DATABASE_NAME = "chan_xin.db"
-@Database(entities = [User::class,FriendApply::class,FriendRelation::class], version = 5, exportSchema = true)
-@TypeConverters(FriendStatusConverter::class, FriendStatusInfoConverter::class)
+@Database(entities = [User::class,FriendApply::class,FriendRelation::class,Post::class,FriendFeed::class,PostLike::class], version = 8, exportSchema = true)
+@TypeConverters(
+    FriendStatusConverter::class,
+    FriendStatusInfoConverter::class,
+    PostMetaConverter::class,
+    PostContentConverter::class
+)
 abstract class UserDatabase:RoomDatabase() {
     abstract fun userDao():IUserDao
     abstract fun socialDao():ISocialDao
+    abstract fun dynamicDao():IDynamicDao
 
     companion object {
         // For Singleton instantiation
@@ -79,11 +91,67 @@ abstract class UserDatabase:RoomDatabase() {
 
                 }
             }
+            val migration5To6 = object : Migration(5,6) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `post` (
+                            `post_id` TEXT PRIMARY KEY NOT NULL,
+                            `user_id` TEXT NOT NULL,
+                            `content` TEXT NOT NULL,
+                            `meta` TEXT NOT NULL,
+                            `is_pinned`  INTEGER NOT NULL CHECK (is_pinned IN (0, 1)),
+                            `create_time` INTEGER NOT NULL
+                        )
+                    """.trimIndent())
+                }
+
+
+            }
+            val migration6To7 = object : Migration(6,7) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `friend_feed` (
+                            `post_id` TEXT PRIMARY KEY NOT NULL,
+                            `user_id` TEXT NOT NULL,
+                            `content` TEXT NOT NULL,
+                            `meta` TEXT NOT NULL,
+                            `is_pinned`  INTEGER NOT NULL CHECK (is_pinned IN (0, 1)),
+                            `create_time` INTEGER NOT NULL
+                        )
+                    """.trimIndent())
+                }
+
+
+            }
+            val migration7To8 = object : Migration(7,8) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `post_like` (
+                            `id` INTEGER PRIMARY KEY NOT NULL,
+                            `post_id` TEXT NOT NULL,
+                            `user_id` TEXT NOT NULL,
+                            `is_deleted` INTEGER NOT NULL CHECK (is_deleted IN (0,1))
+                        )
+                    """.trimIndent())
+                    db.execSQL("""
+                        CREATE UNIQUE INDEX IF NOT EXISTS index_post_like_postId_and_userId ON post_like(post_id,user_id)
+                    """.trimIndent())
+                }
+
+            }
             return Room.databaseBuilder(
                 context = AppGlobal.getAppContext(), klass = UserDatabase::
                 class.java, name = DATABASE_NAME
             )
-                .addMigrations(migration1To2,migration2To3,migration3To4,migration4To5)
+                .addMigrations(
+                    migration1To2,
+                    migration2To3,
+                    migration3To4,
+                    migration4To5,
+                    migration5To6,
+                    migration6To7,
+                    migration7To8
+                )
                 .build()
         }
     }
