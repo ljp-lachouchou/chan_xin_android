@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,9 +34,11 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
@@ -49,6 +52,7 @@ import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -76,23 +80,32 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.text.buildSpannedString
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavHostController
@@ -114,6 +127,7 @@ import com.software.jetpack.compose.chan_xin_android.entity.PostContent
 import com.software.jetpack.compose.chan_xin_android.entity.PostMeta
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.ext.toTime
+import com.software.jetpack.compose.chan_xin_android.http.service.ApiService
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityRouteEnum
 import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
@@ -358,6 +372,11 @@ fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottom
     val isScrolling by remember { derivedStateOf { scrollState.isScrollInProgress } }
     var selectedVideoUri by remember { mutableStateOf<Uri?>(null) }
     var isRefresh by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    var isFocus by remember { mutableStateOf(false) }
+    var find by remember { mutableStateOf("") }
     if (urisSize>9) {
         Toast.makeText(AppGlobal.getAppContext(),"图片选择超出限制",Toast.LENGTH_SHORT).show()
     }
@@ -370,7 +389,19 @@ fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottom
         },onClickVideo = {
             videoLauncher.launch("video/*")
         }) }) {
-            Box {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .pointerInput(Unit) {
+                        detectTapGestures(onPress = {
+                            if (!isFocus) return@detectTapGestures
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            isFocus = false
+                        })
+                    }
+            ) {
                 //if——选择封面,else朋友圈界面
                 if (selectedUri != null) {
                     BackHandler {
@@ -441,6 +472,13 @@ fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottom
                                     if (post != null) {
                                         PostItem(post,isScrolling, mid = user.id,svm = svm, onDelete = {
                                             onDelete(post.postId)
+                                        }, onContentClick = {
+                                            Log.e("onContentClick","onContentClick")
+                                            if (!isFocus) {
+                                                focusRequester.requestFocus()
+                                                keyboardController?.show()
+                                                isFocus = true
+                                            }
                                         }) {
                                             selectedVideoUri = it
                                         }
@@ -487,7 +525,27 @@ fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottom
                                     })
                         }, defaultColor = Color.Transparent)
                     }
-
+                    Wrapper(modifier=Modifier.align(Alignment.BottomStart)) {
+                        Surface(color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
+                            Row {
+                                CustomTextField(
+                                    value = find,
+                                    onValueChange = {find = it},
+                                    modifier = Modifier
+                                        .height(50.dp)
+                                        .weight(1f)
+                                        .focusRequester(focusRequester),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.White,
+                                        unfocusedContainerColor = Color.White,
+                                        cursorColor = IconGreen,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent
+                                    )
+                                )
+                            }
+                        }
+                    }
                 }
                 LoadingDialog(isLoading)
             }
@@ -496,7 +554,9 @@ fun FriendCircleScreenUI(navController:NavHostController,sheetState: ModalBottom
         BackHandler {
             selectedVideoUri = null
         }
-        Box(modifier = Modifier.fillMaxSize().background(color = Color.Black), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .background(color = Color.Black), contentAlignment = Alignment.Center) {
             PlayVideo(selectedVideoUri!!, defaultAspectRatio = 1f)
         }
     }
@@ -526,6 +586,7 @@ fun PostItem(
     svm: SocialViewModel,
     dvm: DynamicViewModel = hiltViewModel(),
     onDelete: (String) -> Unit,
+    onContentClick: () -> Unit,
     onClick: (Uri) -> Unit
 
 ) {
@@ -547,7 +608,6 @@ fun PostItem(
     val content by remember(post) { derivedStateOf { post.content } }
     val createTime by remember(post) { derivedStateOf { post.createTime } }
     val friend by svm.getFriendInfo(mid,postOwnerId).collectAsState(Friend())
-    val scope = rememberCoroutineScope()
     Log.e("friend_ss",friend.toString())
     var isAtTargetPosition by remember { mutableStateOf(false) }
     var isLiked by remember { mutableStateOf(false) }
@@ -571,8 +631,9 @@ fun PostItem(
                     val componentCenterY = layoutCoordinates.positionInWindow().y +
                             (layoutCoordinates.size.height / 2)
 
-                    isAtTargetPosition = componentCenterX in (screenCenterX - targetOffsetPx)..(screenCenterX + targetOffsetPx) &&
-                            componentCenterY in (screenCenterY - targetOffsetPx)..(screenCenterY + targetOffsetPx)
+                    isAtTargetPosition =
+                        componentCenterX in (screenCenterX - targetOffsetPx)..(screenCenterX + targetOffsetPx) &&
+                                componentCenterY in (screenCenterY - targetOffsetPx)..(screenCenterY + targetOffsetPx)
                 }
         ) {
             // 头像区域
@@ -620,12 +681,12 @@ fun PostItem(
                             if (isLiked) { dvm.addLikeId(postId,mid) }else { dvm.removeLikeId(postId,mid) }
                         },
                         onContentClick = {
-                            //todo：評論
+                            onContentClick()
                         }
                     )
 
                 }
-                LikeAndCommentArea(mid,ids,svm = svm)
+                LikeAndCommentArea(mid,postId,ids,svm = svm)
             }
         }
         HorizontalDivider(
@@ -637,7 +698,9 @@ fun PostItem(
 
 }
 @Composable
-fun LikeAndCommentArea(mId:String, ids:List<String>, svm:SocialViewModel, uvm: UserViewmodel= hiltViewModel()) {
+fun LikeAndCommentArea(mId:String, postId: String,ids:List<String>, svm:SocialViewModel, uvm: UserViewmodel= hiltViewModel()) {
+    val dvm: DynamicViewModel = hiltViewModel()
+    val comments by dvm.listCommentByPostId(postId).collectAsState()
     val user by uvm.myUser.collectAsState()
     val friendList by svm.friendCacheList.collectAsState()
     val friendMap by remember(friendList) {
@@ -655,12 +718,37 @@ fun LikeAndCommentArea(mId:String, ids:List<String>, svm:SocialViewModel, uvm: U
         Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             key(like) { BaseText("♡ $like", color = LittleTextColor, fontWeight = FontWeight.Bold) }
             HorizontalDivider(modifier = Modifier.fillMaxWidth(), color = DividerColor, thickness = 0.5.dp)
-            BaseText("hello", color = LittleTextColor, fontWeight = FontWeight.Bold)
+            Column {
+                comments.forEach { comment->
+                    CommentItem(comment)
+                }
+            }
         }
     }
 }
 @Composable
-fun CommentItem() {
+fun CommentItem(comment:ApiService.ListCommentRespStruct) {
+    Row {
+        Text(buildAnnotatedString {
+            withStyle(SpanStyle(color = LittleTextColor, fontWeight = FontWeight.Bold)) {
+                append(comment.userId)
+            }
+            if (comment.targetUserId != "") {
+                withStyle(SpanStyle(color = LittleTextColor)) {
+                    append("对")
+                }
+                withStyle(SpanStyle(color = LittleTextColor, fontWeight = FontWeight.Bold)) {
+                    append(comment.targetUserId)
+                }
+                withStyle(SpanStyle(color = LittleTextColor)) {
+                    append("说")
+                }
+            }
+            append(": ")
+            append(comment.content)
+        })
+
+    }
 
 }
 // 提取用户头像子组件
@@ -816,11 +904,16 @@ private fun LoadingPlaceholder(
 fun ExpandableLikeAndContent(onLikeClick:()->Unit,onContentClick:()->Unit) {
     var isExpand by remember { mutableStateOf(false) }
     Row {
-        ExpandRowMenu(expanded = isExpand, onDismissRequest = {isExpand = false}, offset = DpOffset(-35.dp,-25.dp),modifier = Modifier.height(35.dp).width(150.dp).background(color = Color.Black.copy(0.4f))) {
+        ExpandRowMenu(expanded = isExpand, onDismissRequest = {isExpand = false}, offset = DpOffset(-35.dp,-25.dp),modifier = Modifier
+            .height(35.dp)
+            .width(150.dp)
+            .background(color = Color.Black.copy(0.4f))) {
             DropdownMenuItem(onClick = {
                 isExpand = false
                 onLikeClick()
-            },modifier = Modifier.height(35.dp).width(75.dp)) {
+            },modifier = Modifier
+                .height(35.dp)
+                .width(75.dp)) {
                 BaseText("点赞", color = Color.White, fontSize = 12.sp)
                 Spacer(modifier = Modifier.width(3.dp))
                 Icon(Icons.Filled.ThumbUp,contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -828,7 +921,9 @@ fun ExpandableLikeAndContent(onLikeClick:()->Unit,onContentClick:()->Unit) {
             DropdownMenuItem(onClick = {
                 isExpand = false
                 onContentClick()
-            }, modifier = Modifier.height(35.dp).width(75.dp)) {
+            }, modifier = Modifier
+                .height(35.dp)
+                .width(75.dp)) {
                 BaseText("评论", color = Color.White, fontSize = 12.sp)
                 Spacer(modifier = Modifier.width(3.dp))
                 Icon(Icons.Filled.MailOutline,contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -843,7 +938,10 @@ fun ExpandableLikeAndContent(onLikeClick:()->Unit,onContentClick:()->Unit) {
 }
 @Composable
 fun LittleButton(modifier: Modifier = Modifier,onclick: () -> Unit,backgroundColor: Color = SurfaceColor,content: @Composable () -> Unit) {
-    Box(modifier = modifier.defaultMinSize(minHeight = 15.dp, minWidth = 35.dp).background(backgroundColor).clickable { onclick() }, contentAlignment = Alignment.Center) {
+    Box(modifier = modifier
+        .defaultMinSize(minHeight = 15.dp, minWidth = 35.dp)
+        .background(backgroundColor)
+        .clickable { onclick() }, contentAlignment = Alignment.Center) {
         content()
     }
 }

@@ -107,8 +107,10 @@ interface ApiService {
         @Query("pageToken") pageToken: String
     ): ApiResult<PostListResponse>
 
+    data class ListCommentRespStruct(val userId: String,val targetUserId:String,val content: String)
+    data class ListCommentResp(val list:List<ListCommentRespStruct>)
     @GET("/v1/dynamics/listCommentByPostId")
-    suspend fun listCommentByPostId()
+    suspend fun listCommentByPostId(@Query("postId") postId: String):ApiResult<ListCommentResp>
 
 
 

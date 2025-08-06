@@ -13,6 +13,7 @@ import androidx.paging.PagingState
 import androidx.paging.cachedIn
 import com.software.jetpack.compose.chan_xin_android.cache.dao.IDynamicDao
 import com.software.jetpack.compose.chan_xin_android.cache.dao.IUserDao
+import com.software.jetpack.compose.chan_xin_android.entity.CommentReply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendFeed
 import com.software.jetpack.compose.chan_xin_android.entity.Pagination
 import com.software.jetpack.compose.chan_xin_android.entity.Post
@@ -58,7 +59,7 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
     private var version = 0
     private val _currentUid = MutableStateFlow(UidWithVersion("初始uid", version))
     private val likeIdsMutableFlowCache = mutableMapOf<String, MutableStateFlow<List<String>>>()
-    private val likeIdsFlowCache = mutableMapOf<String, StateFlow<List<String>>>()
+    private val commentsMutableFlowCache = mutableMapOf<String,MutableStateFlow<List<ApiService.ListCommentRespStruct>>>()
     val videoUri:StateFlow<Uri?>
         get() = _videoUri
     val photoUris:StateFlow<List<Uri>>
@@ -126,6 +127,24 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
             MutableStateFlow<List<String>>(emptyList()).also { flow ->
                 // 首次加载数据
                 loadInitialLikeIds(postId, flow)
+            }
+        }
+    }
+    fun listCommentByPostId(postId: String):StateFlow<List<ApiService.ListCommentRespStruct>> {
+        return commentsMutableFlowCache.getOrPut(postId) {
+            MutableStateFlow<List<ApiService.ListCommentRespStruct>>(emptyList()).also { flow ->
+                loadInitialComments(postId,flow)
+            }
+        }
+    }
+    private fun loadInitialComments(postId: String,flow: MutableStateFlow<List<ApiService.ListCommentRespStruct>>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val resp = apiService.listCommentByPostId(postId)
+                val newValue = resp.data?.list?: emptyList()
+                flow.value = newValue
+            }catch (e:Exception) {
+                Log.e("listCommentByPostId", e.toString())
             }
         }
     }
