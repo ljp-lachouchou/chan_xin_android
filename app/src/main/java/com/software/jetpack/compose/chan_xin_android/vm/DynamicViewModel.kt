@@ -42,6 +42,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 @HiltViewModel
 class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private val dynamicDao: IDynamicDao):ViewModel() {
@@ -53,22 +55,34 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
         initialLoadSize = 4,
         enablePlaceholders = false // 不启用占位符（适合网络数据）
     )
+    private val _currentClickComment = MutableStateFlow(ApiService.ListCommentRespStruct())
     data class UidWithVersion(val uid: String, val version: Int)
 
     // 初始化 StateFlow
     private var version = 0
     private val _currentUid = MutableStateFlow(UidWithVersion("初始uid", version))
-    private val likeIdsMutableFlowCache = mutableMapOf<String, MutableStateFlow<List<String>>>()
-    private val commentsMutableFlowCache = mutableMapOf<String,MutableStateFlow<List<ApiService.ListCommentRespStruct>>>()
+    private val likeIdsMutableFlowCache = ConcurrentHashMap<String, MutableStateFlow<List<String>>>()
+    private val commentsMutableFlowCache = ConcurrentHashMap<String,MutableStateFlow<List<ApiService.ListCommentRespStruct>>>()
+    private val _currentPost = MutableStateFlow("")
     val videoUri:StateFlow<Uri?>
         get() = _videoUri
     val photoUris:StateFlow<List<Uri>>
         get() = _photoUris
+    val currentClickComment:StateFlow<ApiService.ListCommentRespStruct>
+        get() = _currentClickComment
+    val currentPostId:StateFlow<String>
+        get() = _currentPost
+    fun loadClickComment(comment:ApiService.ListCommentRespStruct) {
+        _currentClickComment.value = comment
+    }
     fun loadVideoUri(uri:Uri?) {
         _videoUri.value = uri
     }
     fun loadPhotoUris(uris:List<Uri>) {
         _photoUris.value = uris
+    }
+    fun loadCurrentPost(post: String) {
+        _currentPost.value = post
     }
     suspend fun setCover(userId:String = "22",coverUrl:String = "22") {
         try {
@@ -145,6 +159,41 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
                 flow.value = newValue
             }catch (e:Exception) {
                 Log.e("listCommentByPostId", e.toString())
+            }
+        }
+    }
+    fun addComment(postId: String, userId: String, content:String) {
+        val flow = commentsMutableFlowCache[postId] ?: return
+        val originalComments = flow.value
+        val currentComments = flow.value.toMutableList()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val apiResult =
+                    apiService.createComment(ApiService.CreateCommentReq(postId, userId, content))
+                val commentId = apiResult.data?.commentId ?:""
+                currentComments.add(ApiService.ListCommentRespStruct(commentId = commentId,userId = userId, targetUserId = "", content = content))
+                flow.value = currentComments
+                //todo:本地缓存
+            }catch (e:Exception) {
+                Log.e("DynamicViewModel_createComment",e.toString())
+                flow.value = originalComments
+            }
+        }
+    }
+    fun removeComment(commentId:String,postId: String, userId: String, content:String) {
+        val flow = commentsMutableFlowCache[postId] ?: return
+        val originalComments = flow.value
+        val currentComments = flow.value.toMutableList()
+        currentComments.remove(ApiService.ListCommentRespStruct(commentId,userId,"",content))
+        flow.value = currentComments
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                //删除评论
+                apiService.updateComment(ApiService.UpdateCommentReq(true,commentId))
+                //todo:本地缓存
+            }catch (e:Exception) {
+                Log.e("DynamicViewModel_createComment",e.toString())
+                flow.value = originalComments
             }
         }
     }

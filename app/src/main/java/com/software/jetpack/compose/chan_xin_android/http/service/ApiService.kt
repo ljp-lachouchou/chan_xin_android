@@ -99,7 +99,14 @@ interface ApiService {
     @GET("/v1/dynamics/userLikedPost")
     suspend fun userLikedPost(@Query("userId") userId: String, @Query("postId") postId: String):ApiResult<UserLikedPostResp>
 
+    data class CreateCommentReq(val postId: String,val userId: String,val content:String)
+    data class CreateCommentResp(val commentId: String)
+    @POST("/v1/dynamics/createComment")
+    suspend fun createComment(@Body  createCommentReq:CreateCommentReq):ApiResult<CreateCommentResp>
 
+    data class UpdateCommentReq(val isDeleted:Boolean,val commentId:String)
+    @PUT("/v1/dynamics/updateComment")
+    suspend fun updateComment(@Body updateCommentReq:UpdateCommentReq)
 
     @GET("/v1/dynamics/listVisiblePosts")
     suspend fun listVisiblePosts(
@@ -107,7 +114,9 @@ interface ApiService {
         @Query("pageToken") pageToken: String
     ): ApiResult<PostListResponse>
 
-    data class ListCommentRespStruct(val userId: String,val targetUserId:String,val content: String)
+    data class ListCommentRespStruct(val commentId:String = "",val userId: String,val targetUserId:String,val content: String) {
+        constructor():this("","","","")
+    }
     data class ListCommentResp(val list:List<ListCommentRespStruct>)
     @GET("/v1/dynamics/listCommentByPostId")
     suspend fun listCommentByPostId(@Query("postId") postId: String):ApiResult<ListCommentResp>

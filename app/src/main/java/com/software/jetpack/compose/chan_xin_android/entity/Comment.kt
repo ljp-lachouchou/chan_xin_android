@@ -17,7 +17,7 @@ data class PostLike(
     val isDeleted: Boolean)
 
 data class Comment(
-    val id: Long = 0,
+    val commentId: String,
     val postId: String,
     val userId: String,
     val content: String,
