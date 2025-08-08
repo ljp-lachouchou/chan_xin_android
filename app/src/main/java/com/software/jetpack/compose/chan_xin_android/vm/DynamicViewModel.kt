@@ -197,6 +197,42 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
             }
         }
     }
+    fun addCommentReply(postId: String,userId: String,targetId:String,content: String) {
+        val flow = commentsMutableFlowCache[postId] ?: return
+        val originalComments = flow.value
+        val currentComments = flow.value.toMutableList()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val apiResult =
+                    apiService.createCommentReplay(ApiService.CreateCommentReplyReq(postId, userId, targetId,content))
+                val commentReplyId = apiResult.data?.commentReplyId ?:""
+                currentComments.add(ApiService.ListCommentRespStruct(commentId = commentReplyId,userId = userId, targetUserId = targetId, content = content))
+                flow.value = currentComments
+                //todo:本地缓存
+            }catch (e:Exception) {
+                Log.e("DynamicViewModel_createComment",e.toString())
+                flow.value = originalComments
+            }
+        }
+    }
+
+    fun removeCommentReply(commentReplyId:String,postId: String, userId: String, content:String,targetId: String) {
+        val flow = commentsMutableFlowCache[postId] ?: return
+        val originalComments = flow.value
+        val currentComments = flow.value.toMutableList()
+        currentComments.remove(ApiService.ListCommentRespStruct(commentReplyId,userId,targetId,content))
+        flow.value = currentComments
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                //删除评论
+                apiService.updateCommentReplay(ApiService.UpdateCommentReplayReq(true,commentReplyId))
+                //todo:本地缓存
+            }catch (e:Exception) {
+                Log.e("DynamicViewModel_createComment",e.toString())
+                flow.value = originalComments
+            }
+        }
+    }
     private fun loadInitialLikeIds(postId: String, flow: MutableStateFlow<List<String>>) {
         viewModelScope.launch {
             if (AppGlobal.isNetworkValid()) {

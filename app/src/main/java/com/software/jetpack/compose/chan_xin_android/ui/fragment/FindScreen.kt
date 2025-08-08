@@ -283,14 +283,18 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
     val scope = rememberCoroutineScope()
     val clickComment by dvm.currentClickComment.collectAsState()
     val clickPostId by dvm.currentPostId.collectAsState()
+    var find by remember { mutableStateOf("") }
     Log.e("click_comment",clickComment.toString())
     Box {
-        FriendCircleScreenUI(navController,sheetState,filePath,dvm,posts=posts,svm = svm,onFilePathChange = {
+        FriendCircleScreenUI(navController,sheetState,filePath,find,dvm,posts=posts,svm = svm,onFilePathChange = {
             filePath = it
-        }, onDelete = {
+        }, onValueChange = {find = it},onDelete = {
             deletePostId = it
             deleteModel = 1
-        }, onDeleteComment = {deleteModel = 2}, onCommentReply = {}) {
+        }, onDeleteComment = {deleteModel = 2}, onCommentReply = {
+            //todo:回复评论
+            dvm.addCommentReply(clickPostId,user.id,clickComment.userId,find)
+        }) {
             //todo:進入被點擊的好友的詳情頁面
         }
         when (deleteModel) {
@@ -328,7 +332,13 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
                 },confirmButton = {
                     TextButton(onClick = {
                         deleteModel = 0
-                        dvm.removeComment(clickComment.commentId,clickPostId,clickComment.userId,clickComment.content)
+                        dvm.removeCommentReply(
+                            clickComment.commentId,
+                            clickPostId,
+                            clickComment.userId,
+                            clickComment.content,
+                            clickComment.targetUserId
+                        )
                     }) {
                         BaseText("刪除", color = Color.Red)
                     }
@@ -553,7 +563,6 @@ fun CommentItem(comment:ApiService.ListCommentRespStruct,user:User,svm: SocialVi
         HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.2.dp)
 
     }
-
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -563,6 +572,7 @@ fun FriendCircleScreenUI(
     navController: NavHostController,
     sheetState: ModalBottomSheetState,
     filePath: String,
+    find: String,
     dvm: DynamicViewModel,
     svm: SocialViewModel,
     uvm: UserViewmodel = hiltViewModel(),
@@ -571,6 +581,7 @@ fun FriendCircleScreenUI(
     onFilePathChange: (String) -> Unit,
     onCommentReply:()->Unit,
     onDeleteComment:()->Unit,
+    onValueChange:(String)->Unit,
     onDelete: (String) -> Unit,
     enterDetail: (String) -> Unit
 ) {
@@ -584,9 +595,8 @@ fun FriendCircleScreenUI(
     val focusManager = LocalFocusManager.current
     var isRefresh by remember { mutableStateOf(false) }
     var isFocus by remember { mutableStateOf(false) }
-    var find by remember { mutableStateOf("") }
     var postId by remember { mutableStateOf("") }
-
+    var commentModel by remember { mutableIntStateOf(0) }
     // 处理图片选择超出限制的提示
     LaunchedEffect(state.urisSize) {
         if (state.urisSize > 9) {
@@ -603,7 +613,6 @@ fun FriendCircleScreenUI(
     }
 
     when {
-
         state.selectedVideoUri != null -> {
             Log.e("VideoPlayerScreen","VideoPlayerScreen")
             VideoPlayerScreen(
@@ -652,6 +661,7 @@ fun FriendCircleScreenUI(
                                     focusManager.clearFocus()
                                     keyboardController?.hide()
                                     isFocus = false
+                                    commentModel = 0
                                 }
                             })
                         }
@@ -683,8 +693,8 @@ fun FriendCircleScreenUI(
                         onFocusChange = { isFocus = it },
                         onVideoSelected = { state.selectedVideoUri = it },
                         onContentClick = { postId = it },
-                        onCommentReply = onCommentReply,
-                        onDeleteComment = onDeleteComment
+                        onDeleteComment = onDeleteComment,
+                        onCommentModelChange = {commentModel = it}
                     )
 
                     // 顶部导航栏
@@ -703,12 +713,18 @@ fun FriendCircleScreenUI(
                             .fillMaxWidth()
                             .height(if (isFocus) 55.dp else 0.dp)
                             .alpha(if (isFocus) 1f else 0f),
-                        onFindChange = { find = it },
+                        onFindChange = { onValueChange(it) },
                         focusRequester = state.focusRequester,
                         onCommentClick = {
+
                             if (postId != "" && find != "") {
-                                dvm.addComment(postId, userId = user.id,find)
-                                find = ""
+                                if (commentModel == 2) {
+                                    onCommentReply()
+                                }else if (commentModel == 1){
+                                    dvm.addCommentReply(postId, userId = user.id,"",find)
+                                }
+
+                                onValueChange("")
                                 isFocus = false
                                 focusManager.clearFocus()
                                 keyboardController?.hide()
@@ -857,14 +873,14 @@ private fun FriendCircleList(
     focusRequester: FocusRequester,
     keyboardController: SoftwareKeyboardController?,
     isFocus: Boolean,
-    onCommentReply: () -> Unit,
     onDeleteComment: () -> Unit,
     onContentClick: (String) -> Unit,
+    onCommentModelChange:(Int)->Unit,
     onFocusChange: (Boolean) -> Unit,
     onVideoSelected: (Uri) -> Unit
 ) {
     LazyColumnWithCover(
-        if (filePath.isEmpty()) R.drawable.default_cover else filePath,
+        filePath.ifEmpty { R.drawable.default_cover },
         user.nickname,
         user.displayAvatar,
         modifier = Modifier.fillMaxSize(),
@@ -893,10 +909,20 @@ private fun FriendCircleList(
                             focusRequester.requestFocus()
                             keyboardController?.show()
                             onFocusChange(true)
+                            onCommentModelChange(1)
                         }
                     },
                     onDeleteComment = onDeleteComment,
-                    onCommentReply = onCommentReply,
+                    onCommentReply = {
+                        onContentClick(post.postId)
+                        if (!isFocus) {
+                            scope.launch { scrollState.animateScrollToItem(index) }
+                            focusRequester.requestFocus()
+                            keyboardController?.show()
+                            onFocusChange(true)
+                            onCommentModelChange(2)
+                        }
+                    },
                     onClick = onVideoSelected
                 )
             }

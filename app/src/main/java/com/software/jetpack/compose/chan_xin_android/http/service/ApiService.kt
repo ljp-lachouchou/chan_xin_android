@@ -103,10 +103,17 @@ interface ApiService {
     data class CreateCommentResp(val commentId: String)
     @POST("/v1/dynamics/createComment")
     suspend fun createComment(@Body  createCommentReq:CreateCommentReq):ApiResult<CreateCommentResp>
+    data class CreateCommentReplyReq(val postId: String,val userId: String,val targetUserId:String,val content: String)
+    data class CreateCommentReplyResp(val commentReplyId:String,val postId:String)
+    @POST("/v1/dynamics/createCommentReplay")
+    suspend fun createCommentReplay(@Body createCommentReplyReq:CreateCommentReplyReq):ApiResult<CreateCommentReplyResp>
 
     data class UpdateCommentReq(val isDeleted:Boolean,val commentId:String)
+    data class UpdateCommentReplayReq(val isDeleted:Boolean,val commentReplayId:String)
+    @PUT("/v1/dynamics/updateCommentReplay")
+    suspend fun updateCommentReplay(@Body updateCommentReq:UpdateCommentReplayReq)
     @PUT("/v1/dynamics/updateComment")
-    suspend fun updateComment(@Body updateCommentReq:UpdateCommentReq)
+    suspend fun updateComment(@Body updateCommentReplayReq:UpdateCommentReq)
 
     @GET("/v1/dynamics/listVisiblePosts")
     suspend fun listVisiblePosts(
