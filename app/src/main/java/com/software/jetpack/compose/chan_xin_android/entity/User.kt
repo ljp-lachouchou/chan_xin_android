@@ -9,7 +9,7 @@ data class User(
     @PrimaryKey
     val id:String = "",
     val phone:String,
-    var password:String,var avatar:String="",var nickname:String="",var sex:Byte = 0,var status:Byte = 0
+    var password:String = "",var avatar:String="",var nickname:String="",var sex:Byte = 0,var status:Byte = 0
 
 ) {
     constructor():this(phone = "",password = "")

@@ -3,6 +3,8 @@ package com.software.jetpack.compose.chan_xin_android.vm
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -153,47 +156,19 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
     }
     private fun loadInitialComments(postId: String,flow: MutableStateFlow<List<ApiService.ListCommentRespStruct>>) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val resp = apiService.listCommentByPostId(postId)
-                val newValue = resp.data?.list?: emptyList()
-                flow.value = newValue
-            }catch (e:Exception) {
-                Log.e("listCommentByPostId", e.toString())
-            }
-        }
-    }
-    fun addComment(postId: String, userId: String, content:String) {
-        val flow = commentsMutableFlowCache[postId] ?: return
-        val originalComments = flow.value
-        val currentComments = flow.value.toMutableList()
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val apiResult =
-                    apiService.createComment(ApiService.CreateCommentReq(postId, userId, content))
-                val commentId = apiResult.data?.commentId ?:""
-                currentComments.add(ApiService.ListCommentRespStruct(commentId = commentId,userId = userId, targetUserId = "", content = content))
-                flow.value = currentComments
-                //todo:本地缓存
-            }catch (e:Exception) {
-                Log.e("DynamicViewModel_createComment",e.toString())
-                flow.value = originalComments
-            }
-        }
-    }
-    fun removeComment(commentId:String,postId: String, userId: String, content:String) {
-        val flow = commentsMutableFlowCache[postId] ?: return
-        val originalComments = flow.value
-        val currentComments = flow.value.toMutableList()
-        currentComments.remove(ApiService.ListCommentRespStruct(commentId,userId,"",content))
-        flow.value = currentComments
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                //删除评论
-                apiService.updateComment(ApiService.UpdateCommentReq(true,commentId))
-                //todo:本地缓存
-            }catch (e:Exception) {
-                Log.e("DynamicViewModel_createComment",e.toString())
-                flow.value = originalComments
+            if (AppGlobal.isNetworkValid()) {
+                try {
+                    val resp = apiService.listCommentByPostId(postId)
+                    val newValue = resp.data?.list?: emptyList()
+                    flow.value = newValue
+                }catch (e:Exception) {
+                    Log.e("listCommentByPostId", e.toString())
+                }
+            }else {
+                val commentReplies = dynamicDao.listCommentByPostId(postId).map {
+                    ApiService.ListCommentRespStruct(it.commentReplieId,it.userId,it.targetUserId,it.content)
+                }
+                flow.value = commentReplies
             }
         }
     }
@@ -208,7 +183,7 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
                 val commentReplyId = apiResult.data?.commentReplyId ?:""
                 currentComments.add(ApiService.ListCommentRespStruct(commentId = commentReplyId,userId = userId, targetUserId = targetId, content = content))
                 flow.value = currentComments
-                //todo:本地缓存
+                dynamicDao.saveCommentReply(commentReply = CommentReply(commentReplyId,postId,userId,targetId,content,false))
             }catch (e:Exception) {
                 Log.e("DynamicViewModel_createComment",e.toString())
                 flow.value = originalComments
@@ -226,7 +201,7 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
             try {
                 //删除评论
                 apiService.updateCommentReplay(ApiService.UpdateCommentReplayReq(true,commentReplyId))
-                //todo:本地缓存
+                dynamicDao.removeCommentReplyByCommentReplyId(commentReplyId)
             }catch (e:Exception) {
                 Log.e("DynamicViewModel_createComment",e.toString())
                 flow.value = originalComments

@@ -14,6 +14,7 @@ import com.software.jetpack.compose.chan_xin_android.converter.FriendStatusConve
 import com.software.jetpack.compose.chan_xin_android.converter.FriendStatusInfoConverter
 import com.software.jetpack.compose.chan_xin_android.converter.PostContentConverter
 import com.software.jetpack.compose.chan_xin_android.converter.PostMetaConverter
+import com.software.jetpack.compose.chan_xin_android.entity.CommentReply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendFeed
 import com.software.jetpack.compose.chan_xin_android.entity.FriendRelation
@@ -22,7 +23,7 @@ import com.software.jetpack.compose.chan_xin_android.entity.PostLike
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 internal const val DATABASE_NAME = "chan_xin.db"
-@Database(entities = [User::class,FriendApply::class,FriendRelation::class,Post::class,FriendFeed::class,PostLike::class], version = 8, exportSchema = true)
+@Database(entities = [User::class,FriendApply::class,FriendRelation::class,Post::class,FriendFeed::class,PostLike::class,CommentReply::class], version = 9, exportSchema = true)
 @TypeConverters(
     FriendStatusConverter::class,
     FriendStatusInfoConverter::class,
@@ -139,6 +140,21 @@ abstract class UserDatabase:RoomDatabase() {
                 }
 
             }
+            val migration8To9 = object : Migration(8,9) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `comment_reply` (
+                            `comment_replie_id` TEXT PRIMARY KEY NOT NULL,
+                            `post_id` TEXT NOT NULL,
+                            `user_id` TEXT NOT NULL,
+                            `target_user_id` TEXT NOT NULL,
+                            `content` TEXT NOT NULL,
+                            `is_deleted` INTEGER NOT NULL CHECK (is_deleted IN (0,1))
+                        )
+                    """.trimIndent())
+                }
+
+            }
             return Room.databaseBuilder(
                 context = AppGlobal.getAppContext(), klass = UserDatabase::
                 class.java, name = DATABASE_NAME
@@ -150,7 +166,8 @@ abstract class UserDatabase:RoomDatabase() {
                     migration4To5,
                     migration5To6,
                     migration6To7,
-                    migration7To8
+                    migration7To8,
+                    migration8To9
                 )
                 .build()
         }

@@ -11,6 +11,8 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Indication
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -639,16 +641,15 @@ fun LabelScreenItem(imageVector: Painter, label:String,defaultSize:Dp = 24.dp,on
     }
 }
 @Composable
-fun UserInfoScreenItem(label:String,onClick:()->Unit,heightDp: Dp  = DefaultUserScreenItemDp,content:@Composable ()->Unit = {}) {
+fun UserInfoScreenItem(label:String,onClick:()->Unit,heightDp: Dp  = DefaultUserScreenItemDp,indication: Indication? = LocalIndication.current,content:@Composable ()->Unit = {}) {
     Box(modifier = Modifier
         .background(Color.White)
-        .clickable {
+        .clickable(indication = indication, interactionSource = remember { MutableInteractionSource() }) {
             onClick()
         }) {
         Row(modifier = Modifier
             .fillMaxWidth()
-            .height(heightDp), verticalAlignment = Alignment.CenterVertically) {
-            Spacer(modifier = Modifier.width(DefaultUserPadding))
+            .height(heightDp).padding(horizontal = DefaultUserPadding), verticalAlignment = Alignment.CenterVertically) {
             BaseText(text = label, fontSize = DefaultFontSize)
             Spacer(modifier = Modifier.weight(1f))
             content()

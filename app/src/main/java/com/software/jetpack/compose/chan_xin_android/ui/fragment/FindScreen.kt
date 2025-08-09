@@ -79,8 +79,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -114,6 +116,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.text.buildSpannedString
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -128,6 +131,7 @@ import com.software.jetpack.compose.chan_xin_android.R
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPadding
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
+import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
 import com.software.jetpack.compose.chan_xin_android.entity.Post
 import com.software.jetpack.compose.chan_xin_android.entity.PostContent
 import com.software.jetpack.compose.chan_xin_android.entity.PostMeta
@@ -166,6 +170,8 @@ import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URLEncoder
@@ -294,9 +300,7 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
         }, onDeleteComment = {deleteModel = 2}, onCommentReply = {
             //todo:回复评论
             dvm.addCommentReply(clickPostId,user.id,clickComment.userId,find)
-        }) {
-            //todo:進入被點擊的好友的詳情頁面
-        }
+        })
         when (deleteModel) {
             1->{
                 AlertDialog(onDismissRequest = {}, title = {
@@ -359,6 +363,7 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
 @Composable
 fun PostItem(
     post: Post,
+    navController: NavHostController,
     isScrolling: Boolean = true,
     mid:String,
     modifier: Modifier = Modifier,
@@ -418,7 +423,10 @@ fun PostItem(
                 }
         ) {
             // 头像区域
-            UserAvatar(displayAvatar = friend.displayAvatar, lifecycle = lifecycle)
+            UserAvatar(displayAvatar = friend.displayAvatar, lifecycle = lifecycle) {
+                svm.loadClickFriend(friend)
+                navController.switchTab(MainActivityRouteEnum.MAIN_FRIEND_INFO.route)
+            }
 
             Spacer(modifier = Modifier.width(10.dp))
 
@@ -564,7 +572,7 @@ fun CommentItem(comment:ApiService.ListCommentRespStruct,user:User,svm: SocialVi
 
     }
 }
-
+@SuppressLint("StateFlowValueCalledInComposition")
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -582,15 +590,13 @@ fun FriendCircleScreenUI(
     onCommentReply:()->Unit,
     onDeleteComment:()->Unit,
     onValueChange:(String)->Unit,
-    onDelete: (String) -> Unit,
-    enterDetail: (String) -> Unit
+    onDelete: (String) -> Unit
 ) {
+    val listState = rememberLazyListState()
     // 状态管理
     val state = rememberFriendCircleState(navController,dvm)
     val user by uvm.myUser.collectAsState()
-    val clickFriend by svm.clickFriend.collectAsState()
-    val scrollState = rememberLazyListState()
-    val isScrolling by remember { derivedStateOf { scrollState.isScrollInProgress } }
+    val isScrolling by remember { derivedStateOf { listState.isScrollInProgress } }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     var isRefresh by remember { mutableStateOf(false) }
@@ -671,8 +677,9 @@ fun FriendCircleScreenUI(
                         filePath = filePath,
                         scope = state.scope,
                         user = user,
+                        navController = navController,
                         posts = posts,
-                        scrollState = scrollState,
+                        scrollState = listState,
                         isScrolling = isScrolling,
                         svm = svm,
                         dvm = dvm,
@@ -685,7 +692,11 @@ fun FriendCircleScreenUI(
                             }
                         },
                         onChangeCover = { state.launcher.launch("image/*") },
-                        onEnterFriendInfoDetail = { enterDetail(clickFriend.userId) },
+                        onEnterFriendInfoDetail = {
+                            svm.loadClickFriend(Friend(userId = user.id, nickname = user.nickname, avatarUrl = user.avatar, gender = user.sex.toInt(),
+                                FriendStatus()
+                            ))
+                            navController.navigate(MainActivityRouteEnum.MAIN_FRIEND_INFO.route) },
                         onDelete = onDelete,
                         focusRequester = state.focusRequester,
                         keyboardController = keyboardController,
@@ -758,7 +769,7 @@ private fun rememberFriendCircleState(navController: NavHostController,dvm: Dyna
         if (urisSize.intValue <= 9) {
             dvm.loadPhotoUris(uris)
             dvm.loadVideoUri(null)
-            navController.switchTab(MainActivityRouteEnum.CREATE_POST_SCREEN.route)
+            navController.navigate(MainActivityRouteEnum.CREATE_POST_SCREEN.route)
         }
     }
     val videoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -860,6 +871,7 @@ private fun VideoPlayerScreen(
 private fun FriendCircleList(
     filePath: String,
     scope: CoroutineScope,
+    navController: NavHostController,
     user: User, // 假设存在User数据类
     posts: LazyPagingItems<Post>,
     scrollState: LazyListState,
@@ -897,6 +909,7 @@ private fun FriendCircleList(
             if (post != null) {
                 PostItem(
                     post = post,
+                    navController = navController,
                     isScrolling = isScrolling,
                     mid = user.id,
                     svm = svm,
@@ -1097,7 +1110,8 @@ fun NoMoreItem() {
 private fun UserAvatar(
     displayAvatar: Any,
     lifecycle: Lifecycle,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     Wrapper {
         AsyncImage(
@@ -1109,7 +1123,10 @@ private fun UserAvatar(
             contentDescription = "用户头像", // 完善无障碍描述
             modifier = modifier
                 .size(AVATAR_SIZE)
-                .clip(RoundedCornerShape(5.dp)),
+                .clip(RoundedCornerShape(5.dp))
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }) { onClick() },
             contentScale = ContentScale.Crop
         )
     }

@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-class UserRepository @Inject constructor(private val userDao:IUserDao) {
+class UserRepository @Inject constructor(val userDao:IUserDao) {
     private val _currentPhone = MutableStateFlow("")
     private val scope = CoroutineScope(SupervisorJob())
     init {

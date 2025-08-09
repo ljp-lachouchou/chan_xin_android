@@ -15,18 +15,20 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-class SocialRepository @Inject constructor(private val socialDao: ISocialDao,private val userDao:IUserDao) {
-
+class SocialRepository @Inject constructor(val socialDao: ISocialDao,private val userDao:IUserDao) {
+    data class UserIdWithVersion(val userId:String,var version:Int)
+    private var version = 0
     val scope = CoroutineScope(SupervisorJob())
-    private val _currentUid = MutableStateFlow("")
+    private val _currentUid = MutableStateFlow(UserIdWithVersion("",0))
     @OptIn(ExperimentalCoroutinesApi::class)
-    val currentApplyFriendListFlow = _currentUid.flatMapLatest { uid->
+    val currentApplyFriendListFlow = _currentUid.flatMapLatest { (uid,_)->
         Log.e("SocialRepository_uid",uid)
         socialDao.getApplyFriendList(uid)
     }.catch {
@@ -34,15 +36,16 @@ class SocialRepository @Inject constructor(private val socialDao: ISocialDao,pri
         flowOf<List<FriendApply>>(emptyList())
     }
     @OptIn(ExperimentalCoroutinesApi::class)
-    val currentFriendListFlow = _currentUid.flatMapLatest { uid->
-        Log.e("SocialRepository_uid",uid)
+    val currentFriendListFlow = _currentUid.flatMapLatest { (uid,version)->
+        Log.e("SocialRepository_uid","$uid,$version")
+        Log.e("SocialRepository_uid_data",socialDao.getFriendList(uid).first().toString())
         socialDao.getFriendList(uid)
     }.catch {
-        Log.e("fuck_SocialRepository_Error_uid",it.message.toString())
-        flowOf<List<FriendApply>>(emptyList())
+        Log.e("fuck_SocialRepository_Error_friend",it.toString())
+        flowOf<List<Friend>>(emptyList())
     }
     @OptIn(ExperimentalCoroutinesApi::class)
-    val currentHandleFriendApplyListFlow = _currentUid.flatMapLatest { uid ->
+    val currentHandleFriendApplyListFlow = _currentUid.flatMapLatest { (uid,_) ->
         Log.e("SocialRepository_tid", uid)
         socialDao.getHandleApplyList(uid)
     }.catch {
@@ -59,6 +62,7 @@ class SocialRepository @Inject constructor(private val socialDao: ISocialDao,pri
         }
     }
     fun setCurrentUid(uid:String) {
-        _currentUid.value = uid
+        version = (version + 1) % 10
+        _currentUid.value = UserIdWithVersion(uid,version)
     }
 }

@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface IUserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveUsers(users:List<User>):List<Long>
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveUser(user:User):Long
 
     @Query("SELECT * FROM users WHERE `id` = :id")
@@ -17,7 +19,7 @@ interface IUserDao {
     @Query("SELECT * FROM users WHERE `phone` = :phone")
     fun getUserInfoByPhone(phone:String):Flow<User>
     @Query("SELECT COUNT(1) FROM users")
-    fun getUserCount():Int
+    suspend fun getUserCount():Int
     @Query("SELECT `avatar` FROM users WHERE `phone` = :phone")
     suspend fun getUserAvatarByPhone(phone:String):String
 }

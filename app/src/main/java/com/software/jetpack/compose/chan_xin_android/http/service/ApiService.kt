@@ -73,7 +73,6 @@ interface ApiService {
     @GET("/v1/social/firend/getFriendList")
     suspend fun getFriendList(@Query("user_id") userId:String = "1"):ApiResult<DataFriendListWrapper<Friend>>
 
-
     data class SetCoverRequest(val userId:String,val coverUrl:String)
     data class CreatePostRequest(val userId: String,val content:PostContent,val meta:PostMeta)
 

@@ -4,7 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Build
 import android.util.Log
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -57,17 +59,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.software.jetpack.compose.chan_xin_android.R
 import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
+import com.software.jetpack.compose.chan_xin_android.entity.FriendRelation
+import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AbandonFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.CanDeleteFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.CreatePostScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.FindMainScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendCircleScreen
@@ -75,8 +81,10 @@ import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyListScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyVerifyScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendInfoDetailScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendSearchScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.RemarkSettingScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SearchFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SelectFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SettingScreen
@@ -149,7 +157,10 @@ enum class MainActivityRouteEnum(val route: String) {
     FRIEND_CIRCLE_SCREEN("friend_circle_screen"),
     CREATE_POST_SCREEN("create_post_screen"),
     SELECT_FRIEND_SCREEN("select_friend_screen"),
-    ABANDON_FRIEND_SCREEN("abandon_friend_screen")
+    ABANDON_FRIEND_SCREEN("abandon_friend_screen"),
+    MAIN_FRIEND_INFO_DETAIL("main_friend_info_detail"),
+    MAIN_FRIEND_INFO_REMARK_SETTING("main_friend_info_remark_setting"),
+    CAN_DELETE_FRIEND("can_delete_friend")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -160,10 +171,6 @@ fun MainActivityScreen() {
     val svm:SocialViewModel = hiltViewModel()
     val dvm:DynamicViewModel = hiltViewModel()
     val user by vm.myUser.collectAsState()
-    Log.e("users",user.toString())
-    rememberCoroutineScope().launch {
-        Log.e("countc",UserDatabase.getInstance().socialDao().getFriendApplyCount().toString())
-    }
     NavHost(navController = rootNavController,
         startDestination = MainActivityRouteEnum.PARENT.route,
         enterTransition = { fadeIn(tween(700)) },
@@ -202,7 +209,15 @@ fun MainActivityScreen() {
         composable(MainActivityRouteEnum.ABANDON_FRIEND_SCREEN.route) {
             AbandonFriendScreen(rootNavController,svm)
         }
-
+        composable(MainActivityRouteEnum.MAIN_FRIEND_INFO_DETAIL.route) {
+            MainFriendInfoDetailScreen(rootNavController,svm)
+        }
+        composable(MainActivityRouteEnum.MAIN_FRIEND_INFO_REMARK_SETTING.route) {
+            RemarkSettingScreen(rootNavController,svm)
+        }
+        composable(MainActivityRouteEnum.CAN_DELETE_FRIEND.route) {
+            CanDeleteFriendScreen(rootNavController,svm)
+        }
 
     }
 

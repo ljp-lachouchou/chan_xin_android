@@ -7,22 +7,27 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.LOGGER
 import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import com.software.jetpack.compose.chan_xin_android.cache.dao.ISocialDao
 import com.software.jetpack.compose.chan_xin_android.cache.dao.IUserDao
 import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
+import com.software.jetpack.compose.chan_xin_android.entity.FriendRelation
 import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
+import com.software.jetpack.compose.chan_xin_android.entity.FriendStatusInfo
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
 import com.software.jetpack.compose.chan_xin_android.http.service.ApiService
 import com.software.jetpack.compose.chan_xin_android.http.service.ApiService.FriendApplyResponse
 import com.software.jetpack.compose.chan_xin_android.http.service.HttpService
 import com.software.jetpack.compose.chan_xin_android.repo.SocialRepository
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.getGroup
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,7 +44,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.internal.wait
 import retrofit2.HttpException
 import javax.inject.Inject
 
@@ -123,7 +130,22 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
             return emptyList()
         }
     }
-
+    fun updateStatus(userId: String,friendId:String,friendStatus: FriendStatus = FriendStatus(false,false,false,"")) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                apiService.updateFriendStatus(ApiService.UpdateFriendStatus(userId,friendId,friendStatus))
+                socialRepository.socialDao.updateFriendRelation(userId,friendId,friendStatus)
+                socialRepository.setCurrentUid(userId)
+                Log.e("SocialRepository_uid",friendCacheList.value.toString())
+                getGroup(friendCacheList.value) {
+                    loadCurrentGroup(it)
+                }
+                Log.e("SocialRepository_uid_getGroup",currentGroup.value.toString())
+            }catch (e:Exception) {
+                Log.e("fuck_SocialViewModel_updateStatus",e.toString())
+            }
+        }
+    }
     suspend fun handleFriendApply(applicantId:String="1",targetId:String="1",isApproved:Boolean) {
         try {
             apiService.handleFriendApply(
@@ -133,6 +155,7 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
                     isApproved
                 )
             )
+
             withContext(Dispatchers.Main) {
                 Toast.makeText(AppGlobal.getAppContext(),"操作成功",Toast.LENGTH_SHORT).show()
             }
@@ -156,6 +179,7 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
             }
         }
     }
+
     suspend fun updateFriendStatus(userId: String,friendId:String,friendStatus: FriendStatus = FriendStatus(false,false,false,"")) {
         try {
             apiService.updateFriendStatus(ApiService.UpdateFriendStatus(userId,friendId,friendStatus))

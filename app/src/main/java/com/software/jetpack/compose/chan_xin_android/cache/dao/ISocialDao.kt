@@ -4,9 +4,11 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendRelation
+import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -30,6 +32,12 @@ interface ISocialDao {
 
     @Insert(onConflict=OnConflictStrategy.REPLACE)
     suspend fun saveFriendRelation(list:List<FriendRelation>):List<Long>
+    @Query("""
+        UPDATE friend_relation 
+        SET status = :status 
+        WHERE user_id = :userId AND friend_id = :friendId
+    """)
+    suspend fun updateFriendRelation(userId: String,friendId: String,status:FriendStatus)
     @Query("SELECT COUNT(1) FROM friend_relation")
     suspend fun getFriendRelationCount():Int
     @Query("DELETE FROM friend_relation")
@@ -39,7 +47,7 @@ interface ISocialDao {
     @Query(
         """
         SELECT 
-            u.id AS userId,
+            f.friend_id AS userId,
             u.nickname AS nickname,
             u.avatar AS avatarUrl,
             u.sex AS gender,
@@ -66,4 +74,5 @@ interface ISocialDao {
     fun getFriendInfo(uid: String,friendId: String): Flow<Friend>
     @Query("SELECT COUNT(1) FROM friend_relation WHERE user_id = :uid and friend_id = :friendId")
     suspend fun getFriendHas(uid: String,friendId: String): Int
+
 }

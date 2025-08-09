@@ -90,6 +90,7 @@ class UserViewmodel @Inject constructor(private val userRepository: UserReposito
         val apiService = HttpService.getService()
         val apiResult = apiService.findUser(name, phone, ids)
         _findUserInfo.value = apiResult.data?.infos
+        userRepository.userDao.saveUsers(apiResult.data?.infos ?: emptyList())
         pagedUsers = Pager(
             config = PagingConfig(pageSize = 15),
             pagingSourceFactory = { UsersLocalPagerSource(_findUserInfo.value) }

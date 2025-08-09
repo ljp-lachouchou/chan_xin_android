@@ -23,12 +23,19 @@ data class Comment(
     val content: String,
     val isDeleted: Boolean
 )
-
+@Entity("comment_reply")
 data class CommentReply(
-    val id: Long = 0,
-    val commentId: Long,
+    @PrimaryKey
+    @ColumnInfo("comment_replie_id")
+    val commentReplieId: String,
+    @ColumnInfo("post_id")
+    val postId: String,
+    @ColumnInfo("user_id")
     val userId: String,
+    @ColumnInfo("target_user_id")
     val targetUserId: String,
+    @ColumnInfo("content")
     val content: String,
+    @ColumnInfo("is_deleted")
     val isDeleted: Boolean
 )

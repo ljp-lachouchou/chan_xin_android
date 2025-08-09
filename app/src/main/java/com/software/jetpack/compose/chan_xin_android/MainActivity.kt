@@ -7,10 +7,12 @@ import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.lifecycleScope
 import com.software.jetpack.compose.chan_xin_android.lifecycle.MainActivityObserver
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityScreen
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseActivity
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : BaseActivity(),OnBackPressedDispatcherOwner{
@@ -18,6 +20,7 @@ class MainActivity : BaseActivity(),OnBackPressedDispatcherOwner{
     @SuppressLint("StateFlowValueCalledInComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             MainActivityScreen()
         }

@@ -23,6 +23,7 @@ paging-runtime = "3.2.0"
 paging-compose = "1.0.0-alpha18"
 room-paging = "2.5.2"
 palette = "1.0.0"
+lifecycleRuntimeComposeAndroid = "2.9.2"
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -61,6 +62,7 @@ androidx-paging = {group="androidx.paging",name="paging-runtime",version.ref="pa
 androidx-paging-compose = {group="androidx.paging",name="paging-compose",version.ref="paging-compose"}
 androidx-room-paging = {group="androidx.room",name="room-paging",version.ref="room-paging"}
 androidx-palette = {group = "androidx.palette",name="palette-ktx",version.ref="palette"}
+androidx-lifecycle-runtime-compose-android = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose-android", version.ref = "lifecycleRuntimeComposeAndroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

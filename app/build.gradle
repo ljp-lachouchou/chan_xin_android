@@ -81,6 +81,7 @@ dependencies {
     implementation libs.androidx.navigation.fragment
     implementation androids.bundles.http
     implementation alibabaLibs.fastJson
+    implementation libs.androidx.lifecycle.runtime.compose.android
     kapt androids.glide.complier
     implementation libs.androidx.navigation.ui
     implementation libs.androidx.appcompat

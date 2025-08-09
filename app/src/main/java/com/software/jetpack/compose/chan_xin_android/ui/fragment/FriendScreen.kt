@@ -17,6 +17,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Indication
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -25,6 +27,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -75,8 +78,12 @@ import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Search
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.rememberModalBottomSheetState
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -102,6 +109,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusState
+import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
@@ -217,8 +225,10 @@ fun FriendScreen(navController:NavHostController, uvm:UserViewmodel= hiltViewMod
 //好友详情页
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
-fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel = hiltViewModel()) {
+fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel) {
     val friend by svm.clickFriend.collectAsState()
+    val uvm:UserViewmodel = hiltViewModel()
+    val user by uvm.myUser.collectAsState()
     var isSelected by remember { mutableStateOf(false) }
     val sexPainter = when(friend.gender) {
         0->R.drawable.unknow
@@ -238,7 +248,7 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel = 
                         modifier = Modifier.clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }) {
-                            //todo:进入朋友资料设置页面
+                            navController.switchTab(MainActivityRouteEnum.CAN_DELETE_FRIEND.route)
                         })
                 })
         }) {
@@ -287,9 +297,11 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel = 
                     HorizontalDivider(modifier = Modifier
                         .fillMaxWidth()
                         .padding(DefaultUserPadding), thickness = 0.3.dp, color = DividerColor)
-                    UserInfoScreenItem("朋友资料", onClick = {
-                        //todo:朋友资料详情
-                    })
+                    if (friend.userId != user.id) {
+                        UserInfoScreenItem("朋友资料", onClick = {
+                            navController.switchTab(MainActivityRouteEnum.MAIN_FRIEND_INFO_DETAIL.route)
+                        })
+                    }
                     Spacer(modifier = Modifier
                         .fillMaxWidth()
                         .height(10.dp)
@@ -325,25 +337,29 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel = 
                         thickness = 0.3.dp,
                         color = DividerColor
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
-                        .height(
-                            DefaultUserScreenItemDp
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            //todo:跳转音视频通话dialog
-                        }) {
-                        Icon(
-                            Icons.Outlined.Call,
-                            contentDescription = null,
-                            tint = LittleTextColor,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        BaseText("音视频通话", color = LittleTextColor)
+                    if (friend.userId != user.id) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                            .height(
+                                DefaultUserScreenItemDp
+                            )
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                //todo:跳转音视频通话dialog
+                            }) {
+                            Icon(
+                                Icons.Outlined.Call,
+                                contentDescription = null,
+                                tint = LittleTextColor,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            BaseText("音视频通话", color = LittleTextColor)
+
+                        }
                     }
+
                 }
             }
         }
@@ -351,6 +367,271 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel = 
 }
 
 
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+@Composable
+fun MainFriendInfoDetailScreen(navController: NavHostController, svm: SocialViewModel) {
+    val uvm:UserViewmodel = hiltViewModel()
+    val user by uvm.myUser.collectAsState()
+    val clickFriend by svm.clickFriend.collectAsState()
+    val friend by svm.getFriendInfo(user.id,clickFriend.userId).collectAsState()
+    Log.e("friend_friend",friend.toString())
+    Scaffold(
+        topBar = {
+            TopBarWithBack(
+                navController,
+                title = "朋友资料",
+                action = { BaseText("") },
+                color = SurfaceColor
+            )
+        }
+    ) {
+        BaseBox(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(SurfaceColor)
+        ) {
+            Column {
+                BaseText(
+                    "备注",
+                    fontSize = 15.sp,
+                    color = PlaceholderColor,
+                    modifier = Modifier.padding(start = 10.dp)
+                )
+                UserInfoScreenItem("备注名", onClick = {
+                    navController.switchTab(
+                        MainActivityRouteEnum.MAIN_FRIEND_INFO_REMARK_SETTING.route
+                    )
+                }) {
+                    BaseText(clickFriend.friendStatus.remark ?: "", color = PlaceholderColor)
+                }
+                BaseText(
+                    "更多信息",
+                    fontSize = 15.sp,
+                    color = PlaceholderColor,
+                    modifier = Modifier.padding(start = 10.dp)
+                )
+                UserInfoScreenItem("来源", onClick = {}, indication = null) {
+                    BaseText("通过搜索账号添加", color = PlaceholderColor)
+                }
+            }
+        }
+    }
+}
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+@Composable
+fun RemarkSettingScreen(navController: NavHostController,svm:SocialViewModel) {
+    val uvm:UserViewmodel = hiltViewModel()
+    val user by uvm.myUser.collectAsState()
+    val clickFriend by svm.clickFriend.collectAsState()
+    val friend by svm.getFriendInfo(user.id,clickFriend.userId).collectAsState()
+    var remark by remember(friend) { mutableStateOf(friend.friendStatus.remark ?: "") }
+    Scaffold(topBar = {
+        MyTopBar(
+            preContent = {
+                BaseText("取消", modifier = Modifier.clickable { navController.navigateUp() })
+            },
+            action = {
+                BaseButton(onClick = {
+                    svm.loadClickFriend(
+                        Friend(
+                            friend.userId,
+                            friend.nickname,
+                            friend.avatarUrl,
+                            gender = friend.gender,
+                            friendStatus = FriendStatus(
+                                isBlocked = friend.friendStatus.isBlocked,
+                                isMuted = friend.friendStatus.isMuted,
+                                isTopped = friend.friendStatus.isTopped,
+                                remark = remark
+                            )
+                        )
+                    )
+                    svm.updateStatus(user.id,friend.userId, FriendStatus(false,false,false,remark))
+                    navController.navigateUp()
+                }) {
+                    BaseText("完成", color = Color.White)
+                }
+            },
+            defaultColor = Color.White
+        ) }) {
+        BaseBox {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                BaseText("设置备注", fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                ItemWithTitle(title = "备注名") {
+                    CustomTextField(
+                        value = remark,
+                        onValueChange = { remark = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(
+                                RoundedCornerShape(5.dp)
+                            ),
+                        defaultVerticalPadding = 10.dp,
+                        colors = TextFieldDefaults.colors(
+                            focusedIndicatorColor = Color.Transparent,
+                            focusedContainerColor = SurfaceColor,
+                            unfocusedContainerColor = SurfaceColor,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = IconGreen
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun CanDeleteFriendSheet(sheetState: ModalBottomSheetState,sheetModel:Int,scope: CoroutineScope) {
+
+    Column(modifier = Modifier
+        .height(200.dp)
+        .background(Color.White, shape = RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp))) {
+        when(sheetModel) {
+            1 -> {
+                TextButton(contentColor = Color.Black,"加入黑名单,你将不再收到对方的消息", indication = null)
+
+                HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.2.dp)
+                TextButton(contentColor = Color.Red,"确定") {
+                    //todo:加入黑名单
+                }
+                HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 5.dp)
+                TextButton(contentColor = Color.Black,"取消") {
+                    scope.launch { sheetState.hide() }
+                }
+            }
+            2 -> {
+                //todo:删除好友
+            }
+            else-> {}
+        }
+    }
+
+}
+@OptIn(ExperimentalMaterialApi::class)
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+@Composable
+fun CanDeleteFriendScreen(navController: NavHostController,svm: SocialViewModel) {
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+    val scope = rememberCoroutineScope()
+    val clickFriend by svm.clickFriend.collectAsState()
+    var checked by remember { mutableStateOf(clickFriend.friendStatus.isBlocked ?: false) }
+    val sheetState = rememberModalBottomSheetState(ModalBottomSheetValue.Hidden)
+    var sheetModel by remember { mutableIntStateOf(0) }
+    ModalBottomSheetLayout(
+        sheetState = sheetState,
+        sheetContent = {
+            CanDeleteFriendSheet(
+                sheetState = sheetState,
+                sheetModel = sheetModel,
+                scope
+            )
+        }, sheetShape = RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp)
+    ) {
+        Scaffold(
+            topBar = {
+                TopBarWithBack(
+                    navController,
+                    title = "资料设置",
+                    action = { BaseText("") },
+                    color = SurfaceColor
+                )
+            }
+        ) {
+            BaseBox(modifier = Modifier
+                .fillMaxSize()
+                .background(color = SurfaceColor)) {
+                Column {
+                    UserInfoScreenItem("设置备注", onClick = {
+                        navController.switchTab(
+                            MainActivityRouteEnum.MAIN_FRIEND_INFO_REMARK_SETTING.route
+                        )
+                    }) {
+                        BaseText(clickFriend.friendStatus.remark ?: "", color = PlaceholderColor)
+                    }
+                    Spacer(modifier = Modifier.height(5.dp))
+                    UserInfoScreenItem("把他(她)推荐给朋友", onClick = {
+                        //todo:推荐好友
+                    })
+                    Spacer(modifier = Modifier.height(5.dp))
+                    FriendCommonItem("加入黑名单", onClick = {}, indication = null, sufContent = {
+                        Switch(checked, onCheckedChange = {
+                            checked = !checked
+                            if (checked) {
+                                sheetModel = 1
+                                scope.launch { sheetState.show() }
+                            }
+                        }, colors = SwitchColors(
+                            checkedThumbColor = Color.White,
+                            uncheckedThumbColor = Color.White,
+                            checkedTrackColor = IconGreen,
+                            uncheckedTrackColor = SurfaceColor,
+                            checkedIconColor = Color.White,
+                            uncheckedIconColor = Color.White,
+                            checkedBorderColor = Color.Transparent,
+                            uncheckedBorderColor = Color.Transparent,
+                            disabledCheckedThumbColor = Color.White,
+                            disabledCheckedTrackColor = Color.White,
+                            disabledCheckedBorderColor = Color.White,
+                            disabledCheckedIconColor = Color.White,
+                            disabledUncheckedThumbColor = Color.White,
+                            disabledUncheckedTrackColor = Color.White,
+                            disabledUncheckedBorderColor = Color.White,
+                            disabledUncheckedIconColor = Color.White,
+                        ))
+                    })
+                    Spacer(modifier = Modifier.height(5.dp))
+                    TextButton(onClick = {
+                        sheetModel = 2
+                        scope.launch { sheetState.show() }
+                    }, title = "删除好友", contentColor = Color.Red)
+                }
+                if (sheetModel != 0) {
+                    Box(modifier = Modifier.fillMaxWidth().height(screenHeight).clickable {
+                        if (sheetModel==1) checked = false
+                        sheetModel = 0
+                        scope.launch { sheetState.hide() }
+                    })
+                }
+            }
+        }
+    }
+}
+@Composable
+fun TextButton(contentColor:Color,title: String,indication: Indication? = LocalIndication.current,onClick: () -> Unit = {}) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier
+        .fillMaxWidth()
+        .background(Color.White)
+        .height(
+            DefaultUserScreenItemDp
+        )
+        .clickable(
+            indication = indication,
+            interactionSource = remember { MutableInteractionSource() }) {
+            onClick()
+        }) {
+        BaseText(title, color = contentColor)
+    }
+}
+@Composable
+fun FriendCommonItem(title:String, onClick: () -> Unit, indication: Indication?= LocalIndication.current, sufContent:@Composable () -> Unit, content:@Composable () -> Unit = {}) {
+    BaseScreenItem({
+        BaseText(title)
+    },onClick,sufContent) {
+        content()
+    }
+}
+@Composable
+fun ItemWithTitle(modifier: Modifier=Modifier,title: String,content:@Composable () -> Unit) {
+    Column(modifier=modifier
+        .fillMaxWidth()
+        .padding(horizontal = DefaultUserPadding)) {
+        BaseText(title, color = PlaceholderColor, fontSize = 10.sp, modifier = Modifier.padding(start = DefaultUserPadding+5.dp))
+        content()
+    }
+}
 
 
 
@@ -784,7 +1065,7 @@ fun SearchFriendFieldScreen(
                             RadioButton(
                                 selected = (v == selectedOption),
                                 onClick = null,
-                                colors = androidx.compose.material3.RadioButtonDefaults.colors(
+                                colors = RadioButtonDefaults.colors(
                                     selectedColor = IconGreen
                                 ),
                                 modifier = Modifier.indication(
@@ -949,7 +1230,7 @@ fun SearchFriendFieldScreen(
                             RadioButton(
                                 selected = (v == selectedOption),
                                 onClick = null,
-                                colors = androidx.compose.material3.RadioButtonDefaults.colors(
+                                colors = RadioButtonDefaults.colors(
                                     selectedColor = IconGreen
                                 ),
                                 modifier = Modifier.indication(
@@ -1002,13 +1283,10 @@ suspend fun findUser(findModel: Int, uvm: UserViewmodel, find: String) {
 }
 
 
-private suspend fun getGroup(originalList:List<Friend>,mainEvent:(groups: List<Pair<String, List<Friend>>>)->Unit) {
+suspend fun getGroup(originalList:List<Friend>,mainEvent:(groups: List<Pair<String, List<Friend>>>)->Unit) {
     withContext(Dispatchers.Default) {
         val groups = originalList.groupBy {
-            if (it.friendStatus.remark!!.isEmpty())
-                it.nickname.getGroupByFirstLetter()
-            else
-                it.friendStatus.remark.getGroupByFirstLetter()
+            it.displayName.getGroupByFirstLetter()
         }.toList().sortedWith(compareBy(groupComparator) { it.first })
         withContext(Dispatchers.Main) {
             mainEvent(groups)
@@ -1157,6 +1435,7 @@ fun SelectFriendScreen(navController: NavHostController,svm:SocialViewModel) {
         Wrapper { LoadingDialog(isLoading) }
     }
 }
+//谁不可看
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AbandonFriendScreen(navController: NavHostController,svm:SocialViewModel) {
@@ -1712,6 +1991,7 @@ fun HandleFriendApplyVerifyScreen(navController: NavHostController, uvm: UserVie
                UserDatabase.getInstance().socialDao().saveFriendRelation(listOf(FriendRelation(0,user.id,wantApplyFriend.userId,
                    FriendStatus(false,false,false,remark)),FriendRelation(0,wantApplyFriend.userId,user.id,
                    FriendStatus())))
+               uvm.findUser(ids = StringUtil.listToString(listOf(wantApplyFriend.userId)))
                delay(300)
                isLoading = false
                withContext(Dispatchers.Main) {
@@ -1990,7 +2270,7 @@ fun ContactSideBar(
                         ) {
                             // 使用remember避免每次重组都创建TextStyle
                             val textStyle = remember(sideBarState.selectedIndex == index) {
-                                androidx.compose.ui.text.TextStyle(
+                                TextStyle(
                                     textAlign = TextAlign.Center,
                                     fontSize = 12.sp,
                                     color = if (sideBarState.selectedIndex == index) selectTextColor else commonTextColor
