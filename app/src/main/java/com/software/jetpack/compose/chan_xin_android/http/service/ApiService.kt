@@ -70,6 +70,9 @@ interface ApiService {
     @PUT("/v1/social/firend/updateFriendStatus")
     suspend fun updateFriendStatus(@Body updateFriendStatus:UpdateFriendStatus)
 
+    @DELETE("/v1/social/firend/deleteFriend")
+    suspend fun deleteFriend(@Query("from_uid") fromUid:String,@Query("to_uid") toUid:String)
+
     @GET("/v1/social/firend/getFriendList")
     suspend fun getFriendList(@Query("user_id") userId:String = "1"):ApiResult<DataFriendListWrapper<Friend>>
 

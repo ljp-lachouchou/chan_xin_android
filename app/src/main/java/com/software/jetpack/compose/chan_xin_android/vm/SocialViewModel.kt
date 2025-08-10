@@ -130,8 +130,8 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
             return emptyList()
         }
     }
-    fun updateStatus(userId: String,friendId:String,friendStatus: FriendStatus = FriendStatus(false,false,false,"")) {
-        viewModelScope.launch(Dispatchers.IO) {
+    suspend fun updateStatus(userId: String,friendId:String,friendStatus: FriendStatus = FriendStatus(false,false,false,"")) {
+        withContext(Dispatchers.IO) {
             try {
                 apiService.updateFriendStatus(ApiService.UpdateFriendStatus(userId,friendId,friendStatus))
                 socialRepository.socialDao.updateFriendRelation(userId,friendId,friendStatus)
@@ -143,8 +143,10 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
                 Log.e("SocialRepository_uid_getGroup",currentGroup.value.toString())
             }catch (e:Exception) {
                 Log.e("fuck_SocialViewModel_updateStatus",e.toString())
+                throw Exception("更新失败")
             }
         }
+
     }
     suspend fun handleFriendApply(applicantId:String="1",targetId:String="1",isApproved:Boolean) {
         try {
@@ -233,6 +235,24 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
                     started = SharingStarted.WhileSubscribed(5000),
                     initialValue = Friend()
                 )
+        }
+    }
+
+    /**
+     * 删除好友
+     * @param fromId 申请删除好友方用户Id
+     * @param toId 被删除一方用户id
+     */
+    suspend fun deleteFriend(fromId:String,toId:String) {
+        withContext(Dispatchers.IO) {
+            try {
+                apiService.deleteFriend(fromId,toId)
+                socialRepository.socialDao.deleteOne(fromId,toId)
+                socialRepository.socialDao.deleteOne(toId,fromId)
+            }catch (e:Exception) {
+                Log.e("SocialViewModel_deleteFriend",e.toString())
+                throw Exception("删除好友失败")
+            }
         }
     }
 

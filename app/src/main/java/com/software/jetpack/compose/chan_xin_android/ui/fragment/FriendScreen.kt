@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,12 +56,6 @@ import androidx.compose.material.ExperimentalMaterialApi
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Icon
 //noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.ModalBottomSheetLayout
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.ModalBottomSheetState
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.ModalBottomSheetValue
-//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Scaffold
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Surface
@@ -69,15 +64,11 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Search
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.RadioButton
@@ -177,7 +168,11 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.CanLookImage
 import com.software.jetpack.compose.chan_xin_android.ui.base.ClickableOutlineCircle
 import com.software.jetpack.compose.chan_xin_android.ui.base.CustomTextField
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
+import com.software.jetpack.compose.chan_xin_android.ui.base.ModalBottomSheetLayout
+import com.software.jetpack.compose.chan_xin_android.ui.base.ModalBottomSheetState
+import com.software.jetpack.compose.chan_xin_android.ui.base.ModalBottomSheetValue
 import com.software.jetpack.compose.chan_xin_android.ui.base.RefreshLazyColumn
+import com.software.jetpack.compose.chan_xin_android.ui.base.rememberModalBottomSheetState
 import com.software.jetpack.compose.chan_xin_android.ui.base.selectCharRows
 import com.software.jetpack.compose.chan_xin_android.ui.theme.ChatGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
@@ -190,6 +185,7 @@ import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import com.software.jetpack.compose.chan_xin_android.util.PinAYinUtil
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
 import com.software.jetpack.compose.chan_xin_android.util.VibratorHelper
+import com.software.jetpack.compose.chan_xin_android.vm.DynamicViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 import kotlinx.coroutines.CoroutineScope
@@ -424,6 +420,7 @@ fun RemarkSettingScreen(navController: NavHostController,svm:SocialViewModel) {
     val user by uvm.myUser.collectAsState()
     val clickFriend by svm.clickFriend.collectAsState()
     val friend by svm.getFriendInfo(user.id,clickFriend.userId).collectAsState()
+    val scope = rememberCoroutineScope()
     var remark by remember(friend) { mutableStateOf(friend.friendStatus.remark ?: "") }
     Scaffold(topBar = {
         MyTopBar(
@@ -432,21 +429,33 @@ fun RemarkSettingScreen(navController: NavHostController,svm:SocialViewModel) {
             },
             action = {
                 BaseButton(onClick = {
-                    svm.loadClickFriend(
-                        Friend(
-                            friend.userId,
-                            friend.nickname,
-                            friend.avatarUrl,
-                            gender = friend.gender,
-                            friendStatus = FriendStatus(
-                                isBlocked = friend.friendStatus.isBlocked,
-                                isMuted = friend.friendStatus.isMuted,
-                                isTopped = friend.friendStatus.isTopped,
-                                remark = remark
+                    scope.launch {
+                        try {
+
+                            svm.updateStatus(user.id,friend.userId, FriendStatus(false,false,false,remark))
+                            svm.loadClickFriend(
+                                Friend(
+                                    friend.userId,
+                                    friend.nickname,
+                                    friend.avatarUrl,
+                                    gender = friend.gender,
+                                    friendStatus = FriendStatus(
+                                        isBlocked = friend.friendStatus.isBlocked,
+                                        isMuted = friend.friendStatus.isMuted,
+                                        isTopped = friend.friendStatus.isTopped,
+                                        remark = remark
+                                    )
+                                )
                             )
-                        )
-                    )
-                    svm.updateStatus(user.id,friend.userId, FriendStatus(false,false,false,remark))
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(AppGlobal.getAppContext(),"成功更新备注",Toast.LENGTH_SHORT).show()
+                            }
+                        }catch (e:Exception) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(AppGlobal.getAppContext(),e.message,Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
                     navController.navigateUp()
                 }) {
                     BaseText("完成", color = Color.White)
@@ -483,26 +492,82 @@ fun RemarkSettingScreen(navController: NavHostController,svm:SocialViewModel) {
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun CanDeleteFriendSheet(sheetState: ModalBottomSheetState,sheetModel:Int,scope: CoroutineScope) {
-
+fun CanDeleteFriendSheet(
+    navController: NavHostController,
+    sheetState: ModalBottomSheetState,
+    sheetModel: Int,
+    userId: String,
+    friendId:String,
+    status:FriendStatus,
+    scope: CoroutineScope,
+    onChangeBlocked: () -> Unit
+) {
+    val svm:SocialViewModel = hiltViewModel()
     Column(modifier = Modifier
         .height(200.dp)
         .background(Color.White, shape = RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp))) {
+        Box(modifier = Modifier
+            .weight(1f)
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }) {
+                Log.e("CanDeleteFriendSheet_Box", "CanDeleteFriendSheet_Box")
+            })
         when(sheetModel) {
             1 -> {
                 TextButton(contentColor = Color.Black,"加入黑名单,你将不再收到对方的消息", indication = null)
 
                 HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.2.dp)
                 TextButton(contentColor = Color.Red,"确定") {
-                    //todo:加入黑名单
+
+                    scope.launch {
+                        sheetState.hide()
+                        try {
+                            svm.updateStatus(userId, friendId,status.copy(isBlocked = true))
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(AppGlobal.getAppContext(),"拉黑成功",Toast.LENGTH_SHORT).show()
+                            }
+                        }catch (e:Exception) {
+                            onChangeBlocked()
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(AppGlobal.getAppContext(),e.message,Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+
+                }
+                HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 5.dp)
+                TextButton(contentColor = Color.Black,"取消") {
+                    scope.launch { sheetState.hide() }
+                    onChangeBlocked()
+                }
+            }
+            2 -> {
+                TextButton(contentColor = Color.Black,"确定要删除联系人吗", indication = null)
+                HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.2.dp)
+                TextButton(contentColor = Color.Red,"确定") {
+                    scope.launch {
+                        sheetState.hide()
+                        try {
+                            svm.deleteFriend(userId,friendId)
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(AppGlobal.getAppContext(),"删除成功",Toast.LENGTH_SHORT).show()
+                                navController.navigateUp()
+                                navController.navigateUp()
+                            }
+                        }catch (e:Exception) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(AppGlobal.getAppContext(),e.message,Toast.LENGTH_SHORT).show()
+
+                            }
+                        }
+                    }
+
                 }
                 HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 5.dp)
                 TextButton(contentColor = Color.Black,"取消") {
                     scope.launch { sheetState.hide() }
                 }
-            }
-            2 -> {
-                //todo:删除好友
             }
             else-> {}
         }
@@ -513,9 +578,9 @@ fun CanDeleteFriendSheet(sheetState: ModalBottomSheetState,sheetModel:Int,scope:
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun CanDeleteFriendScreen(navController: NavHostController,svm: SocialViewModel) {
-    val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp.dp
+    val uvm:UserViewmodel = hiltViewModel()
     val scope = rememberCoroutineScope()
+    val user by uvm.myUser.collectAsState()
     val clickFriend by svm.clickFriend.collectAsState()
     var checked by remember { mutableStateOf(clickFriend.friendStatus.isBlocked ?: false) }
     val sheetState = rememberModalBottomSheetState(ModalBottomSheetValue.Hidden)
@@ -524,11 +589,23 @@ fun CanDeleteFriendScreen(navController: NavHostController,svm: SocialViewModel)
         sheetState = sheetState,
         sheetContent = {
             CanDeleteFriendSheet(
+                navController,
                 sheetState = sheetState,
                 sheetModel = sheetModel,
+                userId = user.id,
+                friendId = clickFriend.userId,
+                status = clickFriend.friendStatus,
                 scope
-            )
-        }, sheetShape = RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp)
+            ) {
+                checked = false
+            }
+        }, sheetShape = RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp),
+        onDismiss = {
+            if (sheetModel == 1) {
+                checked = false
+            }
+            sheetModel = 0
+        }
     ) {
         Scaffold(
             topBar = {
@@ -587,13 +664,6 @@ fun CanDeleteFriendScreen(navController: NavHostController,svm: SocialViewModel)
                         sheetModel = 2
                         scope.launch { sheetState.show() }
                     }, title = "删除好友", contentColor = Color.Red)
-                }
-                if (sheetModel != 0) {
-                    Box(modifier = Modifier.fillMaxWidth().height(screenHeight).clickable {
-                        if (sheetModel==1) checked = false
-                        sheetModel = 0
-                        scope.launch { sheetState.hide() }
-                    })
                 }
             }
         }
@@ -1297,7 +1367,7 @@ suspend fun getGroup(originalList:List<Friend>,mainEvent:(groups: List<Pair<Stri
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter", "StateFlowValueCalledInComposition")
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun SelectFriendScreenSheet(sheetState: ModalBottomSheetState,svm:SocialViewModel) {
+fun SelectFriendScreenSheet(sheetState: ModalBottomSheetState, svm:SocialViewModel) {
     val selectFriendList by svm.currentSelectFriendList.collectAsState()
     val friendList = svm.friendCacheList.value
     val scope = rememberCoroutineScope()

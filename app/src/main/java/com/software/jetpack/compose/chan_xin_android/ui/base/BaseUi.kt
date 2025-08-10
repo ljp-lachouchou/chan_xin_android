@@ -6,15 +6,12 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import android.view.MotionEvent
 import androidx.activity.compose.BackHandler
-import androidx.annotation.FloatRange
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -30,7 +27,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.FlingBehavior
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -44,9 +40,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -80,22 +74,12 @@ import androidx.compose.material.Checkbox
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ModalBottomSheetDefaults
-import androidx.compose.material.ModalBottomSheetState
-import androidx.compose.material.ModalBottomSheetState.Companion.Saver
-import androidx.compose.material.ModalBottomSheetValue
-import androidx.compose.material.ModalBottomSheetValue.Expanded
-import androidx.compose.material.ModalBottomSheetValue.HalfExpanded
-import androidx.compose.material.ModalBottomSheetValue.Hidden
 import androidx.compose.material.Surface
-import androidx.compose.material.contentColorFor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.pullrefresh.PullRefreshDefaults
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
-import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -107,7 +91,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -116,7 +99,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -136,11 +118,9 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
@@ -154,12 +134,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.collapse
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.dismiss
-import androidx.compose.ui.semantics.expand
-import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -170,9 +144,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -202,7 +174,6 @@ import com.software.jetpack.compose.chan_xin_android.ui.theme.PressedLittleTextC
 import com.software.jetpack.compose.chan_xin_android.ui.theme.RightArrowColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.TextColor
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -213,8 +184,6 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.roundToInt
 
 val maxPullPx = 200.dp
 
@@ -1208,7 +1177,6 @@ fun Modifier.clickableWithPosition(
         )
     }
 }
-
 
 
 
