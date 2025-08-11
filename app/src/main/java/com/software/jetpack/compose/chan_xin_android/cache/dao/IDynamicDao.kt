@@ -15,8 +15,17 @@ import com.software.jetpack.compose.chan_xin_android.entity.PostLike
 interface IDynamicDao {
     @Insert(onConflict= OnConflictStrategy.REPLACE)
     suspend fun saveFriendFeeds(list:List<FriendFeed>):List<Long>
-    @Query("SELECT * FROM friend_feed ORDER BY create_time DESC")
-    fun getFriendFeedsPaged(): PagingSource<Int, Post>
+    @Query("DELETE FROM friend_feed WHERE post_id = :postId")
+    suspend fun removeFriendFeed(postId:String):Int
+    @Query("DELETE FROM friend_feed")
+    suspend fun removeAllFriendFeed()
+    @Query("SELECT * FROM friend_feed WHERE meta LIKE :likeMatch or user_id = :userId ORDER BY create_time DESC")
+    fun getFriendFeedsPaged(likeMatch: String,userId:String): PagingSource<Int, Post>
+
+    @Query("SELECT * FROM post WHERE user_id=:userId and is_pinned = 1 ORDER BY create_time DESC")
+    fun getIsPinSelfPosts(userId:String): PagingSource<Int, Post>
+    @Query("SELECT * FROM post WHERE user_id=:userId and is_pinned = 0 ORDER BY create_time DESC")
+    fun getNotPinSelfPosts(userId:String): PagingSource<Int, Post>
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun savePostLikes(postLikes:List<PostLike>):List<Long>
     @Insert(onConflict = OnConflictStrategy.REPLACE)

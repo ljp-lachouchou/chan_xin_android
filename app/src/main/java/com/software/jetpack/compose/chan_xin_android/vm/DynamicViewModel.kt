@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -64,6 +65,7 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
     // 初始化 StateFlow
     private var version = 0
     private val _currentUid = MutableStateFlow(UidWithVersion("初始uid", version))
+    private val _selfCircleUid = MutableStateFlow(UidWithVersion("初始uid", version))
     private val likeIdsMutableFlowCache = ConcurrentHashMap<String, MutableStateFlow<List<String>>>()
     private val commentsMutableFlowCache = ConcurrentHashMap<String,MutableStateFlow<List<ApiService.ListCommentRespStruct>>>()
     private val _currentPost = MutableStateFlow("")
@@ -124,6 +126,7 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
     suspend fun deletePost(userId: String,postId:String) {
         try {
             apiService.deletePost(userId,postId)
+            dynamicDao.removeFriendFeed(postId)
         }catch (e:Exception) {
             Log.e("dynamic_delete_post_fuck",e.toString())
         }
@@ -277,11 +280,23 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
         Pager(
             config = pagingConfig,
             pagingSourceFactory = {
-                if (AppGlobal.isNetworkValid()) TokenPagingSource(viewerId = uid) else dynamicDao.getFriendFeedsPaged()
+                if (AppGlobal.isNetworkValid()) TokenPagingSource(viewerId = uid) else dynamicDao.getFriendFeedsPaged("%${uid}%", uid)
             }).flow.cachedIn(
             viewModelScope
         )
     }.catch { Log.e("DynamicViewModel_pagingDataFlow", it.toString()) }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val isPinedSelfFlow:Flow<PagingData<Post>> = _selfCircleUid.flatMapLatest { (uid,_) ->
+        Pager(config = pagingConfig, pagingSourceFactory = {
+            if (AppGlobal.isNetworkValid()) SelfPostsPagingSource(userId = uid, isPin = true) else dynamicDao.getIsPinSelfPosts(uid)
+        }).flow.cachedIn(viewModelScope)
+    }.catch { Log.e("DynamicViewModel_isPinedSelfFlow", it.toString()) }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val notPinedSelfFlow:Flow<PagingData<Post>> = _selfCircleUid.flatMapLatest { (uid,_) ->
+        Pager(config = pagingConfig, pagingSourceFactory = {
+            if (AppGlobal.isNetworkValid()) SelfPostsPagingSource(userId = uid, isPin = false) else dynamicDao.getNotPinSelfPosts(uid)
+        }).flow.cachedIn(viewModelScope)
+    }.catch { Log.e("DynamicViewModel_notPinedSelfFlow", it.toString()) }
 
     inner class TokenPagingSource(private val initPagingToken:String = "NONE",private val viewerId:String):PagingSource<String,Post>() {
         override fun getRefreshKey(state: PagingState<String, Post>): String? {
@@ -303,7 +318,33 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
             }catch (e:NoMoreDataException){
                 LoadResult.Error(e)
             } catch (e:Exception) {
-                Log.e("fuck_DynamicViewModel",e.message.toString())
+                Log.e("fuck_DynamicViewModel_TokenPagingSource",e.toString())
+                LoadResult.Error(e)
+            }
+        }
+
+    }
+    inner class SelfPostsPagingSource(private val initPagingToken:String = "NONE",private val userId:String,private val isPin:Boolean):PagingSource<String,Post>() {
+        override fun getRefreshKey(state: PagingState<String, Post>): String? {
+            return initPagingToken
+        }
+
+        override suspend fun load(params: LoadParams<String>): LoadResult<String, Post> {
+            return try {
+                val currentToken = params.key ?: initPagingToken
+                val response = apiService.listUserPosts(userId, isPin,params.loadSize,currentToken)
+                val list = (response.data?.posts ?: emptyList()).filter {
+                    it.userId == _currentUid.value.uid || (it.meta.visibleUserIds.contains(
+                        _currentUid.value.uid
+                    )) }
+                dynamicDao.savePosts(list)
+                LoadResult.Page(
+                    data = list,
+                    nextKey = if (response.data?.posts==null) null else response.data!!.nextPageToken,
+                    prevKey = null
+                )
+            }catch (e:Exception) {
+                Log.e("fuck_DynamicViewModel_SelfPostsPagingSource",e.toString())
                 LoadResult.Error(e)
             }
         }
@@ -312,7 +353,10 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
     inner class NoMoreDataException(message:String):Exception(message)
     fun setCurrentUid(uid:String) {
         version = (version + 1) % 10
-        Log.e("oooooo_fuck1",uid)
         _currentUid.value = UidWithVersion(uid,version)
+    }
+    fun setSelfCircleUid(uid:String) {
+        version = (version + 1) % 10
+        _selfCircleUid.value = UidWithVersion(uid,version)
     }
 }

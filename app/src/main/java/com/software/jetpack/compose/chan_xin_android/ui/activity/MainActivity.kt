@@ -87,6 +87,7 @@ import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendSearc
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.RemarkSettingScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SearchFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SelectFriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.SelfFriendCircleScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SettingScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoInFriendBySearchScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoScreen
@@ -160,7 +161,8 @@ enum class MainActivityRouteEnum(val route: String) {
     ABANDON_FRIEND_SCREEN("abandon_friend_screen"),
     MAIN_FRIEND_INFO_DETAIL("main_friend_info_detail"),
     MAIN_FRIEND_INFO_REMARK_SETTING("main_friend_info_remark_setting"),
-    CAN_DELETE_FRIEND("can_delete_friend")
+    CAN_DELETE_FRIEND("can_delete_friend"),
+    SELF_FRIEND_CIRCLE_SCREEN("self_friend_circle_screen")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -217,6 +219,9 @@ fun MainActivityScreen() {
         }
         composable(MainActivityRouteEnum.CAN_DELETE_FRIEND.route) {
             CanDeleteFriendScreen(rootNavController,svm)
+        }
+        composable(MainActivityRouteEnum.SELF_FRIEND_CIRCLE_SCREEN.route) {
+            SelfFriendCircleScreen(rootNavController,svm,dvm)
         }
 
     }

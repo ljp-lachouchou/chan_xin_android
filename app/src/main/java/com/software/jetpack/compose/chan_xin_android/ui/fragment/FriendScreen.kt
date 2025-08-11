@@ -158,6 +158,7 @@ import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.getGroupByFirstLetter
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
+import com.software.jetpack.compose.chan_xin_android.http.service.HttpService
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityRouteEnum
 import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
@@ -237,15 +238,17 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel) {
             TopBarWithBack(
                 navController,
                 action = {
-                    Icon(
-                        Icons.Filled.Menu,
-                        contentDescription = null,
-                        tint = Color.Black,
-                        modifier = Modifier.clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }) {
-                            navController.switchTab(MainActivityRouteEnum.CAN_DELETE_FRIEND.route)
-                        })
+                    if (friend.userId != user.id) {
+                        Icon(
+                            Icons.Filled.Menu,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }) {
+                                navController.switchTab(MainActivityRouteEnum.CAN_DELETE_FRIEND.route)
+                            })
+                    }
                 })
         }) {
             BaseBox(modifier = Modifier
@@ -303,37 +306,40 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel) {
                         .height(10.dp)
                         .background(color = SurfaceColor))
                     UserInfoScreenItem("朋友圈", onClick = {
-                        //进入个人朋友圈
-                    }, heightDp = DefaultUserScreenItemDp*1.5f)
-                    Spacer(modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp)
-                        .background(color = SurfaceColor))
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
-                        .height(
-                            DefaultUserScreenItemDp
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            //todo:跳转会话界面
-                        }) {
-                        Icon(
-                            painterResource(R.drawable.chan_xin),
-                            contentDescription = null,
-                            tint = LittleTextColor,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        BaseText("发消息", color = LittleTextColor)
+                        navController.switchTab(MainActivityRouteEnum.SELF_FRIEND_CIRCLE_SCREEN.route)
+                    }, heightDp = DefaultUserScreenItemDp*1.5f, isFilled = false) {
+                        DisplayImagesScreen(modifier = Modifier.height(70.dp), svm = svm)
                     }
-                    HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth(),
-                        thickness = 0.3.dp,
-                        color = DividerColor
-                    )
+
                     if (friend.userId != user.id) {
+                        Spacer(modifier = Modifier
+                            .fillMaxWidth()
+                            .height(10.dp)
+                            .background(color = SurfaceColor))
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                            .height(
+                                DefaultUserScreenItemDp
+                            )
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                //todo:跳转会话界面
+                            }) {
+                            Icon(
+                                painterResource(R.drawable.chan_xin),
+                                contentDescription = null,
+                                tint = LittleTextColor,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            BaseText("发消息", color = LittleTextColor)
+                        }
+                        HorizontalDivider(
+                            modifier = Modifier.fillMaxWidth(),
+                            thickness = 0.3.dp,
+                            color = DividerColor
+                        )
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
                             .height(
                                 DefaultUserScreenItemDp
@@ -355,13 +361,11 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel) {
 
                         }
                     }
-
                 }
             }
         }
     }
 }
-
 
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable

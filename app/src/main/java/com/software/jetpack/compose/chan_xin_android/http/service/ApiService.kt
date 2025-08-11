@@ -130,6 +130,9 @@ interface ApiService {
     @GET("/v1/dynamics/listCommentByPostId")
     suspend fun listCommentByPostId(@Query("postId") postId: String):ApiResult<ListCommentResp>
 
+    @GET("/v1/dynamics/listUserPosts")
+    suspend fun listUserPosts(@Query("userId") userId:String,@Query("isPin") isPin:Boolean,@Query("pageSize") pageSize: Int, @Query("pageToken") pageToken: String): ApiResult<PostListResponse>
+
 
 
 }

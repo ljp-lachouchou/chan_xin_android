@@ -54,4 +54,14 @@ object StringUtil {
         return mimeTypeMap.getExtensionFromMimeType(mimeType)
     }
 
+    fun getFileExtensionFromUrl(context: Context, url: String): String? {
+        val contentResolver = context.contentResolver
+        val encode = Uri.encode(url,"UTF-8")
+        val uri = Uri.parse(encode)
+        val mimeType = contentResolver.getType(uri)
+        val mimeTypeMap = MimeTypeMap.getSingleton()
+        return mimeTypeMap.getExtensionFromMimeType(mimeType)
+    }
+
+
 }

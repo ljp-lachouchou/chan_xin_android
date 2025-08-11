@@ -641,7 +641,7 @@ fun LabelScreenItem(imageVector: Painter, label:String,defaultSize:Dp = 24.dp,on
     }
 }
 @Composable
-fun UserInfoScreenItem(label:String,onClick:()->Unit,heightDp: Dp  = DefaultUserScreenItemDp,indication: Indication? = LocalIndication.current,content:@Composable ()->Unit = {}) {
+fun UserInfoScreenItem(label:String,onClick:()->Unit,heightDp: Dp  = DefaultUserScreenItemDp,indication: Indication? = LocalIndication.current,isFilled:Boolean = true,content:@Composable ()->Unit = {}) {
     Box(modifier = Modifier
         .background(Color.White)
         .clickable(indication = indication, interactionSource = remember { MutableInteractionSource() }) {
@@ -651,9 +651,13 @@ fun UserInfoScreenItem(label:String,onClick:()->Unit,heightDp: Dp  = DefaultUser
             .fillMaxWidth()
             .height(heightDp).padding(horizontal = DefaultUserPadding), verticalAlignment = Alignment.CenterVertically) {
             BaseText(text = label, fontSize = DefaultFontSize)
-            Spacer(modifier = Modifier.weight(1f))
+            if (isFilled) Spacer(modifier = Modifier.weight(1f))
             content()
-            Spacer(modifier = Modifier.width(DefaultUserPadding))
+            if (isFilled) {
+                Spacer(modifier = Modifier.width(DefaultUserPadding))
+            }else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
             Icon(imageVector= Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = RightArrowColor)
         }
     }

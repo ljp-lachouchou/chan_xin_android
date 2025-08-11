@@ -359,6 +359,73 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
     }
 }
 
+@Composable
+fun SelfFriendCircleScreen(navController: NavHostController,svm: SocialViewModel,dvm: DynamicViewModel) {
+    val uvm:UserViewmodel = hiltViewModel()
+    val user by uvm.myUser.collectAsState()
+    val friend by svm.clickFriend.collectAsState()
+    val selfUid by remember(friend) { derivedStateOf { friend.userId } }
+    val isPinPosts = dvm.isPinedSelfFlow.collectAsLazyPagingItems()
+    val notPinPosts = dvm.notPinedSelfFlow.collectAsLazyPagingItems()
+    val nickName by remember(friend) { derivedStateOf { if (selfUid==user.id) user.nickname else friend.displayName } }
+    LaunchedEffect(selfUid) {
+        if (selfUid != "") {
+            dvm.setSelfCircleUid(selfUid)
+        }
+    }
+    var filePath by remember { mutableStateOf("") }
+    LaunchedEffect(selfUid) {
+        if (selfUid != "") {
+            filePath = AppGlobal.getFilePath(selfUid)
+        }
+    }
+    val listState = rememberLazyListState()
+    LazyColumnWithCover(filePath,nickName,friend.displayAvatar, onEnterFriendInfoDetail = {}, onChangeCover = {}, onRefresh = {}, listState = listState) {
+
+    }
+}
+@Composable
+fun DisplayImagesScreen(modifier: Modifier = Modifier,imageCount:Int? = 4,svm: SocialViewModel,dvm: DynamicViewModel= hiltViewModel()) {
+    val friend by svm.clickFriend.collectAsState()
+    val selfUid by remember(friend) { derivedStateOf { friend.userId } }
+    val notPinPosts = dvm.notPinedSelfFlow.collectAsLazyPagingItems()
+    LaunchedEffect(selfUid) {
+        if (selfUid != "") {
+            dvm.setSelfCircleUid(selfUid)
+        }
+    }
+    val posts by remember(notPinPosts) { derivedStateOf { notPinPosts.itemSnapshotList.items } }
+    val images by remember(posts) {
+        derivedStateOf {
+            val list = posts.mapNotNull { it.content.imageUrls }.flatten()
+            if (imageCount != null) {
+                list.take(imageCount)
+            } else {
+                list.take(6)
+            }
+        }
+    }
+    Log.e("DisplayImagesScreen_images",posts.toString())
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        images.forEach { image->
+            if (!image.contains("mp4")) {
+                AsyncImage(
+                    model = ImageRequest.Builder(AppGlobal.getAppContext()).data(image).build(),
+                    contentDescription = null,
+                    modifier= Modifier.size(55.dp),
+                    contentScale = ContentScale.Crop
+                )
+            }else {
+                var bitmap:Bitmap? = null
+                LaunchedEffect(Unit) {
+                    bitmap = AppGlobal.getBitmapFromUrl(image)
+                }
+                VideoItem(bitmap ?: R.drawable.default_cover, modifier = Modifier.size(55.dp)) { }
+            }
+        }
+    }
+}
+
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun PostItem(
@@ -611,11 +678,6 @@ fun FriendCircleScreenUI(
             }
             state.urisSize = 0 // 重置计数
         }
-    }
-
-    // 处理加载状态
-    LaunchedEffect(posts.itemCount) {
-        state.isLoading = posts.itemCount == 0
     }
 
     when {
@@ -1647,11 +1709,10 @@ fun ImageItem(data:Any, size: Dp,onDelete:()->Unit={}, onclick:()->Unit) {
     }
 }
 @Composable
-fun VideoItem(data: Any,onclick:  () -> Unit) {
+fun VideoItem(data: Any,modifier: Modifier=Modifier,onclick:  () -> Unit) {
     Box(modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onclick() }) {
-        AsyncImage(ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),contentDescription = null, modifier = Modifier
-            .width(100.dp)
-            .height(150.dp), contentScale = ContentScale.Crop)
+        AsyncImage(ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),contentDescription = null, modifier = modifier
+            .defaultMinSize(100.dp,150.dp), contentScale = ContentScale.Crop)
         Icon(Icons.Filled.PlayArrow,contentDescription = null, tint = Color.White , modifier = Modifier
             .align(Alignment.Center)
             .size(50.dp)
