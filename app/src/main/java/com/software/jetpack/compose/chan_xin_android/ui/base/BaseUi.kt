@@ -608,7 +608,10 @@ fun BaseScreenItem(
         .fillMaxWidth()
         .height(DefaultUserScreenItemDp)
         .background(backgroundColor)
-        .clickable(indication = indication, interactionSource = interactionSource) { onClick();Log.e("iiii", "iiiii") }
+        .clickable(
+            indication = indication,
+            interactionSource = interactionSource
+        ) { onClick();Log.e("iiii", "iiiii") }
         .padding(horizontal = 15.dp), contentAlignment = Alignment.Center) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (preContent != null) {
@@ -988,7 +991,19 @@ fun GeneratePaletteFromImage(data: Any,onGenerated: (Palette) -> Unit) {
     ExperimentalMaterial3Api::class
 )
 @Composable
-fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,listState:LazyListState,modifier: Modifier = Modifier,onChangeCover:()->Unit,onEnterFriendInfoDetail:()->Unit,onRefresh:suspend ()->Unit,content:LazyListScope.() -> Unit) {
+fun LazyColumnWithCover(
+    data: Any,
+    nickname: String,
+    displayAvatar: Any,
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
+    onChangeCover: () -> Unit,
+    onEnterFriendInfoDetail: () -> Unit,
+    onRefresh: suspend () -> Unit,
+    content: LazyListScope.() -> Unit
+) {
     var dominantColor by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
     var dominantColorReverse by remember { mutableStateOf(listOf(Color.Cyan.copy(0.5f),Color.Cyan.copy(0.4f))) }
     var alpha by remember { mutableFloatStateOf(1f) }
@@ -1027,7 +1042,12 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,listState:La
         .fillMaxSize()
         .pullRefresh(state)
     ) {
-        LazyColumn (state = listState, modifier = modifier){
+        LazyColumn(
+            state = listState,
+            modifier = modifier,
+            horizontalAlignment = horizontalAlignment,
+            verticalArrangement = verticalArrangement
+        ){
             item {
                 Wrapper {
                     Column {
@@ -1100,7 +1120,7 @@ fun LazyColumnWithCover(data: Any,nickname:String,displayAvatar:Any,listState:La
                                     .clickable(
                                         indication = null,
                                         interactionSource = remember { MutableInteractionSource() }) {
-                                        if(alpha == 1f) {
+                                        if (alpha == 1f) {
                                             onEnterFriendInfoDetail()
                                             Log.e(
                                                 "nengkanjian",
@@ -1131,7 +1151,9 @@ fun ClickableOutlineCircle(
     Box(
         modifier = Modifier
             .size(diameter)
-            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onClick() },
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }) { onClick() },
         contentAlignment = Alignment.Center
     ) {
         val outlineWidthPx = with(LocalDensity.current) { outlineWidth.toPx() }

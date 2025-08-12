@@ -147,10 +147,20 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.BaseScreenItem
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.base.CanLookImage
 import com.software.jetpack.compose.chan_xin_android.ui.base.CustomTextField
+import com.software.jetpack.compose.chan_xin_android.ui.base.EightSelfImageUi
 import com.software.jetpack.compose.chan_xin_android.ui.base.ExpandRowMenu
+import com.software.jetpack.compose.chan_xin_android.ui.base.FiveSelfImageUi
+import com.software.jetpack.compose.chan_xin_android.ui.base.FourSelfImageUi
 import com.software.jetpack.compose.chan_xin_android.ui.base.LazyColumnWithCover
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
+import com.software.jetpack.compose.chan_xin_android.ui.base.NineSelfImageUi
+import com.software.jetpack.compose.chan_xin_android.ui.base.OneSelfImageUi
 import com.software.jetpack.compose.chan_xin_android.ui.base.PlayVideo
+import com.software.jetpack.compose.chan_xin_android.ui.base.SelfImageUi
+import com.software.jetpack.compose.chan_xin_android.ui.base.SevenSelfImageUi
+import com.software.jetpack.compose.chan_xin_android.ui.base.SixSelfImageUi
+import com.software.jetpack.compose.chan_xin_android.ui.base.ThreeSelfImageUi
+import com.software.jetpack.compose.chan_xin_android.ui.base.TwoSelfImageUi
 import com.software.jetpack.compose.chan_xin_android.ui.base.extraVideoFrame
 import com.software.jetpack.compose.chan_xin_android.ui.base.rememberVideoFrame
 import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
@@ -290,7 +300,7 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
     val clickComment by dvm.currentClickComment.collectAsState()
     val clickPostId by dvm.currentPostId.collectAsState()
     var find by remember { mutableStateOf("") }
-    Log.e("click_comment",clickComment.toString())
+    Log.e("click_comment",posts.itemCount.toString())
     Box {
         FriendCircleScreenUI(navController,sheetState,filePath,find,dvm,posts=posts,svm = svm,onFilePathChange = {
             filePath = it
@@ -359,6 +369,7 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun SelfFriendCircleScreen(navController: NavHostController,svm: SocialViewModel,dvm: DynamicViewModel) {
     val uvm:UserViewmodel = hiltViewModel()
@@ -380,10 +391,76 @@ fun SelfFriendCircleScreen(navController: NavHostController,svm: SocialViewModel
         }
     }
     val listState = rememberLazyListState()
-    LazyColumnWithCover(filePath,nickName,friend.displayAvatar, onEnterFriendInfoDetail = {}, onChangeCover = {}, onRefresh = {}, listState = listState) {
+    Box {
+        LazyColumnWithCover(filePath,nickName,friend.displayAvatar, onEnterFriendInfoDetail = {}, onChangeCover = {}, onRefresh = {}, listState = listState, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            items(notPinPosts.itemSnapshotList.items) {post->
+                SelfPostItem(post) {}
+            }
+        }
+        TopBarWithBack(navController, backTint = Color.White, color = Color.Transparent, action = {
+            if (selfUid == user.id) {
+                Icon(
+                    painterResource(R.drawable.more),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable(indication = null,
+                            interactionSource = remember { MutableInteractionSource() }) {
 
+                        }
+                )
+            }
+        })
     }
 }
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun SelfPostItem(post: Post,onClick: () -> Unit) {
+    val isAllText by remember(post) { derivedStateOf { post.content.imageUrls == null } }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = DefaultUserPadding)){
+        BaseText(post.createTime.toTime("dd日MM月"))
+        Spacer(modifier = Modifier.width(10.dp))
+        Surface(color = if (isAllText) SurfaceColor else Color.Transparent) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.height(100.dp).fillMaxWidth().clickable { onClick() }
+            ) {
+                if (!isAllText) {
+                    MediaOrImageDisplayArea(post.content.imageUrls!!)
+                    Spacer(modifier = Modifier.width(10.dp))
+                }
+                Text(post.content.text, modifier = Modifier.height(100.dp).weight(1f), color = Color.Black, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+
+}
+@Composable
+fun MediaOrImageDisplayArea(urls:List<String>) {
+    val context= LocalContext.current
+    val selfImageUi by remember(urls) { derivedStateOf {
+        when(urls.size) {
+            1-> OneSelfImageUi(context,urls)
+            2-> TwoSelfImageUi(context,urls)
+            3-> ThreeSelfImageUi(context,urls)
+            4-> FourSelfImageUi(context,urls)
+            5->FiveSelfImageUi(context,urls)
+            6->SixSelfImageUi(context,urls)
+            7->SevenSelfImageUi(context,urls)
+            8->EightSelfImageUi(context,urls)
+            9->NineSelfImageUi(context,urls)
+            else -> OneSelfImageUi(context,urls)
+        }
+    } }
+    if (urls[0].contains("mp4")) {
+        VideoItem(R.drawable.default_cover,modifier = Modifier.size(100.dp)) { }
+    }else {
+        SelfImageUi(selfImageUi)
+    }
+}
+
+
 @Composable
 fun DisplayImagesScreen(modifier: Modifier = Modifier,imageCount:Int? = 4,svm: SocialViewModel,dvm: DynamicViewModel= hiltViewModel()) {
     val friend by svm.clickFriend.collectAsState()
@@ -410,7 +487,7 @@ fun DisplayImagesScreen(modifier: Modifier = Modifier,imageCount:Int? = 4,svm: S
         images.forEach { image->
             if (!image.contains("mp4")) {
                 AsyncImage(
-                    model = ImageRequest.Builder(AppGlobal.getAppContext()).data(image).build(),
+                    model = ImageRequest.Builder(LocalContext.current).data(image).build(),
                     contentDescription = null,
                     modifier= Modifier.size(55.dp),
                     contentScale = ContentScale.Crop
@@ -479,14 +556,13 @@ fun PostItem(
                 .fillMaxWidth()
                 .padding(DEFAULT_USER_PADDING)
                 .onGloballyPositioned { layoutCoordinates ->
-                    val componentCenterX = layoutCoordinates.positionInWindow().x +
-                            (layoutCoordinates.size.width / 2)
-                    val componentCenterY = layoutCoordinates.positionInWindow().y +
-                            (layoutCoordinates.size.height / 2)
+                    val componentCenterX =
+                        layoutCoordinates.positionInWindow().x + (layoutCoordinates.size.width / 2)
+                    val componentCenterY =
+                        layoutCoordinates.positionInWindow().y + (layoutCoordinates.size.height / 2)
 
                     isAtTargetPosition =
-                        componentCenterX in (screenCenterX - targetOffsetPx)..(screenCenterX + targetOffsetPx) &&
-                                componentCenterY in (screenCenterY - targetOffsetPx)..(screenCenterY + targetOffsetPx)
+                        componentCenterX in (screenCenterX - targetOffsetPx)..(screenCenterX + targetOffsetPx) && componentCenterY in (screenCenterY - targetOffsetPx)..(screenCenterY + targetOffsetPx)
                 }
         ) {
             // 头像区域
@@ -505,7 +581,7 @@ fun PostItem(
                 BaseText(text = friend.displayName, color = LittleTextColor)
 
                 // 帖子内容
-                BaseText(text = content.text)
+                Text(text = content.text, color = Color.Black)
 
                 // 媒体内容（图片/视频）
                 MediaContent(
@@ -679,7 +755,9 @@ fun FriendCircleScreenUI(
             state.urisSize = 0 // 重置计数
         }
     }
-
+    LaunchedEffect(posts.loadState) {
+        state.isLoading = posts.loadState.refresh is LoadState.Loading
+    }
     when {
         state.selectedVideoUri != null -> {
             Log.e("VideoPlayerScreen","VideoPlayerScreen")
@@ -871,7 +949,7 @@ private fun CoverSelectionScreen(
             .background(color = Color.Black)
     ) {
         AsyncImage(
-            model = ImageRequest.Builder(AppGlobal.getAppContext())
+            model = ImageRequest.Builder(LocalContext.current)
                 .data(uri)
                 .build(),
             contentDescription = "选择封面预览",
@@ -1048,10 +1126,8 @@ private fun TopBar(
                 tint = Color.White,
                 modifier = Modifier
                     .size(24.dp)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {
+                    .clickable(indication = null,
+                        interactionSource = remember { MutableInteractionSource() }) {
                         scope.launch { sheetState.show() }
                     }
             )
@@ -1165,8 +1241,6 @@ fun NoMoreItem() {
 }
 
 
-
-
 // 提取用户头像子组件
 @Composable
 private fun UserAvatar(
@@ -1177,7 +1251,7 @@ private fun UserAvatar(
 ) {
     Wrapper {
         AsyncImage(
-            model = ImageRequest.Builder(AppGlobal.getAppContext())
+            model = ImageRequest.Builder(LocalContext.current)
                 .data(displayAvatar)
                 .allowHardware(true)
                 .lifecycle(lifecycle)
@@ -1203,6 +1277,7 @@ private fun MediaContent(
     lifecycle: Lifecycle,
     onClick: (Uri) -> Unit
 ) {
+    val context = LocalContext.current
     Wrapper {
         val imageUrls = postContent.imageUrls ?: return@Wrapper // 空安全处理：无图片直接返回
 
@@ -1221,6 +1296,7 @@ private fun MediaContent(
                     .width(VIDEO_THUMBNAIL_SIZE.first)
                     .height(VIDEO_THUMBNAIL_SIZE.second)
             ) {
+
                 when {
                     !isScrolling && isAtTargetPosition -> {
                         PlayVideo(
@@ -1236,18 +1312,41 @@ private fun MediaContent(
                                 ) { onClick(videoUri) }
                         )
                     }
-                    !isScrolling -> {
+                    else -> {
                         VideoItem(
                             bitmap ?: R.drawable.default_cover,
                         ) { onClick(videoUri)}
                     }
-                    else -> {
-                        LoadingPlaceholder(
-                            width = VIDEO_THUMBNAIL_SIZE.first,
-                            height = VIDEO_THUMBNAIL_SIZE.second
-                        )
-                    }
                 }
+                /**
+                 * when {
+                 *                     !isScrolling && isAtTargetPosition -> {
+                 *                         PlayVideo(
+                 *                             videoUri = videoUri,
+                 *                             defaultWidth = VIDEO_THUMBNAIL_SIZE.first
+                 *                         )
+                 *                         Box(
+                 *                             modifier = Modifier
+                 *                                 .matchParentSize()
+                 *                                 .clickable(
+                 *                                     indication = null,
+                 *                                     interactionSource = remember { MutableInteractionSource() }
+                 *                                 ) { onClick(videoUri) }
+                 *                         )
+                 *                     }
+                 *                     !isScrolling -> {
+                 *                         VideoItem(
+                 *                             bitmap ?: R.drawable.default_cover,
+                 *                         ) { onClick(videoUri)}
+                 *                     }
+                 *                     else -> {
+                 *                         LoadingPlaceholder(
+                 *                             width = VIDEO_THUMBNAIL_SIZE.first,
+                 *                             height = VIDEO_THUMBNAIL_SIZE.second
+                 *                         )
+                 *                     }
+                 *                 }
+                 */
             }
         } else {
             // 图片网格处理
@@ -1265,25 +1364,39 @@ private fun MediaContent(
                     items = imageUrls,
                     key = { it } // 使用图片URL作为key（比索引更稳定）
                 ) { imageUrl ->
-                    if (!isScrolling) {
-                        AsyncImage(
-                            model = remember(imageUrl, lifecycle) { // 依赖lifecycle变化
-                                ImageRequest.Builder(AppGlobal.getAppContext())
-                                    .data(imageUrl)
-                                    .allowHardware(true)
-                                    .lifecycle(lifecycle)
-                                    .build()
-                            },
-                            contentDescription = "帖子图片",
-                            modifier = Modifier.size(IMAGE_GRID_ITEM_SIZE),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        LoadingPlaceholder(
-                            width = IMAGE_GRID_ITEM_SIZE,
-                            height = IMAGE_GRID_ITEM_SIZE
-                        )
-                    }
+                    AsyncImage(
+                        model = remember(imageUrl, lifecycle) { // 依赖lifecycle变化
+                            ImageRequest.Builder(context)
+                                .data(imageUrl)
+                                .allowHardware(true)
+                                .lifecycle(lifecycle)
+                                .build()
+                        },
+                        contentDescription = "帖子图片",
+                        modifier = Modifier.size(IMAGE_GRID_ITEM_SIZE),
+                        contentScale = ContentScale.Crop
+                    )
+                    /**
+                     * if (!isScrolling) {
+                     *                         AsyncImage(
+                     *                             model = remember(imageUrl, lifecycle) { // 依赖lifecycle变化
+                     *                                 ImageRequest.Builder(context)
+                     *                                     .data(imageUrl)
+                     *                                     .allowHardware(true)
+                     *                                     .lifecycle(lifecycle)
+                     *                                     .build()
+                     *                             },
+                     *                             contentDescription = "帖子图片",
+                     *                             modifier = Modifier.size(IMAGE_GRID_ITEM_SIZE),
+                     *                             contentScale = ContentScale.Crop
+                     *                         )
+                     *                     } else {
+                     *                         LoadingPlaceholder(
+                     *                             width = IMAGE_GRID_ITEM_SIZE,
+                     *                             height = IMAGE_GRID_ITEM_SIZE
+                     *                         )
+                     *                     }
+                     */
                 }
             }
         }
@@ -1580,7 +1693,7 @@ fun MainCreatePostScreen(navController: NavHostController,thisController:NavHost
                         }
                         if (photoUris.size < 9) {
                             item{
-                                AsyncImage(ImageRequest.Builder(AppGlobal.getAppContext()).data(R.drawable.add_image).build(),contentDescription = null,
+                                AsyncImage(ImageRequest.Builder(LocalContext.current).data(R.drawable.add_image).build(),contentDescription = null,
                                     modifier = Modifier
                                         .size(size)
                                         .clickable(
@@ -1691,7 +1804,7 @@ fun CreatePostScaffold(title:String="",selectedUri:Uri=Uri.Builder().build(),loo
 @Composable
 fun ImageItem(data:Any, size: Dp,onDelete:()->Unit={}, onclick:()->Unit) {
     Box {
-        AsyncImage(ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),contentDescription = null, modifier = Modifier
+        AsyncImage(ImageRequest.Builder(LocalContext.current).data(data).build(),contentDescription = null, modifier = Modifier
             .size(size)
             .clickable(
                 indication = null,
@@ -1711,7 +1824,7 @@ fun ImageItem(data:Any, size: Dp,onDelete:()->Unit={}, onclick:()->Unit) {
 @Composable
 fun VideoItem(data: Any,modifier: Modifier=Modifier,onclick:  () -> Unit) {
     Box(modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onclick() }) {
-        AsyncImage(ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),contentDescription = null, modifier = modifier
+        AsyncImage(ImageRequest.Builder(LocalContext.current).data(data).build(),contentDescription = null, modifier = modifier
             .defaultMinSize(100.dp,150.dp), contentScale = ContentScale.Crop)
         Icon(Icons.Filled.PlayArrow,contentDescription = null, tint = Color.White , modifier = Modifier
             .align(Alignment.Center)

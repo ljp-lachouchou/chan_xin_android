@@ -1489,7 +1489,7 @@ fun SelectFriendScreen(navController: NavHostController,svm:SocialViewModel) {
                 ) {
                     items(selectFriendList, key = {i: Friend -> i.userId }) { item: Friend ->
                         AsyncImage(
-                            model = ImageRequest.Builder(AppGlobal.getAppContext())
+                            model = ImageRequest.Builder(LocalContext.current)
                                 .data(item.displayAvatar).build(),
                             contentDescription = null,
                             modifier = Modifier
@@ -1577,7 +1577,7 @@ fun AbandonFriendScreen(navController: NavHostController,svm:SocialViewModel) {
                 ) {
                     items(abandonList, key = {i: Friend -> i.userId }) { item: Friend ->
                         AsyncImage(
-                            model = ImageRequest.Builder(AppGlobal.getAppContext())
+                            model = ImageRequest.Builder(LocalContext.current)
                                 .data(item.displayAvatar).build(),
                             contentDescription = null,
                             modifier = Modifier
@@ -2212,7 +2212,7 @@ fun FriendScreenItem(data: Any, onClick: (Boolean) -> Unit={},canSelected:Boolea
                 Spacer(modifier = Modifier.width(10.dp))
             }
             AsyncImage(
-                model = ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),
+                model = ImageRequest.Builder(LocalContext.current).data(data).build(),
                 contentDescription = null, modifier = Modifier
                     .size(35.dp)
                     .clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop,
