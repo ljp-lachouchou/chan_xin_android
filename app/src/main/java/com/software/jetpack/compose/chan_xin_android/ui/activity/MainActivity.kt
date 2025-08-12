@@ -3,21 +3,11 @@ package com.software.jetpack.compose.chan_xin_android.ui.activity
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Build
-import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.RowScope
@@ -37,46 +27,31 @@ import androidx.compose.material.Icon
 import androidx.compose.material.Scaffold
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.software.jetpack.compose.chan_xin_android.R
-import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
-import com.software.jetpack.compose.chan_xin_android.entity.FriendRelation
-import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
-import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AbandonFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.CanDeleteFriendScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.CreatePostScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.FindMainScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendCircleScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.CreatePostScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.FindMainScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.FriendCircleScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyListScreen
@@ -87,18 +62,17 @@ import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendSearc
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.RemarkSettingScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SearchFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SelectFriendScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.SelfFriendCircleScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.SelfFriendCircleScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.SettingScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoInFriendBySearchScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.MainPostInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.NavigationBarColor
-import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import com.software.jetpack.compose.chan_xin_android.vm.DynamicViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
-import kotlinx.coroutines.launch
 
 enum class TabEnum(val label:String,val resId:Int,val route:String) {
     HOME("禅信", R.drawable.chan_xin,"chat_fragment"),
@@ -162,7 +136,9 @@ enum class MainActivityRouteEnum(val route: String) {
     MAIN_FRIEND_INFO_DETAIL("main_friend_info_detail"),
     MAIN_FRIEND_INFO_REMARK_SETTING("main_friend_info_remark_setting"),
     CAN_DELETE_FRIEND("can_delete_friend"),
-    SELF_FRIEND_CIRCLE_SCREEN("self_friend_circle_screen")
+    SELF_FRIEND_CIRCLE_SCREEN("self_friend_circle_screen"),
+    MAIN_POST_INFO("main_post_info"),
+    MESSAGE_QUEUE_SCREEN("message_queue_screen")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -222,6 +198,12 @@ fun MainActivityScreen() {
         }
         composable(MainActivityRouteEnum.SELF_FRIEND_CIRCLE_SCREEN.route) {
             SelfFriendCircleScreen(rootNavController,svm,dvm)
+        }
+        composable(MainActivityRouteEnum.MAIN_POST_INFO.route) {
+            MainPostInfoScreen(rootNavController,dvm,svm)
+        }
+        composable(MainActivityRouteEnum.MESSAGE_QUEUE_SCREEN.route) {
+
         }
 
     }

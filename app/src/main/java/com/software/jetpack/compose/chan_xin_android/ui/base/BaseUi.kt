@@ -757,6 +757,7 @@ fun CanLookImage(data:Any,isSelected:Boolean = false,onChange:()->Unit,content:@
 
 @Composable
 fun ImageViewer(data:Any,onVerticalDrag:(Float)->Unit) {
+    val context = LocalContext.current
     var imageSize by remember { mutableStateOf(IntSize.Zero) }
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -782,7 +783,7 @@ fun ImageViewer(data:Any,onVerticalDrag:(Float)->Unit) {
 
 
     AsyncImage(
-        model = ImageRequest.Builder(AppGlobal.getAppContext()).data(data).build(),
+        model = ImageRequest.Builder(context).data(data).build(),
         contentDescription = null,
         contentScale = ContentScale.Crop,
         modifier = Modifier
@@ -997,6 +998,7 @@ fun LazyColumnWithCover(
     displayAvatar: Any,
     listState: LazyListState,
     modifier: Modifier = Modifier,
+    canChangeCover:Boolean = true,
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     horizontalAlignment: Alignment.Horizontal = Alignment.Start,
     onChangeCover: () -> Unit,
@@ -1082,21 +1084,23 @@ fun LazyColumnWithCover(
                                 .background(brush = Brush.verticalGradient(dominantColorReverse)),
                             contentAlignment = Alignment.BottomEnd
                         ) {
-                            Column(Modifier
-                                .height(100.dp)
-                                .padding(DefaultUserPadding)
-                                .clickable(
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() }) {
-                                    if (alpha == 0f) {
-                                        onChangeCover()
-                                        Log.e("能看见吗", "嫩模刚看见")
-                                    }
-                                }, horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(painterResource(R.drawable.change_cover),contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp)
+                            if (canChangeCover) {
+                                Column(Modifier
+                                    .height(100.dp)
+                                    .padding(DefaultUserPadding)
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }) {
+                                        if (alpha == 0f) {
+                                            onChangeCover()
+                                            Log.e("能看见吗", "嫩模刚看见")
+                                        }
+                                    }, horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(painterResource(R.drawable.change_cover),contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp)
 
-                                )
-                                Text("更换封面", fontSize = 10.sp, color = Color.White)
+                                    )
+                                    Text("更换封面", fontSize = 10.sp, color = Color.White)
+                                }
                             }
                         }
 

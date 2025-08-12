@@ -1,4 +1,4 @@
-package com.software.jetpack.compose.chan_xin_android.ui.fragment
+package com.software.jetpack.compose.chan_xin_android.ui.fragment.find
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -54,7 +53,6 @@ import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -79,10 +77,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -113,10 +109,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.text.buildSpannedString
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -129,7 +123,6 @@ import coil.request.ImageRequest
 import com.software.jetpack.compose.chan_xin_android.CameraActivity
 import com.software.jetpack.compose.chan_xin_android.R
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPadding
-import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
 import com.software.jetpack.compose.chan_xin_android.entity.Post
@@ -163,6 +156,10 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.ThreeSelfImageUi
 import com.software.jetpack.compose.chan_xin_android.ui.base.TwoSelfImageUi
 import com.software.jetpack.compose.chan_xin_android.ui.base.extraVideoFrame
 import com.software.jetpack.compose.chan_xin_android.ui.base.rememberVideoFrame
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.LabelScreenItem
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.MyTopBar
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.SexSingleSelect
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.TopBarWithBack
 import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.LittleTextColor
@@ -180,8 +177,6 @@ import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URLEncoder
@@ -368,141 +363,6 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
         }
     }
 }
-
-@RequiresApi(Build.VERSION_CODES.O)
-@Composable
-fun SelfFriendCircleScreen(navController: NavHostController,svm: SocialViewModel,dvm: DynamicViewModel) {
-    val uvm:UserViewmodel = hiltViewModel()
-    val user by uvm.myUser.collectAsState()
-    val friend by svm.clickFriend.collectAsState()
-    val selfUid by remember(friend) { derivedStateOf { friend.userId } }
-    val isPinPosts = dvm.isPinedSelfFlow.collectAsLazyPagingItems()
-    val notPinPosts = dvm.notPinedSelfFlow.collectAsLazyPagingItems()
-    val nickName by remember(friend) { derivedStateOf { if (selfUid==user.id) user.nickname else friend.displayName } }
-    LaunchedEffect(selfUid) {
-        if (selfUid != "") {
-            dvm.setSelfCircleUid(selfUid)
-        }
-    }
-    var filePath by remember { mutableStateOf("") }
-    LaunchedEffect(selfUid) {
-        if (selfUid != "") {
-            filePath = AppGlobal.getFilePath(selfUid)
-        }
-    }
-    val listState = rememberLazyListState()
-    Box {
-        LazyColumnWithCover(filePath,nickName,friend.displayAvatar, onEnterFriendInfoDetail = {}, onChangeCover = {}, onRefresh = {}, listState = listState, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            items(notPinPosts.itemSnapshotList.items) {post->
-                SelfPostItem(post) {}
-            }
-        }
-        TopBarWithBack(navController, backTint = Color.White, color = Color.Transparent, action = {
-            if (selfUid == user.id) {
-                Icon(
-                    painterResource(R.drawable.more),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable(indication = null,
-                            interactionSource = remember { MutableInteractionSource() }) {
-
-                        }
-                )
-            }
-        })
-    }
-}
-@RequiresApi(Build.VERSION_CODES.O)
-@Composable
-fun SelfPostItem(post: Post,onClick: () -> Unit) {
-    val isAllText by remember(post) { derivedStateOf { post.content.imageUrls == null } }
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = DefaultUserPadding)){
-        BaseText(post.createTime.toTime("dd日MM月"))
-        Spacer(modifier = Modifier.width(10.dp))
-        Surface(color = if (isAllText) SurfaceColor else Color.Transparent) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.height(100.dp).fillMaxWidth().clickable { onClick() }
-            ) {
-                if (!isAllText) {
-                    MediaOrImageDisplayArea(post.content.imageUrls!!)
-                    Spacer(modifier = Modifier.width(10.dp))
-                }
-                Text(post.content.text, modifier = Modifier.height(100.dp).weight(1f), color = Color.Black, overflow = TextOverflow.Ellipsis)
-            }
-        }
-    }
-
-}
-@Composable
-fun MediaOrImageDisplayArea(urls:List<String>) {
-    val context= LocalContext.current
-    val selfImageUi by remember(urls) { derivedStateOf {
-        when(urls.size) {
-            1-> OneSelfImageUi(context,urls)
-            2-> TwoSelfImageUi(context,urls)
-            3-> ThreeSelfImageUi(context,urls)
-            4-> FourSelfImageUi(context,urls)
-            5->FiveSelfImageUi(context,urls)
-            6->SixSelfImageUi(context,urls)
-            7->SevenSelfImageUi(context,urls)
-            8->EightSelfImageUi(context,urls)
-            9->NineSelfImageUi(context,urls)
-            else -> OneSelfImageUi(context,urls)
-        }
-    } }
-    if (urls[0].contains("mp4")) {
-        VideoItem(R.drawable.default_cover,modifier = Modifier.size(100.dp)) { }
-    }else {
-        SelfImageUi(selfImageUi)
-    }
-}
-
-
-@Composable
-fun DisplayImagesScreen(modifier: Modifier = Modifier,imageCount:Int? = 4,svm: SocialViewModel,dvm: DynamicViewModel= hiltViewModel()) {
-    val friend by svm.clickFriend.collectAsState()
-    val selfUid by remember(friend) { derivedStateOf { friend.userId } }
-    val notPinPosts = dvm.notPinedSelfFlow.collectAsLazyPagingItems()
-    LaunchedEffect(selfUid) {
-        if (selfUid != "") {
-            dvm.setSelfCircleUid(selfUid)
-        }
-    }
-    val posts by remember(notPinPosts) { derivedStateOf { notPinPosts.itemSnapshotList.items } }
-    val images by remember(posts) {
-        derivedStateOf {
-            val list = posts.mapNotNull { it.content.imageUrls }.flatten()
-            if (imageCount != null) {
-                list.take(imageCount)
-            } else {
-                list.take(6)
-            }
-        }
-    }
-    Log.e("DisplayImagesScreen_images",posts.toString())
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        images.forEach { image->
-            if (!image.contains("mp4")) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current).data(image).build(),
-                    contentDescription = null,
-                    modifier= Modifier.size(55.dp),
-                    contentScale = ContentScale.Crop
-                )
-            }else {
-                var bitmap:Bitmap? = null
-                LaunchedEffect(Unit) {
-                    bitmap = AppGlobal.getBitmapFromUrl(image)
-                }
-                VideoItem(bitmap ?: R.drawable.default_cover, modifier = Modifier.size(55.dp)) { }
-            }
-        }
-    }
-}
-
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun PostItem(
@@ -518,7 +378,6 @@ fun PostItem(
     onDelete: (String) -> Unit,
     onContentClick: (String) -> Unit,
     onClick: (Uri) -> Unit
-
 ) {
 
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -593,31 +452,10 @@ fun PostItem(
                 )
 
                 // 时间和交互区
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    BaseText(text = createTime.toTime(), color = PlaceholderColor)
-                    Spacer(modifier = Modifier.weight(1f))
-                    if (postOwnerId == mid) {
-                        LittleButton(modifier=Modifier.width(20.dp),onclick = {
-                            onDelete(postId)
-                        }) {
-                            Icon(Icons.Filled.Delete,contentDescription = null, tint = LittleTextColor, modifier = Modifier.size(13.dp))
-                        }
-                        Spacer(modifier.width(10.dp))
-                    }
-                    ExpandableLikeAndContent(
-                        onLikeClick = {
-                            isLiked = !isLiked
-                            if (isLiked) { dvm.addLikeId(postId,mid) }else { dvm.removeLikeId(postId,mid) }
-                        },
-                        onContentClick = {
-                            onContentClick(postId)
-                        }
-                    )
-
-                }
+                BottomDynamicArea(modifier,postOwnerId,mid,createTime, location = post.meta.location,onLikeClick = {
+                    isLiked = !isLiked
+                    if (isLiked) { dvm.addLikeId(postId,mid) }else { dvm.removeLikeId(postId,mid) }
+                },onContentClick={onContentClick(postId)},onDelete={onDelete(postId)})
                 Wrapper {
                     LikeAndCommentArea(mid,postId,comments,ids,svm = svm, onCommentReply = onCommentReply, onDelete = onDeleteComment, dvm = dvm)
                 }
@@ -630,6 +468,38 @@ fun PostItem(
         )
     }
 
+}
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun BottomDynamicArea(modifier: Modifier=Modifier,postOwnerId:String,mid: String,createTime:Long,location:String,onLikeClick:()->Unit,onContentClick:()->Unit={},onDelete: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BaseText(text = createTime.toTime(), color = PlaceholderColor)
+            Spacer(modifier = Modifier.weight(1f))
+            if (postOwnerId == mid) {
+                LittleButton(modifier=Modifier.width(20.dp),onclick = {
+                    onDelete()
+                }) {
+                    Icon(Icons.Filled.Delete,contentDescription = null, tint = LittleTextColor, modifier = Modifier.size(13.dp))
+                }
+                Spacer(modifier.width(10.dp))
+            }
+            ExpandableLikeAndContent(
+                onLikeClick = {
+                    onLikeClick()
+                },
+                onContentClick = {
+                    onContentClick()
+                }
+            )
+
+        }
+        BaseText(location, overflow = TextOverflow.Ellipsis)
+
+    }
 }
 @Composable
 fun LikeAndCommentArea(mId:String, postId: String,comments: List<ApiService. ListCommentRespStruct>,ids:List<String>, svm:SocialViewModel,dvm:DynamicViewModel,uvm: UserViewmodel= hiltViewModel(),onDelete:()->Unit,onCommentReply:()->Unit) {
@@ -1173,7 +1043,7 @@ private fun CommentInputBar(
     }
 }
 
-// 工具函数：处理封面确认逻辑
+// 处理封面确认逻辑
 private fun handleCoverConfirmation(
     scope: CoroutineScope,
     uri: Uri,
@@ -1196,7 +1066,7 @@ private fun handleCoverConfirmation(
     }
 }
 
-// 工具函数：处理Activity结果
+// 处理Activity结果
 private fun handleActivityResult(result: ActivityResult,dvm: DynamicViewModel,navController: NavHostController) {
     when (result.resultCode) {
         CameraUtil.IMAGE_URI_CODE -> {
@@ -1216,7 +1086,7 @@ private fun handleActivityResult(result: ActivityResult,dvm: DynamicViewModel,na
     }
 }
 
-// 工具函数：获取ParcelableExtra（兼容不同API版本）
+// 获取ParcelableExtra（兼容不同API版本）
 private inline fun <reified T : Parcelable> getParcelableExtra(data: Intent?, key: String): T? {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         data?.getParcelableExtra(key, T::class.java)
@@ -1243,7 +1113,7 @@ fun NoMoreItem() {
 
 // 提取用户头像子组件
 @Composable
-private fun UserAvatar(
+internal fun UserAvatar(
     displayAvatar: Any,
     lifecycle: Lifecycle,
     modifier: Modifier = Modifier,
@@ -1270,11 +1140,12 @@ private fun UserAvatar(
 
 // 提取媒体内容（图片/视频）子组件
 @Composable
-private fun MediaContent(
+fun MediaContent(
     postContent: PostContent, // 传递Content对象，减少参数数量
     isScrolling: Boolean,
     isAtTargetPosition: Boolean,
     lifecycle: Lifecycle,
+    onImageClick:(Any)->Unit={},
     onClick: (Uri) -> Unit
 ) {
     val context = LocalContext.current
@@ -1373,7 +1244,7 @@ private fun MediaContent(
                                 .build()
                         },
                         contentDescription = "帖子图片",
-                        modifier = Modifier.size(IMAGE_GRID_ITEM_SIZE),
+                        modifier = Modifier.size(IMAGE_GRID_ITEM_SIZE).clickable { onImageClick(imageUrl) },
                         contentScale = ContentScale.Crop
                     )
                     /**
@@ -1486,416 +1357,7 @@ enum class CreatePostEnum(val route:String) {
 }
 
 
-@Composable
-fun CreatePostScreen(navController: NavHostController,dvm: DynamicViewModel,svm:SocialViewModel) {
-    val uvm = hiltViewModel<UserViewmodel>()
-    val user by uvm.myUser.collectAsState()
-    val thisController = rememberNavController()
-    var lookModel by remember { mutableIntStateOf(0) }
-    var location by remember { mutableStateOf("所在位置") }
-    var scopeList by remember { mutableStateOf<List<String>>(emptyList()) }
-    LaunchedEffect(user.id) {
-        if (user.id != "") {
-            scopeList = svm.getFriendList(user.id).map { it.userId }
-        }
-    }
-    Log.e("scopeList_f",scopeList.toString())
-    NavHost(navController=thisController, startDestination = CreatePostEnum.MAIN_CREATE.route) {
-        composable(CreatePostEnum.MAIN_CREATE.route){
-            MainCreatePostScreen(navController,thisController,lookModel,location,scopeList,dvm, svm)
-        }
-        composable(CreatePostEnum.SELECT_LOCATION.route) {
-            SelectLocationToCreatePostScreen(thisController,location) {
-                location = it
-            }
-        }
-        composable(CreatePostEnum.SELECT_SCOPE.route) {
-            SelectScopeToCreatePostScreen(navController,thisController,svm, onChangeScopeList = {scopeList = it}) { lookModel = it }
-        }
-    }
-}
-
-@Composable
-fun SelectLocationToCreatePostScreen(thisController: NavHostController,location:String,onChange:(String)->Unit) {
-    var selectLocation by remember { mutableStateOf(location) }
-    CreatePostScaffold("所在位置", onCancel = {thisController.navigateUp()}, onCreate = {onChange(selectLocation);thisController.navigateUp()}) {
-        Column {
-            Wrapper { SexSingleSelect("不显示位置",selectLocation == "所在位置") {selectLocation = "所在位置"} }
-            Wrapper { SexSingleSelect(Location.province,selectLocation == Location.province) {selectLocation = Location.province } }
-            Wrapper { SexSingleSelect(Location.city,selectLocation == Location.city) {selectLocation = Location.city } }
-            Wrapper { SexSingleSelect(Location.address,selectLocation == Location.address) {selectLocation = Location.address } }
-        }
-    }
-}
 
 
-@Composable
-fun SelectScopeToCreatePostScreen(navController: NavHostController,thisController: NavHostController,svm:SocialViewModel,onChangeScopeList:(List<String>)->Unit,onChange: (Int) -> Unit) {
-    var selectModel by rememberSaveable { mutableIntStateOf(0) }
-    val userViewModel = hiltViewModel<UserViewmodel>()
-    val user by userViewModel.myUser.collectAsState()
-    val friendList by svm.currentFriendList.collectAsState()
-    val selectFriendList by svm.currentSelectFriendList.collectAsState()
-    val abandonList by svm.currentAbandonFriendList.collectAsState()
-    val sb1 by remember { mutableStateOf(StringBuilder()) }
-    var allList by remember { mutableStateOf(friendList) }
-    LaunchedEffect(user.id) {
-        if (user.id != "") {
-            allList = svm.getFriendList(user.id)
-        }
-    }
-    LaunchedEffect(selectFriendList) {
-        sb1.append(selectFriendList.map { it.displayName })
-    }
-    val sb2 by remember { mutableStateOf(StringBuilder()) }
-    LaunchedEffect(abandonList) {
-        sb2.append(abandonList.map { it.displayName })
-    }
-    CreatePostScaffold("谁可以看", onCancel = {thisController.navigateUp()}, onCreate = {
-        if (selectModel==2 && selectFriendList.isEmpty()) {
-            Toast.makeText(AppGlobal.getAppContext(),"至少选择一个好友",Toast.LENGTH_SHORT).show()
-            return@CreatePostScaffold
-        }
-        onChange(selectModel)
-        onChangeScopeList(when(selectModel) {
-            0-> {
-                allList.map { it.userId }
-            }
-            1-> {
-                listOf(user.id)
-            }
-            2->{
-                selectFriendList.map { it.userId }
-            }
-            3-> {
-                (friendList - abandonList).map { it.userId }
-            }
-            else -> {emptyList()}
-        })
-        thisController.navigateUp()}) {
-        Column {
-            Wrapper { SexSingleSelect("公开",selectModel == 0) { selectModel = 0 } }
-            Wrapper { SexSingleSelect("私密",selectModel == 1) {selectModel = 1 } }
-            Wrapper { SexSingleSelect("部分可见 $sb1",selectModel == 2) {selectModel = 2
-                svm.loadCurrentSelectFriendList(emptyList())
-                navController.switchTab(MainActivityRouteEnum.SELECT_FRIEND_SCREEN.route) } }
-            Wrapper {  SexSingleSelect("谁不可看 $sb2",selectModel == 3) {
-                selectModel = 3
-                navController.switchTab(MainActivityRouteEnum.ABANDON_FRIEND_SCREEN.route)
-            } }
-        }
-    }
-
-}
-@Composable
-fun PlayVideoScreen(uri: Uri,onCancel: () -> Unit) {
-    Box {
-       PlayVideo(uri)
-        Icon(Icons.Filled.Close,contentDescription = null, tint = Color.White, modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onCancel() })
-    }
-}
-
-@Composable
-fun MainCreatePostScreen(navController: NavHostController,thisController:NavHostController,lookModel: Int,location:String,scopeList:List<String>,dvm: DynamicViewModel,svm:SocialViewModel,uvm:UserViewmodel= hiltViewModel()) {
-    val user by uvm.myUser.collectAsState()
-    val videoUri by dvm.videoUri.collectAsState()
-    val photoUris by dvm.photoUris.collectAsState()
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) {uris: List<Uri> ->
-        val newUris = photoUris.let {
-            (it+uris).take(9)
-        }
-        Log.e("urissad",newUris.size.toString())
-        dvm.loadPhotoUris(newUris)
-    }
-    var selectedUri by remember { mutableStateOf(Uri.Builder().build()) }
-    var lookImage by remember { mutableStateOf(false) }
-    var text by remember { mutableStateOf("") }
-    var textCount by remember { mutableIntStateOf(0) }
-    val maxCount = 200
-    val isLimited by remember(textCount) { derivedStateOf { textCount > maxCount } }
-    val size = 85.dp
-    val scope = rememberCoroutineScope()
-    var isLoading by remember { mutableStateOf(false) }
-    var videoBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    LaunchedEffect(Unit) {
-        videoBitmap = extraVideoFrame(AppGlobal.getAppContext(),videoUri?:Uri.Builder().build(),0L)
-    }
-    var isPlay by remember { mutableStateOf(false) }
-    Box {
-        CreatePostScaffold("发表动态",selectedUri,lookImage&&videoUri==null, onChange = {lookImage = !lookImage;Log.e("lookImage","$lookImage")}, onCancel = {navController.navigateUp()}, onCreate = {
-            if (!isLimited) {
-                scope.launch(Dispatchers.IO) {
-                    isLoading  =true
-                    val urls = if (videoUri == null) {
-                        photoUris.map {
-                            Oss.uploadFile("${System.currentTimeMillis()}.${StringUtil.getFileExtensionFromUri(AppGlobal.getAppContext(),it)}", uri = it)
-                        }
-                    }else {
-                        listOf(videoUri).map { Oss.uploadFile("${System.currentTimeMillis()}.${StringUtil.getFileExtensionFromUri(AppGlobal.getAppContext(),it)}", uri = it) }
-                    }
-                    dvm.createPost(user.id, PostContent(text,urls,""), PostMeta(if (location=="所在位置") "" else location,if (lookModel>1) 2 else lookModel,
-                        scopeList
-                    ))
-                    isLoading = false
-                    delay(100)
-                    withContext(Dispatchers.Main) {
-                        navController.navigateUp()
-                    }
-                }
-
-            }else {
-                Toast.makeText(AppGlobal.getAppContext(),"字数超过200",Toast.LENGTH_SHORT).show()
-            }
-        }){
-            Column(modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp)) {
-                Wrapper {
-                    CustomTextField(
-                        text,
-                        onValueChange = { text = it;textCount=text.length},
-                        placeholder = { BaseText("这一刻的想法...", color = PlaceholderColor, fontSize = 14.sp) },
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        colors = TextFieldDefaults.colors(
-                            cursorColor = IconGreen,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent
-                        )
-                    )
-                }
-                if (videoUri != null) {
-                    Wrapper {
-                        if (!isPlay) {
-                            VideoItem(videoBitmap ?: R.drawable.default_cover) {
-                                isPlay = true
-                            }
-                        }else {
-                            PlayVideoScreen(videoUri!!){isPlay = false}
-                        }
-                    }
-
-                }
-                else {
-                    LazyVerticalGrid(columns = GridCells.Fixed(3), contentPadding = PaddingValues(DefaultUserPadding), verticalArrangement = Arrangement.spacedBy(5.dp), horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.width(size*3+40.dp)) {
-                        items(photoUris) {uri->
-                            Wrapper {
-                                ImageItem(uri,size, onDelete = {
-                                    dvm.loadPhotoUris(photoUris.let {
-                                        val newUris = it.toMutableList()
-                                        newUris.remove(uri)
-                                        newUris
-                                    })
-                                }) { selectedUri = uri;lookImage = true }
-                            }
-                        }
-                        if (photoUris.size < 9) {
-                            item{
-                                AsyncImage(ImageRequest.Builder(LocalContext.current).data(R.drawable.add_image).build(),contentDescription = null,
-                                    modifier = Modifier
-                                        .size(size)
-                                        .clickable(
-                                            indication = null,
-                                            interactionSource = remember { MutableInteractionSource() }) {
-                                            launcher.launch("image/*")
-                                        }, contentScale = ContentScale.Crop)
-                            }
-                        }
-                    }
-                }
-                HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.3.dp, color = DividerColor)
-                CreatePostItem(R.drawable.location,location) { thisController.switchTab(CreatePostEnum.SELECT_LOCATION.route) }
-                HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.3.dp, color = DividerColor)
-                //谁可以看
-                CreatePostLookItem(R.drawable.user,lookModel, svm = svm) { thisController.switchTab(CreatePostEnum.SELECT_SCOPE.route) }
-                HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.3.dp, color = DividerColor)
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Wrapper(modifier = Modifier.imePadding()) {
-                BaseText("字数:$textCount/$maxCount", color = if (isLimited) Color.Red else PlaceholderColor, modifier = Modifier.imePadding())
-            }
-        }
-        LoadingDialog(isLoading)
-    }
-}
-
-@Composable
-fun CreatePostItem(icon:Int, title:String, onclick: () -> Unit) {
-    BaseScreenItem(preContent = {
-        Icon(painterResource(icon),contentDescription = null, tint = PlaceholderColor, modifier = Modifier.size(24.dp))
-    },onclick, tailContent = {
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,contentDescription = null, tint = PlaceholderColor)
-    }, indication = null) {
-        BaseText(title)
-    }
-}
 
 
-@Composable
-fun CreatePostLookItem(icon:Int, lookModel:Int,
-    svm: SocialViewModel, onclick: () -> Unit) {
-    var title by remember { mutableStateOf("谁可以看") }
-    val isCanLook by remember(lookModel) { derivedStateOf { lookModel==3 } }
-    val selectFriendList by svm.currentSelectFriendList.collectAsState()
-    val abandonList by svm.currentAbandonFriendList.collectAsState()
-    val sb1 by remember { mutableStateOf(StringBuilder()) }
-    LaunchedEffect(selectFriendList) {
-        sb1.append(selectFriendList.map { it.displayName })
-    }
-    val sb2 by remember { mutableStateOf(StringBuilder()) }
-    LaunchedEffect(abandonList) {
-        sb2.append(abandonList.map { it.displayName })
-    }
-    val sb = if (lookModel==2) sb1 else sb2
-    Column{
-        BaseScreenItem(preContent = {
-            Icon(painterResource(icon),contentDescription = null, tint = PlaceholderColor, modifier = Modifier.size(24.dp))
-        },onclick, tailContent = {
-            when(lookModel) {
-                0,1-> {
-                    Row {
-                        BaseText(if (lookModel==0) "公开" else "私密")
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,contentDescription = null, tint = PlaceholderColor)
-                    }
-                }
-                2,3-> {
-                    title = if (lookModel==2) "谁可以看" else "谁不可以看"
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,contentDescription = null, tint = PlaceholderColor)
-                }
-            }
-        }, indication = null) {
-            BaseText(title, color = if(isCanLook) Color.Red else Color.Black)
-        }
-        if (lookModel>1) {
-            BaseText("-朋友: $sb", color = PlaceholderColor, fontSize = 10.sp, modifier = Modifier.padding(start = DefaultUserPadding), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
-}
-@Composable
-fun CreatePostScaffold(title:String="",selectedUri:Uri=Uri.Builder().build(),lookImage:Boolean=false, onCancel:()->Unit, onCreate:()->Unit,onChange:()->Unit = {}, content:@Composable ColumnScope.()->Unit) {
-
-    CanLookImage(selectedUri,lookImage, onChange = {onChange()}) {
-        Column(modifier = Modifier.padding(DefaultUserPadding), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceBetween) {
-            MyTopBar(
-                title,
-                {
-                    BaseText(
-                        "取消",
-                        modifier = Modifier.clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }) { onCancel() })
-                },
-                defaultColor = Color.White,
-                action = {
-                    Wrapper {
-                        BaseButton(onClick =  { onCreate()}, modifier = Modifier
-                            .height(30.dp)
-                            .width(60.dp)) { BaseText("发表", color = Color.White, fontSize = 12.sp) }
-                    }
-                })
-            content()
-        }
-    }
-
-}
-@Composable
-fun ImageItem(data:Any, size: Dp,onDelete:()->Unit={}, onclick:()->Unit) {
-    Box {
-        AsyncImage(ImageRequest.Builder(LocalContext.current).data(data).build(),contentDescription = null, modifier = Modifier
-            .size(size)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }) {
-                onclick()
-            }, contentScale = ContentScale.Crop)
-        Icon(Icons.Filled.Close,contentDescription = null, tint = PlaceholderColor, modifier = Modifier
-            .size(16.dp)
-            .align(Alignment.TopEnd)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }) {
-                onDelete()
-            })
-    }
-}
-@Composable
-fun VideoItem(data: Any,modifier: Modifier=Modifier,onclick:  () -> Unit) {
-    Box(modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onclick() }) {
-        AsyncImage(ImageRequest.Builder(LocalContext.current).data(data).build(),contentDescription = null, modifier = modifier
-            .defaultMinSize(100.dp,150.dp), contentScale = ContentScale.Crop)
-        Icon(Icons.Filled.PlayArrow,contentDescription = null, tint = Color.White , modifier = Modifier
-            .align(Alignment.Center)
-            .size(50.dp)
-            .padding(start = DefaultUserPadding))
-
-    }
-}
-@OptIn(ExperimentalMaterialApi::class)
-@Composable
-fun DynamicCreateSheet(scope: CoroutineScope, launcher: ManagedActivityResultLauncher<Intent, ActivityResult>, bottomSheetState: ModalBottomSheetState, onClickPhoto:()->Unit, onClickVideo:()->Unit){
-    val context = LocalContext.current
-    val intent = Intent(context, CameraActivity::class.java)
-    intent.putExtra("camera_model",1)
-    scope.apply {
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .background(color = Color.Transparent)
-        ) {
-            TextButton(onClick = {
-                launch { bottomSheetState.hide() }
-                launcher.launch(intent)
-            }, shape = RectangleShape) {
-                BaseText("拍照", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            }
-            TextButton(onClick = {
-                launch { bottomSheetState.hide() }
-                onClickPhoto()
-            }, shape = RectangleShape) {
-                BaseText("图片动态(最多选择九张哦)", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            }
-            TextButton(onClick = {
-                launch { bottomSheetState.hide() }
-                onClickVideo()
-            }, shape = RectangleShape) {
-                BaseText("视频动态", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            }
-            Spacer(Modifier
-                .fillMaxWidth()
-                .height(10.dp)
-                .background(SurfaceColor))
-            TextButton(onClick = {
-                launch { bottomSheetState.hide() }
-            }, shape = RectangleShape) {
-                BaseText(text = "取消", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            }
-        }
-    }
-}
-
-// 状态数据类
-private class FriendCircleState(
-    val scope: CoroutineScope,
-    val launcher: ManagedActivityResultLauncher<String, Uri?>,
-    val activityLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>,
-    val mutableLauncher:  ManagedActivityResultLauncher<String, List<@JvmSuppressWildcards Uri>>,
-    val videoLauncher:  ManagedActivityResultLauncher<String, Uri?>,
-    val focusRequester: FocusRequester,
-    private val selectedUriState: MutableState<Uri?>,
-    private val urisSizeState: MutableIntState,
-    var isLoading: Boolean = false,
-    private val selectedVideoUriState: MutableState<Uri?>,
-) {
-    var selectedUri:Uri?
-        get() = selectedUriState.value
-        set(value) {selectedUriState.value = value}
-    var urisSize: Int
-        get() = urisSizeState.intValue
-        set(value) { urisSizeState.intValue = value }
-    var selectedVideoUri:Uri?
-        get() = selectedVideoUriState.value
-        set(value) { selectedVideoUriState.value = value }
-
-}

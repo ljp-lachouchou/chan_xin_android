@@ -1,8 +1,6 @@
 package com.software.jetpack.compose.chan_xin_android.ui
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
@@ -17,9 +15,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.software.jetpack.compose.chan_xin_android.R
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.VideoItem
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.VideoItem
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
-import com.software.jetpack.compose.chan_xin_android.util.StringUtil
 
 @Preview
 @Composable

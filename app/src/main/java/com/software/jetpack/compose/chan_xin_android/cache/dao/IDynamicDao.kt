@@ -10,6 +10,7 @@ import com.software.jetpack.compose.chan_xin_android.entity.CommentReply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendFeed
 import com.software.jetpack.compose.chan_xin_android.entity.Post
 import com.software.jetpack.compose.chan_xin_android.entity.PostLike
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface IDynamicDao {
@@ -47,5 +48,8 @@ interface IDynamicDao {
     suspend fun listPostLikesIdByPostId(postId:String):List<PostLike>
     @Insert(onConflict= OnConflictStrategy.REPLACE)
     suspend fun savePosts(list:List<Post>):List<Long>
+
+    @Query("SELECT * FROM post WHERE post_id = :postId")
+    fun getPostInfo(postId:String):Flow<Post>
 
 }

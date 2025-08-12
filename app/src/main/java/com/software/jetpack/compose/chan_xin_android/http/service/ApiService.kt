@@ -101,6 +101,9 @@ interface ApiService {
     @GET("/v1/dynamics/userLikedPost")
     suspend fun userLikedPost(@Query("userId") userId: String, @Query("postId") postId: String):ApiResult<UserLikedPostResp>
 
+    @GET("/v1/dynamics/getPostInfo")
+    suspend fun getPostInfo(@Query("postId") postId: String):ApiResult<Post>
+
     data class CreateCommentReq(val postId: String,val userId: String,val content:String)
     data class CreateCommentResp(val commentId: String)
     @POST("/v1/dynamics/createComment")

@@ -61,7 +61,15 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
     )
     private val _currentClickComment = MutableStateFlow(ApiService.ListCommentRespStruct())
     data class UidWithVersion(val uid: String, val version: Int)
-
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            val phone = AppGlobal.getUserPhone()
+            userDao.getUserInfoByPhone(phone).collect{
+                    user->
+                setCurrentUid(user.id)
+            }
+        }
+    }
     // 初始化 StateFlow
     private var version = 0
     private val _currentUid = MutableStateFlow(UidWithVersion("初始uid", version))
@@ -89,6 +97,8 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
     fun loadCurrentPost(post: String) {
         _currentPost.value = post
     }
+
+
     suspend fun setCover(userId:String = "22",coverUrl:String = "22") {
         try {
             apiService.setCover(ApiService.SetCoverRequest(userId,coverUrl))
@@ -140,6 +150,19 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
             false
         }
     }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val postInfo:StateFlow<Post> = _currentPost.flatMapLatest { pid->
+        if (AppGlobal.isNetworkValid()) {
+            flow {
+                emit(apiService.getPostInfo(pid).data ?: Post())
+            }
+        }else {
+            dynamicDao.getPostInfo(pid)
+        }
+    }.stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(5000), initialValue = Post())
+
+
 
     //获取此动态点赞ids
     fun listLikeByPostId(postId: String):StateFlow<List<String>> {
@@ -265,15 +288,11 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
             }
         }
     }
-    init {
-        viewModelScope.launch(Dispatchers.IO) {
-            val phone = AppGlobal.getUserPhone()
-            userDao.getUserInfoByPhone(phone).collect{
-                    user->
-                setCurrentUid(user.id)
-            }
-        }
-    }
+
+
+
+
+
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val pagingDataFlow: Flow<PagingData<Post>> = _currentUid.flatMapLatest { (uid,_) ->
