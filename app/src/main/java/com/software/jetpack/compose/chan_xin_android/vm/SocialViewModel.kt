@@ -55,7 +55,6 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
     private val _wantApplyFriend = MutableStateFlow(FriendApply())
     private val _currentFriendList = MutableStateFlow<List<Friend>>(emptyList())
     private val _clickFriend = MutableStateFlow(Friend())
-    private val _currentGroup = MutableStateFlow<List<Pair<String, List<Friend>>>>(emptyList())
     private val _currentSelectFriendList = MutableStateFlow<List<Friend>>(emptyList())
     private val _currentAbandonFriendList = MutableStateFlow<List<Friend>>(emptyList())
     private val apiService = HttpService.getService()
@@ -74,12 +73,15 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+    fun setCurrentUid(uid:String) {
+        socialRepository.setCurrentUid(uid)
+    }
     val currentSelectFriendList:StateFlow<List<Friend>>
         get() = _currentSelectFriendList
     val currentAbandonFriendList:StateFlow<List<Friend>>
         get() = _currentAbandonFriendList
     val currentGroup: StateFlow<List<Pair<String, List<Friend>>>>
-        get() = _currentGroup
+        get() = socialRepository.currentGroup
     val wantApplyFriend:StateFlow<FriendApply>
         get() = _wantApplyFriend
     val currentFriendList:StateFlow<List<Friend>>
@@ -93,7 +95,7 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
         _clickFriend.value = friend
     }
     fun loadCurrentGroup(group:List<Pair<String, List<Friend>>>) {
-        _currentGroup.value = group
+        socialRepository.setCurrentGroup(group)
     }
     fun loadCurrentFriendList(list:List<Friend>) {
         _currentFriendList.value = list
@@ -136,11 +138,8 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
                 apiService.updateFriendStatus(ApiService.UpdateFriendStatus(userId,friendId,friendStatus))
                 socialRepository.socialDao.updateFriendRelation(userId,friendId,friendStatus)
                 socialRepository.setCurrentUid(userId)
-                Log.e("SocialRepository_uid",friendCacheList.value.toString())
-                getGroup(friendCacheList.value) {
-                    loadCurrentGroup(it)
-                }
-                Log.e("SocialRepository_uid_getGroup",currentGroup.value.toString())
+                clearFriendInfoCache()
+                loadCurrentFriendList(friendCacheList.value)
             }catch (e:Exception) {
                 Log.e("fuck_SocialViewModel_updateStatus",e.toString())
                 throw Exception("更新失败")
@@ -206,7 +205,9 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
     }
 
     private val friendInfoCache = mutableMapOf<Pair<String, String>, StateFlow<Friend>>()
-
+    fun clearFriendInfoCache() {
+        friendInfoCache.clear()
+    }
     /**
      * 获取好友信息（返回StateFlow，避免UI抖动）
      * @param uid 当前用户ID

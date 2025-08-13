@@ -18,15 +18,19 @@ interface IDynamicDao {
     suspend fun saveFriendFeeds(list:List<FriendFeed>):List<Long>
     @Query("DELETE FROM friend_feed WHERE post_id = :postId")
     suspend fun removeFriendFeed(postId:String):Int
+    @Query("DELETE FROM post WHERE post_id = :postId")
+    suspend fun removePostByPostId(postId:String):Int
     @Query("DELETE FROM friend_feed")
     suspend fun removeAllFriendFeed()
+    @Query("DELETE FROM post")
+    suspend fun removeAllPosts()
     @Query("SELECT * FROM friend_feed WHERE meta LIKE :likeMatch or user_id = :userId ORDER BY create_time DESC")
     fun getFriendFeedsPaged(likeMatch: String,userId:String): PagingSource<Int, Post>
 
-    @Query("SELECT * FROM post WHERE user_id=:userId and is_pinned = 1 ORDER BY create_time DESC")
-    fun getIsPinSelfPosts(userId:String): PagingSource<Int, Post>
-    @Query("SELECT * FROM post WHERE user_id=:userId and is_pinned = 0 ORDER BY create_time DESC")
-    fun getNotPinSelfPosts(userId:String): PagingSource<Int, Post>
+    @Query("SELECT * FROM post WHERE user_id=:userId and is_pinned = 1 or meta LIKE :likeMatch ORDER BY create_time DESC")
+    fun getIsPinSelfPosts(userId:String,likeMatch:String): PagingSource<Int, Post>
+    @Query("SELECT * FROM post WHERE user_id=:userId and is_pinned = 0 or meta LIKE :likeMatch ORDER BY create_time DESC")
+    fun getNotPinSelfPosts(userId:String,likeMatch:String): PagingSource<Int, Post>
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun savePostLikes(postLikes:List<PostLike>):List<Long>
     @Insert(onConflict = OnConflictStrategy.REPLACE)

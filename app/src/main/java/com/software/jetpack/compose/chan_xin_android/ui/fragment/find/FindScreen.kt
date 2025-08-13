@@ -295,7 +295,7 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
     val clickComment by dvm.currentClickComment.collectAsState()
     val clickPostId by dvm.currentPostId.collectAsState()
     var find by remember { mutableStateOf("") }
-    Log.e("click_comment",posts.itemCount.toString())
+    Log.e("click_comment",clickComment.toString())
     Box {
         FriendCircleScreenUI(navController,sheetState,filePath,find,dvm,posts=posts,svm = svm,onFilePathChange = {
             filePath = it
@@ -316,9 +316,16 @@ fun FriendCircleScreen(navController:NavHostController,dvm:DynamicViewModel,svm:
                     TextButton(onClick = {
                         deleteModel = 0
                         scope.launch(Dispatchers.IO) {
-                            dvm.deletePost(userId = user.id,deletePostId)
-                            withContext(Dispatchers.Main) {
-                                dvm.setCurrentUid(user.id)
+                            try {
+                                dvm.deletePost(userId = user.id,deletePostId)
+                                withContext(Dispatchers.Main) {
+                                    dvm.setCurrentUid(user.id)
+                                    Toast.makeText(AppGlobal.getAppContext(),"删除成功",Toast.LENGTH_SHORT).show()
+                                }
+                            }catch (e:Exception) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(AppGlobal.getAppContext(),e.message,Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
 
@@ -374,7 +381,7 @@ fun PostItem(
     svm: SocialViewModel,
     dvm: DynamicViewModel,
     onDeleteComment:()->Unit,
-    onCommentReply:()->Unit,
+    onCommentReply:(ApiService.ListCommentRespStruct)->Unit,
     onDelete: (String) -> Unit,
     onContentClick: (String) -> Unit,
     onClick: (Uri) -> Unit
@@ -398,7 +405,6 @@ fun PostItem(
     val content by remember(post) { derivedStateOf { post.content } }
     val createTime by remember(post) { derivedStateOf { post.createTime } }
     val friend by svm.getFriendInfo(mid,postOwnerId).collectAsState(Friend())
-    Log.e("friend_ss",friend.toString())
     var isAtTargetPosition by remember { mutableStateOf(false) }
     var isLiked by remember { mutableStateOf(false) }
     Log.e("comments",comments.toString())
@@ -457,7 +463,7 @@ fun PostItem(
                     if (isLiked) { dvm.addLikeId(postId,mid) }else { dvm.removeLikeId(postId,mid) }
                 },onContentClick={onContentClick(postId)},onDelete={onDelete(postId)})
                 Wrapper {
-                    LikeAndCommentArea(mid,postId,comments,ids,svm = svm, onCommentReply = onCommentReply, onDelete = onDeleteComment, dvm = dvm)
+                    LikeAndCommentArea(mid,postId,comments,ids,svm = svm, onCommentReply = {onCommentReply(ApiService.ListCommentRespStruct())}, onDelete = {onDeleteComment()}, dvm = dvm)
                 }
             }
         }
@@ -502,19 +508,16 @@ fun BottomDynamicArea(modifier: Modifier=Modifier,postOwnerId:String,mid: String
     }
 }
 @Composable
-fun LikeAndCommentArea(mId:String, postId: String,comments: List<ApiService. ListCommentRespStruct>,ids:List<String>, svm:SocialViewModel,dvm:DynamicViewModel,uvm: UserViewmodel= hiltViewModel(),onDelete:()->Unit,onCommentReply:()->Unit) {
+fun LikeAndCommentArea(mId:String, postId: String,comments: List<ApiService. ListCommentRespStruct>,ids:List<String>, svm:SocialViewModel,dvm:DynamicViewModel,uvm: UserViewmodel= hiltViewModel(),onDelete:(ApiService. ListCommentRespStruct)->Unit,onCommentReply:(ApiService. ListCommentRespStruct)->Unit) {
 
     val user by uvm.myUser.collectAsState()
     val friendList by svm.friendCacheList.collectAsState()
     val friendMap by remember(friendList) {
         derivedStateOf { friendList.associateBy { it.userId } }
     }
-    val displayNames by remember(ids,friendMap) {
-        derivedStateOf { ids.map {
-            if (it == mId) user.nickname
-            else friendMap[it]?.displayName ?: "11"
-
-        } }
+    val displayNames = ids.map {
+        if (it == mId) user.nickname
+        else friendMap[it]?.displayName ?: "11"
     }
     Log.e("LikeAndCommentArea_comments",comments.toString())
     val like by remember(displayNames) { derivedStateOf { displayNames.joinToString(separator = ", ") } }
@@ -524,16 +527,15 @@ fun LikeAndCommentArea(mId:String, postId: String,comments: List<ApiService. Lis
             HorizontalDivider(modifier = Modifier.fillMaxWidth(), color = DividerColor, thickness = 0.5.dp)
             Column {
                 comments.forEach { comment->
-                    CommentItem(comment,user,svm) {
+                    CommentItem(comment,user,friendMap) {
                         dvm.loadClickComment(comment)
                         dvm.loadCurrentPost(postId)
-                        Log.e("长按评论","回复或者删除评论${comment.commentId}")
                         if (comment.userId==mId) {
                             //删除评论
-                            onDelete()
+                            onDelete(comment)
                         }else {
                             //回复别人
-                            onCommentReply()
+                            onCommentReply(comment)
                         }
                     }
                 }
@@ -543,23 +545,12 @@ fun LikeAndCommentArea(mId:String, postId: String,comments: List<ApiService. Lis
 }
 
 @Composable
-fun CommentItem(comment:ApiService.ListCommentRespStruct,user:User,svm: SocialViewModel,onclick:() -> Unit) {
-    val friendList by svm.friendCacheList.collectAsState()
-    val friendMap by remember(friendList) {
-        derivedStateOf { friendList.associateBy { it.userId } }
-    }
-    val fromDisplayName by remember(friendMap,comment) {
-        derivedStateOf {
-            if (comment.userId==user.id) user.nickname
-            else friendMap[comment.userId]?.displayName ?: ""
-        }
-    }
-    val toDisplayName by remember(friendMap,comment) {
-        derivedStateOf {
-            if (comment.targetUserId==user.id) user.nickname
-            else friendMap[comment.targetUserId]?.displayName ?: ""
-        }
-    }
+fun CommentItem(comment:ApiService.ListCommentRespStruct,user:User,friendMap: Map<String, Friend>,onclick:() -> Unit) {
+    val fromDisplayName = if (comment.userId==user.id) user.nickname
+    else friendMap[comment.userId]?.displayName ?: ""
+    Log.e("sdasdsa2d",friendMap.toString())
+    val toDisplayName  = if (comment.targetUserId==user.id) user.nickname
+    else friendMap[comment.targetUserId]?.displayName ?: ""
     Column(modifier = Modifier.clickable { onclick() }) {
         Wrapper {
             Text(buildAnnotatedString {
@@ -628,6 +619,11 @@ fun FriendCircleScreenUI(
     LaunchedEffect(posts.loadState) {
         state.isLoading = posts.loadState.refresh is LoadState.Loading
     }
+    LaunchedEffect(Unit) {
+        delay(10000)
+        state.isLoading = false
+    }
+    Log.e("isLoading",state.isLoading.toString())
     when {
         state.selectedVideoUri != null -> {
             Log.e("VideoPlayerScreen","VideoPlayerScreen")
@@ -766,6 +762,7 @@ private fun rememberFriendCircleState(navController: NavHostController,dvm: Dyna
     val scope = rememberCoroutineScope()
     val selectedUri = remember { mutableStateOf<Uri?>(null) }
     val selectedVideoUri = remember { mutableStateOf<Uri?>(null) }
+    val isLoadingState = remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         selectedUri.value = uri
         Log.e("state_select_uri_",selectedUri.toString())
@@ -798,7 +795,8 @@ private fun rememberFriendCircleState(navController: NavHostController,dvm: Dyna
             videoLauncher = videoLauncher,
             urisSizeState = urisSize,
             selectedVideoUriState = selectedVideoUri,
-            focusRequester = FocusRequester()
+            focusRequester = FocusRequester(),
+            isLoadingState = isLoadingState
         )
     }
 }

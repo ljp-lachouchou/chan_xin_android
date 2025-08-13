@@ -413,12 +413,15 @@ internal class FriendCircleState(
     val focusRequester: FocusRequester,
     private val selectedUriState: MutableState<Uri?>,
     private val urisSizeState: MutableIntState,
-    var isLoading: Boolean = false,
+    private val isLoadingState: MutableState<Boolean>,
     private val selectedVideoUriState: MutableState<Uri?>,
 ) {
     var selectedUri: Uri?
         get() = selectedUriState.value
         set(value) {selectedUriState.value = value}
+    var isLoading:Boolean
+        get() = isLoadingState.value
+        set(value) {isLoadingState.value = value}
     var urisSize: Int
         get() = urisSizeState.intValue
         set(value) { urisSizeState.intValue = value }

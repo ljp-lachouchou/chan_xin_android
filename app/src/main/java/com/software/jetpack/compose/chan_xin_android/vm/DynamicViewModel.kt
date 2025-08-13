@@ -137,8 +137,10 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
         try {
             apiService.deletePost(userId,postId)
             dynamicDao.removeFriendFeed(postId)
+            dynamicDao.removePostByPostId(postId)
         }catch (e:Exception) {
             Log.e("dynamic_delete_post_fuck",e.toString())
+            throw Exception("删除动态失败")
         }
     }
 
@@ -291,11 +293,9 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
 
 
 
-
-
-
     @OptIn(ExperimentalCoroutinesApi::class)
     val pagingDataFlow: Flow<PagingData<Post>> = _currentUid.flatMapLatest { (uid,_) ->
+        Log.e("ssdsadasd","sdsadasdasdas")
         Pager(
             config = pagingConfig,
             pagingSourceFactory = {
@@ -307,13 +307,13 @@ class DynamicViewModel @Inject constructor(private val userDao: IUserDao,private
     @OptIn(ExperimentalCoroutinesApi::class)
     val isPinedSelfFlow:Flow<PagingData<Post>> = _selfCircleUid.flatMapLatest { (uid,_) ->
         Pager(config = pagingConfig, pagingSourceFactory = {
-            if (AppGlobal.isNetworkValid()) SelfPostsPagingSource(userId = uid, isPin = true) else dynamicDao.getIsPinSelfPosts(uid)
+            if (AppGlobal.isNetworkValid()) SelfPostsPagingSource(userId = uid, isPin = true) else dynamicDao.getIsPinSelfPosts(uid,"%${_currentUid.value}%")
         }).flow.cachedIn(viewModelScope)
     }.catch { Log.e("DynamicViewModel_isPinedSelfFlow", it.toString()) }
     @OptIn(ExperimentalCoroutinesApi::class)
     val notPinedSelfFlow:Flow<PagingData<Post>> = _selfCircleUid.flatMapLatest { (uid,_) ->
         Pager(config = pagingConfig, pagingSourceFactory = {
-            if (AppGlobal.isNetworkValid()) SelfPostsPagingSource(userId = uid, isPin = false) else dynamicDao.getNotPinSelfPosts(uid)
+            if (AppGlobal.isNetworkValid()) SelfPostsPagingSource(userId = uid, isPin = false) else dynamicDao.getNotPinSelfPosts(uid,"%${_currentUid.value}%")
         }).flow.cachedIn(viewModelScope)
     }.catch { Log.e("DynamicViewModel_notPinedSelfFlow", it.toString()) }
 

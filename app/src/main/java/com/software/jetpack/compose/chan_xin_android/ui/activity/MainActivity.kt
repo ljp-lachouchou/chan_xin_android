@@ -28,6 +28,7 @@ import androidx.compose.material.Scaffold
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -44,6 +45,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.software.jetpack.compose.chan_xin_android.R
+import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AbandonFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendInfoScreen
@@ -191,7 +193,7 @@ fun MainActivityScreen() {
             MainFriendInfoDetailScreen(rootNavController,svm)
         }
         composable(MainActivityRouteEnum.MAIN_FRIEND_INFO_REMARK_SETTING.route) {
-            RemarkSettingScreen(rootNavController,svm)
+            RemarkSettingScreen(rootNavController,svm,dvm)
         }
         composable(MainActivityRouteEnum.CAN_DELETE_FRIEND.route) {
             CanDeleteFriendScreen(rootNavController,svm)

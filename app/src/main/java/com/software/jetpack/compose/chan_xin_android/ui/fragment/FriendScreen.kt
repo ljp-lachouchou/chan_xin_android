@@ -173,6 +173,7 @@ import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import com.software.jetpack.compose.chan_xin_android.util.PinAYinUtil
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
 import com.software.jetpack.compose.chan_xin_android.util.VibratorHelper
+import com.software.jetpack.compose.chan_xin_android.vm.DynamicViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 import kotlinx.coroutines.CoroutineScope
@@ -405,7 +406,7 @@ fun MainFriendInfoDetailScreen(navController: NavHostController, svm: SocialView
 }
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
-fun RemarkSettingScreen(navController: NavHostController,svm:SocialViewModel) {
+fun RemarkSettingScreen(navController: NavHostController,svm:SocialViewModel,dvm:DynamicViewModel) {
     val uvm:UserViewmodel = hiltViewModel()
     val user by uvm.myUser.collectAsState()
     val clickFriend by svm.clickFriend.collectAsState()
@@ -421,7 +422,6 @@ fun RemarkSettingScreen(navController: NavHostController,svm:SocialViewModel) {
                 BaseButton(onClick = {
                     scope.launch {
                         try {
-
                             svm.updateStatus(user.id,friend.userId, FriendStatus(false,false,false,remark))
                             svm.loadClickFriend(
                                 Friend(
@@ -437,8 +437,12 @@ fun RemarkSettingScreen(navController: NavHostController,svm:SocialViewModel) {
                                     )
                                 )
                             )
+                            dvm.setCurrentUid(user.id)
+                            svm.setCurrentUid(user.id)
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(AppGlobal.getAppContext(),"成功更新备注",Toast.LENGTH_SHORT).show()
+                                delay(100)
+                                navController.navigateUp()
                             }
                         }catch (e:Exception) {
                             withContext(Dispatchers.Main) {
@@ -446,7 +450,7 @@ fun RemarkSettingScreen(navController: NavHostController,svm:SocialViewModel) {
                             }
                         }
                     }
-                    navController.navigateUp()
+
                 }) {
                     BaseText("完成", color = Color.White)
                 }
@@ -1593,6 +1597,7 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
     val groupedFriends by svm.currentGroup.collectAsState()
     var showSidebar by remember { mutableStateOf(false) }
     val listCache by svm.friendCacheList.collectAsState()
+    Log.e("groupedFriends_groupedFriends",groupedFriends.toString())
     LaunchedEffect(user.id) {
         if (user.id != "") {
             withContext(Dispatchers.IO) {
@@ -2047,7 +2052,7 @@ fun HandleFriendApplyVerifyScreen(navController: NavHostController, uvm: UserVie
            scope.launch(Dispatchers.IO) {
                isLoading = true
                svm.handleFriendApply(wantApplyFriend.userId,user.id,true)
-               svm.updateFriendStatus(user.id,wantApplyFriend.userId, friendStatus = FriendStatus(false,false,false,remark))
+               svm.updateStatus(user.id,wantApplyFriend.userId, friendStatus = FriendStatus(false,false,false,remark))
                UserDatabase.getInstance().socialDao().saveFriendRelation(listOf(FriendRelation(0,user.id,wantApplyFriend.userId,
                    FriendStatus(false,false,false,remark)),FriendRelation(0,wantApplyFriend.userId,user.id,
                    FriendStatus())))
