@@ -1,7 +1,5 @@
 package com.software.jetpack.compose.chan_xin_android.ui.fragment.find
 
-import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.graphics.Bitmap
 import android.os.Build
 import android.util.Log
@@ -30,8 +28,6 @@ import androidx.compose.material.AlertDialog
 import androidx.compose.material.Icon
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -57,8 +53,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,7 +66,6 @@ import com.software.jetpack.compose.chan_xin_android.R
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPadding
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.Post
-import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
 import com.software.jetpack.compose.chan_xin_android.ext.toTime
 import com.software.jetpack.compose.chan_xin_android.http.service.ApiService
@@ -92,9 +85,8 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.SevenSelfImageUi
 import com.software.jetpack.compose.chan_xin_android.ui.base.SixSelfImageUi
 import com.software.jetpack.compose.chan_xin_android.ui.base.ThreeSelfImageUi
 import com.software.jetpack.compose.chan_xin_android.ui.base.TwoSelfImageUi
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.TopBarWithBack
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.TopBarWithBack
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
-import com.software.jetpack.compose.chan_xin_android.ui.theme.LittleTextColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
@@ -102,7 +94,6 @@ import com.software.jetpack.compose.chan_xin_android.vm.DynamicViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -114,7 +105,6 @@ fun SelfFriendCircleScreen(navController: NavHostController, svm: SocialViewMode
     val user by uvm.myUser.collectAsState()
     val friend by svm.clickFriend.collectAsState()
     val selfUid by remember(friend) { derivedStateOf { friend.userId } }
-    val isPinPosts = dvm.isPinedSelfFlow.collectAsLazyPagingItems()
     val notPinPosts = dvm.notPinedSelfFlow.collectAsLazyPagingItems()
     Log.e("notPinPosts_notPinPosts",notPinPosts.itemSnapshotList.items.toString())
     val nickName by remember(friend) { derivedStateOf { if (selfUid==user.id) user.nickname else friend.displayName } }
@@ -147,10 +137,6 @@ fun SelfFriendCircleScreen(navController: NavHostController, svm: SocialViewMode
                     tint = Color.White,
                     modifier = Modifier
                         .size(24.dp)
-                        .clickable(indication = null,
-                            interactionSource = remember { MutableInteractionSource() }) {
-                            navController.switchTab(MainActivityRouteEnum.MESSAGE_QUEUE_SCREEN.route)
-                        }
                 )
             }
         })
@@ -421,6 +407,7 @@ fun PostInfoDetail(post: Post,friend:Friend,modifier: Modifier=Modifier,focusReq
             .imePadding()) {
             UserAvatar(friend.displayAvatar, lifecycle) { onImageClick(friend.displayAvatar) }
             Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                BaseText(friend.displayName, fontWeight = FontWeight.Bold)
                 Text(post.content.text, color = Color.Black)
                 if (post.content.imageUrls != null) MediaContent(post.content,false,true,lifecycle,onImageClick={
                     onImageClick(it)
@@ -465,7 +452,4 @@ fun PostInfoDetail(post: Post,friend:Friend,modifier: Modifier=Modifier,focusReq
     }
 }
 
-@Composable
-fun PostInfoItem() {
 
-}

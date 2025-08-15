@@ -28,7 +28,6 @@ import androidx.compose.material.Scaffold
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -45,31 +44,31 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.software.jetpack.compose.chan_xin_android.R
-import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.AbandonFriendScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.AboutChanXinScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendInfoScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.ApplyFriendScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.CanDeleteFriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.AbandonFriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.user.AboutChanXinScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.ApplyFriendInfoScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.ApplyFriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.CanDeleteFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.CreatePostScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.FindMainScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.FriendCircleScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.FriendScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyInfoScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyListScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.HandleFriendApplyVerifyScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendInfoDetailScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendInfoScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.MainFriendSearchScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.RemarkSettingScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.SearchFriendScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.SelectFriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.FriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.HandleFriendApplyInfoScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.HandleFriendApplyListScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.HandleFriendApplyVerifyScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.MainFriendInfoDetailScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.MainFriendInfoScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.MainFriendSearchScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.RemarkSettingScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.SearchFriendScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.SelectFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.SelfFriendCircleScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.SettingScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoInFriendBySearchScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserInfoScreen
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.UserScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.user.SettingScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.UserInfoInFriendBySearchScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.user.UserInfoScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.user.UserScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.MainPostInfoScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.im.ConversationScreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.NavigationBarColor
 import com.software.jetpack.compose.chan_xin_android.vm.DynamicViewModel
@@ -139,8 +138,7 @@ enum class MainActivityRouteEnum(val route: String) {
     MAIN_FRIEND_INFO_REMARK_SETTING("main_friend_info_remark_setting"),
     CAN_DELETE_FRIEND("can_delete_friend"),
     SELF_FRIEND_CIRCLE_SCREEN("self_friend_circle_screen"),
-    MAIN_POST_INFO("main_post_info"),
-    MESSAGE_QUEUE_SCREEN("message_queue_screen")
+    MAIN_POST_INFO("main_post_info")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -158,9 +156,9 @@ fun MainActivityScreen() {
         composable(MainActivityRouteEnum.PARENT.route) { MainScreen(rootNavController,svm) }
 
         composable(MainActivityRouteEnum.ABOUT_IN_USER.route) { AboutChanXinScreen(rootNavController) }
-        composable(MainActivityRouteEnum.USER_INFO_IN_USER.route) {UserInfoScreen(navController = rootNavController,user=user)}
-        composable(MainActivityRouteEnum.SETTING_IN_USER.route) {SettingScreen(navController = rootNavController)}
-        composable(MainActivityRouteEnum.MAIN_FRIEND_INFO.route) {MainFriendInfoScreen(rootNavController,svm)}
+        composable(MainActivityRouteEnum.USER_INFO_IN_USER.route) { UserInfoScreen(navController = rootNavController,user=user) }
+        composable(MainActivityRouteEnum.SETTING_IN_USER.route) { SettingScreen(navController = rootNavController) }
+        composable(MainActivityRouteEnum.MAIN_FRIEND_INFO.route) { MainFriendInfoScreen(rootNavController,svm) }
         composable(MainActivityRouteEnum.FIND_USER_IN_FRIEND.route) { SearchFriendScreen(rootNavController,svm=svm) }
         composable(MainActivityRouteEnum.USER_INFO_IN_FRIEND_BY_SEARCH.route) { UserInfoInFriendBySearchScreen(rootNavController,svm=svm) }
         composable(MainActivityRouteEnum.APPLY_FRIEND_LIST.route) { ApplyFriendScreen(rootNavController,svm=svm) }
@@ -204,9 +202,6 @@ fun MainActivityScreen() {
         composable(MainActivityRouteEnum.MAIN_POST_INFO.route) {
             MainPostInfoScreen(rootNavController,dvm,svm)
         }
-        composable(MainActivityRouteEnum.MESSAGE_QUEUE_SCREEN.route) {
-
-        }
 
     }
 
@@ -224,12 +219,7 @@ fun MainScreen(rootController:NavHostController,svm:SocialViewModel) {
             enterTransition = { fadeIn(tween(300)) },
             exitTransition = { fadeOut(tween(300)) }) {
             composable(route = TabEnum.HOME.route) {
-                val activity = LocalContext.current as Activity
-                // 拦截返回键，直接退出应用
-                BackHandler(enabled = true) {
-                    activity.moveTaskToBack(true) // 切换到后台
-                }
-                Text("禅信")
+                ConversationScreen(rootController)
             }
             composable(route = TabEnum.SOCIAL.route) {
                 FriendScreen(

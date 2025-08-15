@@ -1,6 +1,7 @@
 package com.software.jetpack.compose.chan_xin_android.http.service
 
 import com.google.gson.annotations.SerializedName
+import com.software.jetpack.compose.chan_xin_android.entity.Conversation
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
@@ -135,6 +136,11 @@ interface ApiService {
 
     @GET("/v1/dynamics/listUserPosts")
     suspend fun listUserPosts(@Query("userId") userId:String,@Query("isPin") isPin:Boolean,@Query("pageSize") pageSize: Int, @Query("pageToken") pageToken: String): ApiResult<PostListResponse>
+
+
+    data class GetConversationsResp(val conversationList:Map<String,Conversation>)
+    @GET("/v1/im/getConversations")
+    suspend fun getConversations(@Query("userId") userId: String):ApiResult<GetConversationsResp>
 
 
 

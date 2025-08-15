@@ -1,4 +1,4 @@
-package com.software.jetpack.compose.chan_xin_android.ui.fragment
+package com.software.jetpack.compose.chan_xin_android.ui.fragment.friend
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -161,6 +161,8 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.ModalBottomSheetVal
 import com.software.jetpack.compose.chan_xin_android.ui.base.RefreshLazyColumn
 import com.software.jetpack.compose.chan_xin_android.ui.base.rememberModalBottomSheetState
 import com.software.jetpack.compose.chan_xin_android.ui.base.selectCharRows
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.user.UserInfoScreenItem
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.user.UserSimpleItem
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.DisplayImagesScreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.ChatGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
@@ -197,11 +199,13 @@ fun FriendScreen(navController:NavHostController, uvm:UserViewmodel= hiltViewMod
     }
     val thisNavController = rememberNavController()
     NavHost(navController = thisNavController, startDestination = FriendScreenRouteEnum.PARENT.route) {
-        composable(FriendScreenRouteEnum.PARENT.route) {MainFriendScreen(
+        composable(FriendScreenRouteEnum.PARENT.route) {
+            MainFriendScreen(
             navController,
             uvm = uvm,
             svm = svm
-        )}
+        )
+        }
     }
 }
 
@@ -717,7 +721,7 @@ fun ApplyFriendInfoScreen(navController: NavHostController,svm:SocialViewModel= 
         else->""
     }
     var selectedImage by remember { mutableStateOf(false) }
-    Scaffold(topBar = {TopBarWithBack(navController)}) {
+    Scaffold(topBar = { TopBarWithBack(navController) }) {
         CanLookImage(isSelected = selectedImage, data = if (wantApplyFriend.avatar != "") wantApplyFriend.avatar else R.drawable.default_avatar, onChange = {selectedImage = false}) {
 
             BaseBox(modifier = Modifier
@@ -1688,7 +1692,7 @@ data class CanSelectedState(val canSelected: Boolean=false,val list: List<Friend
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MainFriendListScreen(navController: NavHostController, groupedFriends:List<Pair<String, List<Friend>>>, showSidebar:Boolean, canSelectedState: CanSelectedState= CanSelectedState(), topBar:@Composable () -> Unit = {}, preContent: LazyListScope.() -> Unit={}, sufContent:LazyListScope.()->Unit={}, onClick: (Boolean, Friend) -> Unit) {
+fun MainFriendListScreen(navController: NavHostController, groupedFriends:List<Pair<String, List<Friend>>>, showSidebar:Boolean, canSelectedState: CanSelectedState = CanSelectedState(), topBar:@Composable () -> Unit = {}, preContent: LazyListScope.() -> Unit={}, sufContent:LazyListScope.()->Unit={}, onClick: (Boolean, Friend) -> Unit) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1850,7 +1854,7 @@ data class FriendItem(
 )
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
-fun BaseApplyScreen(navController: NavHostController,title:String,action:@Composable () -> Unit={},onClick: (FriendItem) -> Unit,list:List<FriendApply>,friendItems:List<FriendItem>) {
+fun BaseApplyScreen(navController: NavHostController, title:String, action:@Composable () -> Unit={}, onClick: (FriendItem) -> Unit, list:List<FriendApply>, friendItems:List<FriendItem>) {
     var isLoading by remember { mutableStateOf(true) }
     Scaffold(topBar = {
         TopBarWithBack(navController, title) {
@@ -1959,7 +1963,7 @@ fun HandleFriendApplyInfoScreen(navController: NavHostController,svm:SocialViewM
     val enabled by remember(wantApplyFriend.status) { derivedStateOf { wantApplyFriend.status==0 } }
     var selectedImage by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    Scaffold(topBar = {TopBarWithBack(navController)}) {
+    Scaffold(topBar = { TopBarWithBack(navController) }) {
         CanLookImage(isSelected = selectedImage, data = if (wantApplyFriend.avatar != "") wantApplyFriend.avatar else R.drawable.default_avatar, onChange = {selectedImage = false}) {
             BaseBox(modifier = Modifier
                 .fillMaxSize()
@@ -2110,7 +2114,7 @@ fun HandleFriendApplyVerifyUISheetContent(greetMsg:String,sheetState:ModalBottom
 @Composable
 fun HandleFriendApplyVerifyUI(scope:CoroutineScope,navController:NavHostController,remark:String,isFocused:Boolean,wantApplyFriend:FriendApply,onValueChange:(String)->Unit, onFocusChanged: (FocusState) -> Unit,onClick: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(ModalBottomSheetValue.Hidden)
-    ModalBottomSheetLayout(sheetContent = {HandleFriendApplyVerifyUISheetContent(wantApplyFriend.greetMsg,sheetState,scope,onValueChange=onValueChange)},sheetShape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp), sheetState = sheetState) {
+    ModalBottomSheetLayout(sheetContent = { HandleFriendApplyVerifyUISheetContent(wantApplyFriend.greetMsg,sheetState,scope,onValueChange=onValueChange) },sheetShape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp), sheetState = sheetState) {
         Scaffold(topBar = { TopBarWithBack(navController,"通过好友验证", action = { Text("") }) }) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier
                 .fillMaxSize()

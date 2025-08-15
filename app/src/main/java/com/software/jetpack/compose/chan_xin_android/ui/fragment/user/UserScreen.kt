@@ -1,4 +1,4 @@
-package com.software.jetpack.compose.chan_xin_android.ui.fragment
+package com.software.jetpack.compose.chan_xin_android.ui.fragment.user
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,7 +45,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.TextButton
@@ -75,7 +73,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -107,7 +104,6 @@ import com.software.jetpack.compose.chan_xin_android.ui.activity.AppTopBar
 import com.software.jetpack.compose.chan_xin_android.ui.activity.AppTopBarBack
 import com.software.jetpack.compose.chan_xin_android.ui.activity.IconButton
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityRouteEnum
-import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityScreen
 import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseBox
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseButton
@@ -115,7 +111,6 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseTextField
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
 import com.software.jetpack.compose.chan_xin_android.ui.camera.Camera
-import com.software.jetpack.compose.chan_xin_android.ui.theme.ChatGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.RightArrowColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
@@ -130,7 +125,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.internal.wait
 import retrofit2.HttpException
 import java.lang.Exception
 
@@ -148,8 +142,8 @@ fun UserScreen(navController: NavHostController) {
 fun UserInfoScreen(navController: NavHostController,user: User,vm:UserViewmodel = hiltViewModel<UserViewmodel>()) {
     val thisNavController = rememberNavController()
     NavHost(navController = thisNavController, startDestination = UserInfoScreenRouteEnum.PARENT.route) {
-        composable(UserInfoScreenRouteEnum.PARENT.route) {InfoMainScreen(navController,user,thisNavController)}
-        composable(UserInfoScreenRouteEnum.AVATAR.route) {UpdateAvatarScreen(thisNavController,user,vm)}
+        composable(UserInfoScreenRouteEnum.PARENT.route) { InfoMainScreen(navController,user,thisNavController) }
+        composable(UserInfoScreenRouteEnum.AVATAR.route) { UpdateAvatarScreen(thisNavController,user,vm) }
         composable(UserInfoScreenRouteEnum.NICKNAME.route) { UpdateNicknameScreen(thisNavController,user,vm) }
         composable(UserInfoScreenRouteEnum.SEX.route) { UpdateSexScreen(thisNavController,user,vm) }
     }
@@ -171,7 +165,7 @@ fun UpdateAvatarScreen(navController: NavHostController,user:User,vm:UserViewmod
         selectedUri = uri
     }
     var isLoading  by remember { mutableStateOf(false) }
-    ModalBottomSheetLayout(sheetContent = {AvatarMoreSheet(launcher,scope,bottomSheetState=sheetState, user = user)},sheetState = sheetState, sheetShape = RoundedCornerShape(topEnd = 10.dp, topStart = 10.dp)) {
+    ModalBottomSheetLayout(sheetContent = { AvatarMoreSheet(launcher,scope,bottomSheetState=sheetState, user = user) },sheetState = sheetState, sheetShape = RoundedCornerShape(topEnd = 10.dp, topStart = 10.dp)) {
         Scaffold(topBar = { AppTopBar(title = "头像", actions = {
             IconButton(onClick = {
                 scope.launch { sheetState.show() }

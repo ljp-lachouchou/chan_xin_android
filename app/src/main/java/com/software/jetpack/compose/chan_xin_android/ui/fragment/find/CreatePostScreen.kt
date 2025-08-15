@@ -88,8 +88,8 @@ import com.software.jetpack.compose.chan_xin_android.ui.base.CustomTextField
 import com.software.jetpack.compose.chan_xin_android.ui.base.LoadingDialog
 import com.software.jetpack.compose.chan_xin_android.ui.base.PlayVideo
 import com.software.jetpack.compose.chan_xin_android.ui.base.extraVideoFrame
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.MyTopBar
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.SexSingleSelect
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.MyTopBar
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.user.SexSingleSelect
 import com.software.jetpack.compose.chan_xin_android.ui.theme.DividerColor
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.PlaceholderColor

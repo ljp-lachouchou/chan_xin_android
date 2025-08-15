@@ -1,26 +1,22 @@
 package com.software.jetpack.compose.chan_xin_android.repo
 
 import android.util.Log
-import androidx.paging.LOGGER
 import com.software.jetpack.compose.chan_xin_android.cache.dao.ISocialDao
 import com.software.jetpack.compose.chan_xin_android.cache.dao.IUserDao
-import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
-import com.software.jetpack.compose.chan_xin_android.ui.fragment.getGroup
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.getGroup
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
