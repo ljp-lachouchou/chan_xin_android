@@ -871,8 +871,9 @@ fun UserInfoInFriendBySearchScreen(navController: NavHostController, uvm: UserVi
 }
 
 @Composable
-fun TopBarWithBack(navController: NavHostController,title :String="",backTint:Color=Color.Black,color: Color=Color.White,action:@Composable ()->Unit = {}) {
+fun TopBarWithBack(navController: NavHostController,title :String="",isBold:Boolean = false,backTint:Color=Color.Black,color: Color=Color.White,action:@Composable ()->Unit = {}) {
     val padding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val fontWeight:FontWeight? = if (isBold) FontWeight.Bold else null
     Box(modifier = Modifier
         .fillMaxWidth()
         .padding(top = padding)
@@ -888,7 +889,7 @@ fun TopBarWithBack(navController: NavHostController,title :String="",backTint:Co
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {navController.navigateUp()}, tint = backTint)
-            BaseText(text = title)
+            BaseText(text = title, fontWeight = fontWeight)
             action()
         }
 

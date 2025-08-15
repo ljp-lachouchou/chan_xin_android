@@ -97,6 +97,8 @@ import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultPadding
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultRoundCircleShapeDp
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserPadding
 import com.software.jetpack.compose.chan_xin_android.defaultValue.DefaultUserScreenItemDp
+import com.software.jetpack.compose.chan_xin_android.entity.Friend
+import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.getImageBitmapByUrl
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
@@ -119,6 +121,7 @@ import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 import com.software.jetpack.compose.chan_xin_android.util.Oss
 import com.software.jetpack.compose.chan_xin_android.util.PreferencesFileName
 import com.software.jetpack.compose.chan_xin_android.util.StringUtil
+import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -129,13 +132,13 @@ import retrofit2.HttpException
 import java.lang.Exception
 
 @Composable
-fun UserScreen(navController: NavHostController) {
+fun UserScreen(navController: NavHostController,svm: SocialViewModel) {
     val activity = LocalContext.current as Activity
     // 拦截返回键，直接退出应用
     BackHandler(enabled = true) {
         activity.moveTaskToBack(true) // 切换到后台
     }
-    ParentScreen(navController)
+    ParentScreen(navController, svm = svm)
 }
 
 @Composable
@@ -516,7 +519,7 @@ fun SettingScreen(navController:NavHostController) {
 }
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
-fun ParentScreen(navController: NavHostController, vm: UserViewmodel= hiltViewModel()) {
+fun ParentScreen(navController: NavHostController,svm:SocialViewModel, vm: UserViewmodel= hiltViewModel()) {
     val user by vm.myUser.collectAsState()
     Log.e("UserScreen",vm.myUser.value.toString())
     val sexPainter = when(user.sex.toInt()) {
@@ -539,7 +542,10 @@ fun ParentScreen(navController: NavHostController, vm: UserViewmodel= hiltViewMo
                     .fillMaxWidth()
                     .background(SurfaceColor))
                 UserScreenItem(imageVector = painterResource(R.drawable.friend_circle), label = "朋友圈") {
-                    //todo:朋友圈
+                    svm.loadClickFriend(Friend(user.id,user.nickname,user.avatar,user.sex.toInt(),
+                        FriendStatus()
+                    ))
+                    navController.switchTab(MainActivityRouteEnum.SELF_FRIEND_CIRCLE_SCREEN.route)
                 }
                 Spacer(modifier = Modifier
                     .height(40.dp)

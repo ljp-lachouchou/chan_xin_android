@@ -232,7 +232,7 @@ fun MainScreen(rootController:NavHostController,svm:SocialViewModel,ivm:ImViewMo
             enterTransition = { fadeIn(tween(300)) },
             exitTransition = { fadeOut(tween(300)) }) {
             composable(route = TabEnum.HOME.route) {
-                ConversationScreen(rootController, ivm = ivm)
+                ConversationScreen(rootController, ivm = ivm,svm)
             }
             composable(route = TabEnum.SOCIAL.route) {
                 FriendScreen(
@@ -244,7 +244,7 @@ fun MainScreen(rootController:NavHostController,svm:SocialViewModel,ivm:ImViewMo
             }
             composable(route = TabEnum.USER.route) {
                 UserScreen(
-                    navController = rootController
+                    navController = rootController,svm
                 )
             }
         }

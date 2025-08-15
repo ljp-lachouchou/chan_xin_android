@@ -1,6 +1,7 @@
 package com.software.jetpack.compose.chan_xin_android.http.service
 
 import com.google.gson.annotations.SerializedName
+import com.software.jetpack.compose.chan_xin_android.entity.ChatLog
 import com.software.jetpack.compose.chan_xin_android.entity.Conversation
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
@@ -141,6 +142,16 @@ interface ApiService {
     data class GetConversationsResp(val conversationList:Map<String,Conversation>)
     @GET("/v1/im/getConversations")
     suspend fun getConversations(@Query("userId") userId: String):ApiResult<GetConversationsResp>
+
+    data class GetChatLogResp(val list:List<ChatLog>)
+    @GET("/v1/im/getChatLog")
+    suspend fun getChatLog(
+        @Query("startSendTime") startSendTime: Long,
+        @Query("endSendTime") endSendTime: Long,
+        @Query("count") count: Int,
+        @Query("conversationId") conversationId: String,
+        @Query("msgId") msgId: String
+    ):ApiResult<GetChatLogResp>
 
 
 

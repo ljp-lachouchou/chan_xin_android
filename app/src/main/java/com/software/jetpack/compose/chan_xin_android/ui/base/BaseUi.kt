@@ -535,7 +535,7 @@ fun ChatBubble(
     bubbleColor: Color = ChatGreen,
     textStyle: TextStyle = TextStyle(
         fontSize = 16.sp,
-        color = if (direction == BubbleDirection.LEFT) Color.Black else Color.Black
+        color = Color.Black
     )
 ) {
     val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
