@@ -39,7 +39,7 @@ class ImRepository @Inject constructor(private val userDao: IUserDao){
                     val result = apiService.getConversations(userId).data
                     emit(result?.conversationList ?: emptyMap())
                 }catch (e:Exception) {
-                    android.util.Log.e("ImRepository_getConversations",e.toString())
+                    Log.e("ImRepository_getConversations",e.toString())
                     emit(emptyMap())
                 }
             }

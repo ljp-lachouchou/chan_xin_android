@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter
 
 @RequiresApi(Build.VERSION_CODES.O)
 fun Long.toTime(pattern: String = "yyyy-MM-dd HH:mm:ss"):String {
+    if (this == 0L) return ""
     val instant = Instant.ofEpochSecond(this)
     val localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
     val formatter = DateTimeFormatter.ofPattern(pattern)

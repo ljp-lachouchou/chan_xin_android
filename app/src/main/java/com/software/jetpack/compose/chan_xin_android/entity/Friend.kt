@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
 import com.software.jetpack.compose.chan_xin_android.R
 
-@Entity("friend_relation")
+@Entity("friend_relation", indices = [Index("user_id","friend_id", unique = true)])
 data class FriendRelation(
     @PrimaryKey(true) val id: Long,
     @ColumnInfo("user_id") val userId: String,

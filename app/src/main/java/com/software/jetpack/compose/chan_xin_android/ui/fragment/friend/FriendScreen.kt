@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +37,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -211,7 +214,6 @@ fun FriendScreen(navController:NavHostController, uvm:UserViewmodel= hiltViewMod
 
 
 //好友详情页
-@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel) {
     val friend by svm.clickFriend.collectAsState()
@@ -241,9 +243,10 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel) {
                             })
                     }
                 })
-        }) {
+        }) {padding->
             BaseBox(modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
             ) {
                 Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(modifier = Modifier
@@ -358,7 +361,6 @@ fun MainFriendInfoScreen(navController: NavHostController,svm:SocialViewModel) {
     }
 }
 
-@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun MainFriendInfoDetailScreen(navController: NavHostController, svm: SocialViewModel) {
     val uvm:UserViewmodel = hiltViewModel()
@@ -375,10 +377,11 @@ fun MainFriendInfoDetailScreen(navController: NavHostController, svm: SocialView
                 color = SurfaceColor
             )
         }
-    ) {
+    ) {padding->
         BaseBox(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .background(SurfaceColor)
         ) {
             Column {
@@ -408,7 +411,6 @@ fun MainFriendInfoDetailScreen(navController: NavHostController, svm: SocialView
         }
     }
 }
-@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun RemarkSettingScreen(navController: NavHostController,svm:SocialViewModel,dvm:DynamicViewModel) {
     val uvm:UserViewmodel = hiltViewModel()
@@ -460,8 +462,8 @@ fun RemarkSettingScreen(navController: NavHostController,svm:SocialViewModel,dvm
                 }
             },
             defaultColor = Color.White
-        ) }) {
-        BaseBox {
+        ) }) {padding->
+        BaseBox(modifier = Modifier.padding(padding)) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 BaseText("设置备注", fontWeight = FontWeight.Bold, fontSize = 24.sp)
                 ItemWithTitle(title = "备注名") {
@@ -573,7 +575,6 @@ fun CanDeleteFriendSheet(
 
 }
 @OptIn(ExperimentalMaterialApi::class)
-@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun CanDeleteFriendScreen(navController: NavHostController,svm: SocialViewModel) {
     val uvm:UserViewmodel = hiltViewModel()
@@ -614,9 +615,10 @@ fun CanDeleteFriendScreen(navController: NavHostController,svm: SocialViewModel)
                     color = SurfaceColor
                 )
             }
-        ) {
+        ) {padding->
             BaseBox(modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .background(color = SurfaceColor)) {
                 Column {
                     UserInfoScreenItem("设置备注", onClick = {
@@ -704,7 +706,6 @@ fun ItemWithTitle(modifier: Modifier=Modifier,title: String,content:@Composable 
 
 
 //申请好友详情
-@SuppressLint("UnusedMaterialScaffoldPaddingParameter", "StateFlowValueCalledInComposition")
 @Composable
 fun ApplyFriendInfoScreen(navController: NavHostController,svm:SocialViewModel= hiltViewModel()) {
     val wantApplyFriend by svm.wantApplyFriend.collectAsState()
@@ -721,11 +722,11 @@ fun ApplyFriendInfoScreen(navController: NavHostController,svm:SocialViewModel= 
         else->""
     }
     var selectedImage by remember { mutableStateOf(false) }
-    Scaffold(topBar = { TopBarWithBack(navController) }) {
+    Scaffold(topBar = { TopBarWithBack(navController) }) {padding->
         CanLookImage(isSelected = selectedImage, data = if (wantApplyFriend.avatar != "") wantApplyFriend.avatar else R.drawable.default_avatar, onChange = {selectedImage = false}) {
-
             BaseBox(modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .background(color = SurfaceColor)) {
                 Column(){
                     UserSimpleItem(
@@ -871,8 +872,10 @@ fun UserInfoInFriendBySearchScreen(navController: NavHostController, uvm: UserVi
 
 @Composable
 fun TopBarWithBack(navController: NavHostController,title :String="",backTint:Color=Color.Black,color: Color=Color.White,action:@Composable ()->Unit = {}) {
+    val padding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     Box(modifier = Modifier
         .fillMaxWidth()
+        .padding(top = padding)
         .background(color), contentAlignment = Alignment.Center) {
         Row(modifier = Modifier
             .fillMaxWidth()
@@ -898,8 +901,10 @@ fun MyTopBar(
     defaultColor: Color = SurfaceColor,
     action: @Composable () -> Unit = { BaseText("你好", color = SurfaceColor) }
 ) {
+    val padding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     Box(modifier = Modifier
         .fillMaxWidth()
+        .padding(top = padding)
         .background(defaultColor), contentAlignment = Alignment.Center) {
         Row(modifier = Modifier
             .fillMaxWidth()
@@ -1610,6 +1615,7 @@ fun MainFriendScreen(navController: NavHostController, uvm: UserViewmodel, svm: 
                 }else {
                     listCache
                 }
+                svm.saveAllFriend(originalList)
                 svm.loadCurrentFriendList(originalList)
                 if (originalList.sortedBy { it.userId }==listCache.sortedBy { it.userId }) {
                     if (groupedFriends.isEmpty()) {

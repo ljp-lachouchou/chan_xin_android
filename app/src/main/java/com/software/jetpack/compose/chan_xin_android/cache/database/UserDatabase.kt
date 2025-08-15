@@ -23,7 +23,7 @@ import com.software.jetpack.compose.chan_xin_android.entity.PostLike
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 internal const val DATABASE_NAME = "chan_xin.db"
-@Database(entities = [User::class,FriendApply::class,FriendRelation::class,Post::class,FriendFeed::class,PostLike::class,CommentReply::class], version = 9, exportSchema = true)
+@Database(entities = [User::class,FriendApply::class,FriendRelation::class,Post::class,FriendFeed::class,PostLike::class,CommentReply::class], version = 10, exportSchema = true)
 @TypeConverters(
     FriendStatusConverter::class,
     FriendStatusInfoConverter::class,
@@ -153,6 +153,16 @@ abstract class UserDatabase:RoomDatabase() {
                         )
                     """.trimIndent())
                 }
+            }
+            val migration9To10 = object:Migration(9,10) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        DELETE FROM friend_relation;
+                    """.trimIndent())
+                    db.execSQL("""
+                        CREATE UNIQUE INDEX IF NOT EXISTS index_friend_relation_userId_and_friendId ON friend_relation(user_id,friend_id)
+                    """.trimIndent())
+                }
 
             }
             return Room.databaseBuilder(
@@ -167,7 +177,8 @@ abstract class UserDatabase:RoomDatabase() {
                     migration5To6,
                     migration6To7,
                     migration7To8,
-                    migration8To9
+                    migration8To9,
+                    migration9To10
                 )
                 .build()
         }

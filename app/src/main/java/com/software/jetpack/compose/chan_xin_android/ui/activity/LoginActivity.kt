@@ -22,11 +22,14 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -631,7 +634,8 @@ fun sexSingleSelection(modifier: Modifier = Modifier
 }
 @Composable
 fun AppTopBar(title:String = "",navigationIcon: @Composable () -> Unit,actions: @Composable RowScope.() -> Unit = {},backgroundColor: Color,titleColor:Color) {
-    TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = titleColor) }, navigationIcon = navigationIcon, actions =actions,backgroundColor = backgroundColor)
+    val padding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    TopAppBar(modifier = Modifier.padding(top = padding),title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = titleColor) }, navigationIcon = navigationIcon, actions =actions,backgroundColor = backgroundColor)
 }
 @Composable
 fun AppTopBar(title:String = "",navigationIcon: @Composable () -> Unit,actions: @Composable RowScope.() -> Unit = {},backgroundColor: Color) {
@@ -639,11 +643,13 @@ fun AppTopBar(title:String = "",navigationIcon: @Composable () -> Unit,actions: 
 }
 @Composable
 fun AppTopBar(title:String = "",navigationIcon: @Composable () -> Unit,actions: @Composable RowScope.() -> Unit = {}) {
-    TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = navigationIcon, actions =actions,backgroundColor = SurfaceColor)
+    val padding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    TopAppBar(modifier = Modifier.padding(top = padding),title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = navigationIcon, actions =actions,backgroundColor = SurfaceColor)
 }
 @Composable
 fun AppTopBar(title:String = "",actions: @Composable RowScope.() -> Unit = {},navController:NavHostController) {
-    TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = {
+    val padding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    TopAppBar(modifier = Modifier.padding(top = padding),title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = {
         IconButton(onClick = {navController.switchTab("parent")}) {
             Icon(Icons.Filled.Close, contentDescription = null)
         }
@@ -673,7 +679,8 @@ fun AppTopBar(title:String = "",navController:NavHostController,route:String) {
 }
 @Composable
 fun AppTopBarBack(title:String = "",navController:NavHostController) {
-    TopAppBar(title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = {
+    val padding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    TopAppBar(modifier = Modifier.padding(top = padding),title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, navigationIcon = {
         IconButton(onClick = {navController.navigateUp()}) {
             Icon(Icons.Filled.Close, contentDescription = null)
         }

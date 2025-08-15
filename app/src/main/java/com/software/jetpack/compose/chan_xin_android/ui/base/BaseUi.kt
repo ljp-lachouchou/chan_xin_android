@@ -600,13 +600,14 @@ fun BaseScreenItem(
     onClick: () -> Unit,
     tailContent: (@Composable () -> Unit)? = null,
     backgroundColor:Color = Color.White,
+    height:Dp = DefaultUserScreenItemDp,
     indication: Indication?= LocalIndication.current,
     interactionSource: MutableInteractionSource= remember { MutableInteractionSource() },
     content: @Composable () -> Unit
 ) {
     Box(modifier = Modifier
         .fillMaxWidth()
-        .height(DefaultUserScreenItemDp)
+        .height(height)
         .background(backgroundColor)
         .clickable(
             indication = indication,

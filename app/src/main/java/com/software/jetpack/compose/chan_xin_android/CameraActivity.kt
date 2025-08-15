@@ -41,11 +41,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
@@ -269,7 +273,9 @@ fun CameraX(cameraModel:Int,vm:UserViewmodel= hiltViewModel()) {
             }
         },ContextCompat.getMainExecutor(context))
     }
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    val paddingTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val paddingBottom = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+    Box(modifier = Modifier.fillMaxSize().padding(top = paddingTop, bottom = paddingBottom).background(Color.Black)) {
         Column {
             if (uri != null || videoUri != null) {
                 Box(modifier = Modifier.fillMaxWidth().weight(0.8f).background(Color.Gray.copy(0.4f)), contentAlignment = Alignment.Center) {

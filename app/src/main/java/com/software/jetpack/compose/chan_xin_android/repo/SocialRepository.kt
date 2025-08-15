@@ -73,4 +73,6 @@ class SocialRepository @Inject constructor(val socialDao: ISocialDao,private val
         version = (version + 1) % 10
         _currentUid.value = UserIdWithVersion(uid,version)
     }
+    val currentUid:String
+        get() = _currentUid.value.userId
 }

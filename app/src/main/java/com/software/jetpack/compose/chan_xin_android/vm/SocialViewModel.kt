@@ -10,6 +10,7 @@ import com.software.jetpack.compose.chan_xin_android.cache.dao.IUserDao
 import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.entity.Friend
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
+import com.software.jetpack.compose.chan_xin_android.entity.FriendRelation
 import com.software.jetpack.compose.chan_xin_android.entity.FriendStatus
 import com.software.jetpack.compose.chan_xin_android.http.entity.ApiResult
 import com.software.jetpack.compose.chan_xin_android.http.service.ApiService
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import javax.inject.Inject
@@ -87,6 +89,18 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
     }
     fun loadCurrentAbandonFriendList(list:List<Friend>) {
         _currentAbandonFriendList.value = list
+    }
+    fun saveAllFriend(list: List<Friend>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            socialRepository.socialDao.saveFriendRelation(list.map {
+                FriendRelation(
+                    0,
+                    socialRepository.currentUid,
+                    it.userId,
+                    it.friendStatus
+                )
+            })
+        }
     }
     suspend fun applyFriend(userId:String="2",targetId:String="1",greetMsg:String="1"): FriendApplyResponse? {
         val applyFriend =

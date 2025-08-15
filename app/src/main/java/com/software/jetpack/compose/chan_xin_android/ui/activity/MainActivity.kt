@@ -10,8 +10,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -28,9 +30,11 @@ import androidx.compose.material.Scaffold
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -44,6 +48,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.software.jetpack.compose.chan_xin_android.R
+import com.software.jetpack.compose.chan_xin_android.cache.database.UserDatabase
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.AbandonFriendScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.user.AboutChanXinScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.ApplyFriendInfoScreen
@@ -68,10 +73,12 @@ import com.software.jetpack.compose.chan_xin_android.ui.fragment.friend.UserInfo
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.user.UserInfoScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.user.UserScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.find.MainPostInfoScreen
+import com.software.jetpack.compose.chan_xin_android.ui.fragment.im.ChatScreen
 import com.software.jetpack.compose.chan_xin_android.ui.fragment.im.ConversationScreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.IconGreen
 import com.software.jetpack.compose.chan_xin_android.ui.theme.NavigationBarColor
 import com.software.jetpack.compose.chan_xin_android.vm.DynamicViewModel
+import com.software.jetpack.compose.chan_xin_android.vm.ImViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 
@@ -83,7 +90,7 @@ enum class TabEnum(val label:String,val resId:Int,val route:String) {
 }
 val FragmentModifier = Modifier.padding(bottom = 60.dp)
 @Composable
-fun BottomNavBar(navController: NavHostController) {
+fun BottomNavBar(navController: NavHostController,modifier: Modifier=Modifier) {
     var selectedTab by remember {
         mutableIntStateOf(0)
     }
@@ -99,6 +106,7 @@ fun BottomNavBar(navController: NavHostController) {
         activity.moveTaskToBack(true)
     }
     BottomNavigation(
+        modifier = modifier,
         backgroundColor = NavigationBarColor,
         elevation = 0.dp
     ) {
@@ -138,7 +146,8 @@ enum class MainActivityRouteEnum(val route: String) {
     MAIN_FRIEND_INFO_REMARK_SETTING("main_friend_info_remark_setting"),
     CAN_DELETE_FRIEND("can_delete_friend"),
     SELF_FRIEND_CIRCLE_SCREEN("self_friend_circle_screen"),
-    MAIN_POST_INFO("main_post_info")
+    MAIN_POST_INFO("main_post_info"),
+    CHAT_SCREEN("chat_screen")
 }
 @SuppressLint("CoroutineCreationDuringComposition")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -149,11 +158,12 @@ fun MainActivityScreen() {
     val svm:SocialViewModel = hiltViewModel()
     val dvm:DynamicViewModel = hiltViewModel()
     val user by vm.myUser.collectAsState()
+    val ivm:ImViewModel = hiltViewModel()
     NavHost(navController = rootNavController,
         startDestination = MainActivityRouteEnum.PARENT.route,
         enterTransition = { fadeIn(tween(700)) },
         exitTransition = { fadeOut(tween(200)) }) {
-        composable(MainActivityRouteEnum.PARENT.route) { MainScreen(rootNavController,svm) }
+        composable(MainActivityRouteEnum.PARENT.route) { MainScreen(rootNavController,svm,ivm) }
 
         composable(MainActivityRouteEnum.ABOUT_IN_USER.route) { AboutChanXinScreen(rootNavController) }
         composable(MainActivityRouteEnum.USER_INFO_IN_USER.route) { UserInfoScreen(navController = rootNavController,user=user) }
@@ -202,16 +212,19 @@ fun MainActivityScreen() {
         composable(MainActivityRouteEnum.MAIN_POST_INFO.route) {
             MainPostInfoScreen(rootNavController,dvm,svm)
         }
+        composable(MainActivityRouteEnum.CHAT_SCREEN.route) {
+            ChatScreen(rootNavController,svm,ivm)
+        }
 
     }
 
 }
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MainScreen(rootController:NavHostController,svm:SocialViewModel) {
+fun MainScreen(rootController:NavHostController,svm:SocialViewModel,ivm:ImViewModel) {
     val mainController = rememberNavController()
-    val insets = WindowInsets.systemBars
-    Scaffold(bottomBar = { BottomNavBar(mainController) }, contentWindowInsets = insets) { padding->
+    val insets = WindowInsets.systemBars.asPaddingValues()
+    Scaffold(bottomBar = { BottomNavBar(mainController, modifier = Modifier.padding(insets)) }) { padding->
         //设置路由
         NavHost(navController = mainController,
             startDestination = TabEnum.HOME.route,
@@ -219,7 +232,7 @@ fun MainScreen(rootController:NavHostController,svm:SocialViewModel) {
             enterTransition = { fadeIn(tween(300)) },
             exitTransition = { fadeOut(tween(300)) }) {
             composable(route = TabEnum.HOME.route) {
-                ConversationScreen(rootController)
+                ConversationScreen(rootController, ivm = ivm)
             }
             composable(route = TabEnum.SOCIAL.route) {
                 FriendScreen(
