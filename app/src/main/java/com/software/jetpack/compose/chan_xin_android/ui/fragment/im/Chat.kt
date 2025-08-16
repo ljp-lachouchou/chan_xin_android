@@ -3,10 +3,12 @@ package com.software.jetpack.compose.chan_xin_android.ui.fragment.im
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,19 +20,29 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,10 +51,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.trace
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -57,6 +72,7 @@ import com.software.jetpack.compose.chan_xin_android.entity.MessageData
 import com.software.jetpack.compose.chan_xin_android.entity.MessageFrame
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.ext.switchTab
+import com.software.jetpack.compose.chan_xin_android.ui.activity.IconButton
 import com.software.jetpack.compose.chan_xin_android.ui.activity.MainActivityRouteEnum
 import com.software.jetpack.compose.chan_xin_android.ui.activity.Wrapper
 import com.software.jetpack.compose.chan_xin_android.ui.base.BaseText
@@ -70,14 +86,15 @@ import com.software.jetpack.compose.chan_xin_android.ui.theme.SurfaceColor
 import com.software.jetpack.compose.chan_xin_android.vm.ImViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
+private val InputFieldHeight = 45.dp
+private val ButtonPadding = 8.dp
+private val ButtonIconSize = 24.dp
 @Composable
 fun ChatScreen(navHostController: NavHostController,svm:SocialViewModel,ivm:ImViewModel) {
     val clickFriend by svm.clickFriend.collectAsState()
-    /**
-     *
-     * ivm.send(MessageFrame(fromId = "0x000000900000000f", toId = "0x000000d000000003", data = MessageData("0x000000900000000f", recvId = "0x000000d000000003",0, msg = MessageContent(1,"你好呀"))))
-     */
     Scaffold(topBar = {
         TopBarWithBack(
             navHostController,
@@ -93,23 +110,52 @@ fun ChatScreen(navHostController: NavHostController,svm:SocialViewModel,ivm:ImVi
 }
 @Composable
 fun ChatScreenUI(modifier: Modifier=Modifier,friend:Friend,ivm: ImViewModel) {
-    val chatLogs = ivm.chatLogFlow.collectAsLazyPagingItems()
+    val chatLogsItems by ivm.chatLogsByConversationId().collectAsState()
+    val chatLogs = chatLogsItems.collectAsLazyPagingItems()
     val uvm:UserViewmodel = hiltViewModel()
     val user by uvm.myUser.collectAsState()
-    Box (modifier=modifier.fillMaxSize().imePadding()){
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    Column(modifier=modifier
+        .fillMaxSize()
+        .imePadding()
+    ){
         LazyColumn(
+            state = listState,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(start = DefaultUserPadding, end = DefaultUserPadding, bottom = 105.dp),
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(start = DefaultUserPadding, end = DefaultUserPadding),
             reverseLayout = true,
             verticalArrangement = Arrangement.spacedBy(15.dp)
         ){
-            items(chatLogs.itemSnapshotList.items) {chatLog->
-                ChatLogItem(user,friend,chatLog)
+            items(chatLogs.itemSnapshotList.items, key = {item->item.id}) { chatLog->
+                Log.d("ChatLog.sendTime", "id=${chatLog.id}, sendTime=${chatLog.sendTime}")
+                Log.d("ChatLog", "id=${chatLog.id}")
+                Wrapper {
+                    ChatLogItem(user,friend,chatLog)
+                }
             }
         }
-        Wrapper(modifier=Modifier.align(Alignment.BottomStart)) {
-            BottomChatArea()
+        Wrapper {
+            BottomChatArea(onSend = {content->
+                ivm.send(
+                    MessageFrame(
+                        toId = friend.userId,
+                        fromId = user.id,
+                        data = MessageData(
+                            sendId = user.id,
+                            recvId = friend.userId,
+                            0,
+                            MessageContent(0, content)
+                        )
+                    )
+                )
+                chatLogs.refresh()
+                scope.launch {
+                    delay(500)
+                    listState.animateScrollToItem(0) }
+            }, onEmojiClick = {}, onAddClick = {})
         }
     }
 }
@@ -152,13 +198,26 @@ fun ChatLogItem(user:User,friend:Friend,chatLog: ChatLog,modifier:Modifier=Modif
     }
 }
 @Composable
-fun BottomChatArea() {
+fun BottomChatArea(onSend:(String)->Unit,onEmojiClick:()->Unit,onAddClick:()->Unit) {
     var find by remember { mutableStateOf("") }
-    Surface(color = SurfaceColor, modifier = Modifier
-        .fillMaxWidth()
-        .height(100.dp)) {
-        Box(modifier = Modifier.height(50.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.padding(horizontal = DefaultUserPadding, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Surface(
+        color = SurfaceColor,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .padding(top = 10.dp)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = DefaultUserPadding),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 CustomTextField(
                     value = find,
                     onValueChange = { find = it },
@@ -167,19 +226,60 @@ fun BottomChatArea() {
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
+                        unfocusedContainerColor = Color.White,
+                        disabledContainerColor = Color.White
                     ),
                     defaultVerticalPadding = 5.dp,
-                    modifier = Modifier.height(45.dp)
-                )
-                BaseText("表情")
-                Icon(
-                    painterResource(R.drawable.add_outline),
-                    contentDescription = null,
-                    tint = Color.Black,
                     modifier = Modifier
-                        .size(24.dp)
+                        .weight(1f)
+                        .height(InputFieldHeight)
+                        .border(
+                            width = 1.dp, color = Color(0xFFE0E0E0)
+                        ),
+                    keyboardActions = KeyboardActions(
+                        onSend = {
+                            if (find.isNotBlank()) onSend(find)
+                            find = ""
+                        }
+                    ),
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Send,
+                        keyboardType = KeyboardType.Text
+                    ),
+                    maxLines = 1,
+                    singleLine = true
                 )
+
+                IconButton(
+                    onClick = onEmojiClick,
+                    modifier = Modifier
+                        .size(InputFieldHeight)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .padding(ButtonPadding)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Face,
+                        contentDescription = "表情",
+                        modifier = Modifier.size(ButtonIconSize)
+                    )
+                }
+
+                IconButton(
+                    onClick = onAddClick,
+                    modifier = Modifier
+                        .size(InputFieldHeight)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .padding(ButtonPadding)
+                ) {
+                    Icon(
+                        painterResource(R.drawable.add_outline),
+                        contentDescription = "添加",
+                        tint = Color.Black,
+                        modifier = Modifier.size(ButtonIconSize)
+                    )
+                }
             }
         }
     }
@@ -192,10 +292,8 @@ fun ChatScreenAction() {
         tint = Color.Black,
         modifier = Modifier
             .size(24.dp)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }) {
-            }
+            .clickable(indication = null,
+                interactionSource = remember { MutableInteractionSource() }) {}
     )
 
 }

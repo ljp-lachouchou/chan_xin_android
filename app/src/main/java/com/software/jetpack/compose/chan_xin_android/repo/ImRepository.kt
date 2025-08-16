@@ -1,6 +1,7 @@
 package com.software.jetpack.compose.chan_xin_android.repo
 
 import android.util.Log
+import com.software.jetpack.compose.chan_xin_android.cache.dao.IChatDao
 import com.software.jetpack.compose.chan_xin_android.cache.dao.IUserDao
 import com.software.jetpack.compose.chan_xin_android.entity.Conversation
 import com.software.jetpack.compose.chan_xin_android.http.service.HttpService
@@ -17,7 +18,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-class ImRepository @Inject constructor(private val userDao: IUserDao){
+class ImRepository @Inject constructor(private val userDao: IUserDao,val chatDao:IChatDao){
     private val _currentUserId = MutableStateFlow(UserIdWithVersion("",0))
     private val scope = CoroutineScope(SupervisorJob())
     private val apiService = HttpService.getService()

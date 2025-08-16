@@ -11,7 +11,7 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import java.util.concurrent.TimeUnit
 
-class WebsocketManager(url:String, token:String) {
+class WebsocketManager(url:String, token:String,private val onWebSocketMessageListener: OnWebSocketMessageListener) {
     private var websocket:WebSocket? = null
     private val gson = Gson()
     private var isConnectBool:Boolean = false
@@ -41,7 +41,6 @@ class WebsocketManager(url:String, token:String) {
                 super.onMessage(webSocket, text)
                 Log.e("websocket","收到消息:$text")
                 receiveMessage(text)
-
             }
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 super.onFailure(webSocket, t, response)
@@ -58,6 +57,7 @@ class WebsocketManager(url:String, token:String) {
     fun receiveMessage(message:String) {
         val messageFrame = gson.fromJson(message,MessageFrame::class.java)
         Log.e("websocket_messageFrame",messageFrame.toString())
+        onWebSocketMessageListener.onMessageReceive(messageFrame)
     }
 
 }

@@ -3,6 +3,7 @@ package com.software.jetpack.compose.chan_xin_android.ui.activity
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Build
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.tween
@@ -159,6 +160,10 @@ fun MainActivityScreen() {
     val dvm:DynamicViewModel = hiltViewModel()
     val user by vm.myUser.collectAsState()
     val ivm:ImViewModel = hiltViewModel()
+    LaunchedEffect(UInt) {
+//        UserDatabase.getInstance().chatDao().deleteAllChatLog()
+        Log.e("allChatLogs",UserDatabase.getInstance().chatDao().allChatLogs().size.toString())
+    }
     NavHost(navController = rootNavController,
         startDestination = MainActivityRouteEnum.PARENT.route,
         enterTransition = { fadeIn(tween(700)) },

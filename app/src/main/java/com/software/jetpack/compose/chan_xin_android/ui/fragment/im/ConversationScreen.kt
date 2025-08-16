@@ -77,6 +77,7 @@ import com.software.jetpack.compose.chan_xin_android.vm.SocialViewModel
 import com.software.jetpack.compose.chan_xin_android.vm.UserViewmodel
 import androidx.lifecycle.compose.currentStateAsState
 import com.software.jetpack.compose.chan_xin_android.R
+import java.util.concurrent.TimeUnit
 
 private val CONVERSATION_ITEM_DP = 65.dp
 
@@ -206,7 +207,7 @@ fun ConversationItemUI(friend:Friend,conversation:Conversation,onClick:()->Unit)
                 )
             },
             tailContent = {
-                BaseText(conversation.msg.sendTime.toTime(), fontSize = 10.sp, color = PlaceholderColor)
+                BaseText(conversation.msg.sendTime.toTime(unit = TimeUnit.MILLISECONDS), fontSize = 10.sp, color = PlaceholderColor)
             }
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {

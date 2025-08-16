@@ -1,10 +1,32 @@
 package com.software.jetpack.compose.chan_xin_android.entity
 
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
-
-data class ChatLog(val id:String,val conversationId: String,val sendId:String,val recvId:String,val msgType:Int,val msgContent:String,val chatType:String,val sendTime:Long)
+@Entity("chat_log")
+data class ChatLog(
+    @PrimaryKey
+    val id: String,
+    @ColumnInfo("conversation_id")
+    val conversationId: String,
+    @ColumnInfo("send_id")
+    val sendId: String,
+    @ColumnInfo("recv_id")
+    val recvId: String,
+    @ColumnInfo("msg_type")
+    val msgType: Int,
+    @ColumnInfo("msg_content")
+    val msgContent: String,
+    @ColumnInfo("chat_type")
+    val chatType: Int,
+    @ColumnInfo("send_time")
+    val sendTime: Long
+) {
+    constructor():this("","","","",0,"",0,0)
+}
 
 data class Conversation(val conversationId:String,val chatType:Int,val targetId:String,val isShow:Boolean,val seq:Long,val total:Int,val toRead:Int,val read:Int,val msg:ChatLog)
 

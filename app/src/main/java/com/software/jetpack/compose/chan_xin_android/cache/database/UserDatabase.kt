@@ -7,6 +7,7 @@ import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.software.jetpack.compose.chan_xin_android.cache.dao.IChatDao
 import com.software.jetpack.compose.chan_xin_android.cache.dao.IDynamicDao
 import com.software.jetpack.compose.chan_xin_android.cache.dao.ISocialDao
 import com.software.jetpack.compose.chan_xin_android.cache.dao.IUserDao
@@ -14,6 +15,7 @@ import com.software.jetpack.compose.chan_xin_android.converter.FriendStatusConve
 import com.software.jetpack.compose.chan_xin_android.converter.FriendStatusInfoConverter
 import com.software.jetpack.compose.chan_xin_android.converter.PostContentConverter
 import com.software.jetpack.compose.chan_xin_android.converter.PostMetaConverter
+import com.software.jetpack.compose.chan_xin_android.entity.ChatLog
 import com.software.jetpack.compose.chan_xin_android.entity.CommentReply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendApply
 import com.software.jetpack.compose.chan_xin_android.entity.FriendFeed
@@ -23,7 +25,7 @@ import com.software.jetpack.compose.chan_xin_android.entity.PostLike
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 internal const val DATABASE_NAME = "chan_xin.db"
-@Database(entities = [User::class,FriendApply::class,FriendRelation::class,Post::class,FriendFeed::class,PostLike::class,CommentReply::class], version = 10, exportSchema = true)
+@Database(entities = [User::class,FriendApply::class,FriendRelation::class,Post::class,FriendFeed::class,PostLike::class,CommentReply::class,ChatLog::class], version = 11, exportSchema = true)
 @TypeConverters(
     FriendStatusConverter::class,
     FriendStatusInfoConverter::class,
@@ -34,6 +36,7 @@ abstract class UserDatabase:RoomDatabase() {
     abstract fun userDao():IUserDao
     abstract fun socialDao():ISocialDao
     abstract fun dynamicDao():IDynamicDao
+    abstract fun chatDao():IChatDao
 
     companion object {
         // For Singleton instantiation
@@ -165,6 +168,23 @@ abstract class UserDatabase:RoomDatabase() {
                 }
 
             }
+            val migration10To11 = object : Migration(10, 11) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `chat_log` (
+                            `id` TEXT PRIMARY KEY NOT NULL,
+                            `conversation_id` TEXT NOT NULL,
+                            `send_id` TEXT NOT NULL,
+                            `recv_id` TEXT NOT NULL,
+                            `msg_type` INTEGER NOT NULL,
+                            `chat_type` INTEGER NOT NULL,
+                            `msg_content` TEXT NOT NULL,
+                            `send_time` INTEGER NOT NULL
+                        )
+                    """.trimIndent())
+                }
+
+            }
             return Room.databaseBuilder(
                 context = AppGlobal.getAppContext(), klass = UserDatabase::
                 class.java, name = DATABASE_NAME
@@ -178,7 +198,8 @@ abstract class UserDatabase:RoomDatabase() {
                     migration6To7,
                     migration7To8,
                     migration8To9,
-                    migration9To10
+                    migration9To10,
+                    migration10To11
                 )
                 .build()
         }
