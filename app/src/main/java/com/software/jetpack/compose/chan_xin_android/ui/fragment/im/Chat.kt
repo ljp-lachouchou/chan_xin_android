@@ -37,6 +37,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -110,12 +111,13 @@ fun ChatScreen(navHostController: NavHostController,svm:SocialViewModel,ivm:ImVi
 }
 @Composable
 fun ChatScreenUI(modifier: Modifier=Modifier,friend:Friend,ivm: ImViewModel) {
-    val chatLogsItems by ivm.chatLogsByConversationId().collectAsState()
-    val chatLogs = chatLogsItems.collectAsLazyPagingItems()
+    val chatLogsItems by ivm.chatLogListByConversationId().collectAsState()
     val uvm:UserViewmodel = hiltViewModel()
     val user by uvm.myUser.collectAsState()
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
+    LaunchedEffect(chatLogsItems.size) {
+        listState.animateScrollToItem(0)
+    }
     Column(modifier=modifier
         .fillMaxSize()
         .imePadding()
@@ -129,9 +131,7 @@ fun ChatScreenUI(modifier: Modifier=Modifier,friend:Friend,ivm: ImViewModel) {
             reverseLayout = true,
             verticalArrangement = Arrangement.spacedBy(15.dp)
         ){
-            items(chatLogs.itemSnapshotList.items, key = {item->item.id}) { chatLog->
-                Log.d("ChatLog.sendTime", "id=${chatLog.id}, sendTime=${chatLog.sendTime}")
-                Log.d("ChatLog", "id=${chatLog.id}")
+            items(chatLogsItems, key = {item->item.id}) { chatLog->
                 Wrapper {
                     ChatLogItem(user,friend,chatLog)
                 }
@@ -146,15 +146,12 @@ fun ChatScreenUI(modifier: Modifier=Modifier,friend:Friend,ivm: ImViewModel) {
                         data = MessageData(
                             sendId = user.id,
                             recvId = friend.userId,
-                            0,
-                            MessageContent(0, content)
+                            chatType = 0,
+                            msg = MessageContent(0, content)
                         )
                     )
                 )
-                chatLogs.refresh()
-                scope.launch {
-                    delay(500)
-                    listState.animateScrollToItem(0) }
+
             }, onEmojiClick = {}, onAddClick = {})
         }
     }

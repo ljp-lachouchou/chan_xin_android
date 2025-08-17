@@ -45,6 +45,12 @@ class UserViewmodel @Inject constructor(private val userRepository: UserReposito
         viewModelScope.launch {
             userRepository.setPhone(AppGlobal.getUserPhone())
         }
+
+    }
+    fun saveUsers(users: List<User>) {
+        viewModelScope.launch {
+            userRepository.userDao.saveUsers(users)
+        }
     }
     var pagedUsers: Flow<PagingData<User>>? = null
     suspend fun login(phone:String,password:String):Boolean {
@@ -83,19 +89,25 @@ class UserViewmodel @Inject constructor(private val userRepository: UserReposito
 
     }
     suspend fun findUser(
-        name: String = "------1", phone: String = "1", ids: String = StringUtil.listToString(
-            listOf("1")
-        )
+        name: String = "------1", phone: String = "1", ids: List<String> = listOf("1")
     ){
-        val apiService = HttpService.getService()
-        val apiResult = apiService.findUser(name, phone, ids)
-        _findUserInfo.value = apiResult.data?.infos
-        userRepository.userDao.saveUsers(apiResult.data?.infos ?: emptyList())
-        pagedUsers = Pager(
-            config = PagingConfig(pageSize = 15),
-            pagingSourceFactory = { UsersLocalPagerSource(_findUserInfo.value) }
-        ).flow
-            .cachedIn(viewModelScope)
+        try {
+
+            val apiService = HttpService.getService()
+            val apiResult = apiService.findUser(name, phone, ids)
+            _findUserInfo.value = apiResult.data?.infos
+            Log.e("info_ids",ids.toString())
+            Log.e("info_info",_findUserInfo.value.toString())
+            pagedUsers = Pager(
+                config = PagingConfig(pageSize = 15),
+                pagingSourceFactory = { UsersLocalPagerSource(_findUserInfo.value) }
+            ).flow
+                .cachedIn(viewModelScope)
+            userRepository.userDao.saveUsers(apiResult.data?.infos ?: emptyList())
+
+        }catch (e:Exception) {
+            Log.e("findUser",e.toString())
+        }
     }
     fun loadUser(phone: String) {
         viewModelScope.launch {

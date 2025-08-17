@@ -30,6 +30,7 @@ interface IChatDao {
         SELECT * FROM chat_log 
         WHERE conversation_id = :conversationId 
         AND send_time BETWEEN :startTime AND :endTime 
+        AND is_local = 0 
         ORDER BY send_time DESC 
         LIMIT :count
     """)

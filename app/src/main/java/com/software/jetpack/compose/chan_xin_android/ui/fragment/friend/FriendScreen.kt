@@ -1346,7 +1346,7 @@ suspend fun findUser(findModel: Int, uvm: UserViewmodel, find: String) {
     try {
         return if (find == "") uvm.findUser(name = "禅信号/手机号/昵称") else when (findModel) {
             0 -> uvm.findUser(phone = find)
-            1 -> uvm.findUser(ids = StringUtil.listToString(listOf(find)))
+            1 -> uvm.findUser(ids = listOf(find))
             2 -> uvm.findUser(name =  find)
             else -> uvm.findUser()
         }
@@ -1810,7 +1810,10 @@ fun ApplyFriendScreen(navController:NavHostController,uvm:UserViewmodel = hiltVi
     val uid by remember(user) { derivedStateOf { user.id } }
     val screenState by remember { mutableStateOf(ApplyFriendScreenState()) }
     val applyFriendList by svm.applyFriendList.collectAsState()
-
+    LaunchedEffect(applyFriendList) {
+        val ids = applyFriendList.map { it.userId }
+        uvm.findUser(ids = ids)
+    }
 // 将状态转换为不可变数据结构，避免并发修改问题
     val friendItems by remember(screenState.list) {
         derivedStateOf {
@@ -1914,7 +1917,10 @@ fun HandleFriendApplyListScreen(navController: NavHostController,uvm: UserViewmo
     val uid by remember(user) { derivedStateOf { user.id } }
     val screenState by remember { mutableStateOf(HandleFriendApplyState()) }
     val handleFriendApplyList by svm.handleFriendApplyList.collectAsState()
-
+    LaunchedEffect(handleFriendApplyList) {
+        val ids = handleFriendApplyList.map { it.applicantId }
+        uvm.findUser(ids = ids)
+    }
 // 将状态转换为不可变数据结构，避免并发修改问题
     val friendItems by remember(screenState.list) {
         derivedStateOf {
@@ -2067,7 +2073,7 @@ fun HandleFriendApplyVerifyScreen(navController: NavHostController, uvm: UserVie
                UserDatabase.getInstance().socialDao().saveFriendRelation(listOf(FriendRelation(0,user.id,wantApplyFriend.userId,
                    FriendStatus(false,false,false,remark)),FriendRelation(0,wantApplyFriend.userId,user.id,
                    FriendStatus())))
-               uvm.findUser(ids = StringUtil.listToString(listOf(wantApplyFriend.userId)))
+               uvm.findUser(ids = listOf(wantApplyFriend.userId))
                delay(300)
                isLoading = false
                withContext(Dispatchers.Main) {

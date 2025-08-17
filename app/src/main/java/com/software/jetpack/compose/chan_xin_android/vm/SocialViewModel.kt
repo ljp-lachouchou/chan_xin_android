@@ -92,7 +92,7 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
     }
     fun saveAllFriend(list: List<Friend>) {
         viewModelScope.launch(Dispatchers.IO) {
-            socialRepository.socialDao.saveFriendRelation(list.map {
+            val longs = socialRepository.socialDao.saveFriendRelation(list.map {
                 FriendRelation(
                     0,
                     socialRepository.currentUid,
@@ -100,6 +100,8 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
                     it.friendStatus
                 )
             })
+            Log.e("longs_longs",longs.toString())
+            setCurrentUid(socialRepository.currentUid)
         }
     }
     suspend fun applyFriend(userId:String="2",targetId:String="1",greetMsg:String="1"): FriendApplyResponse? {
@@ -191,7 +193,9 @@ class SocialViewModel @Inject constructor(private val socialRepository:SocialRep
         try {
             val apiResult = apiService.getFriendList(uid)
             Log.e("apiResult.data?.list",apiResult.data?.list.toString())
-            return apiResult.data?.list ?: emptyList()
+            val friends = apiResult.data?.list ?: emptyList()
+            saveAllFriend(friends)
+            return friends
         }catch (e:Exception) {
             withContext(Dispatchers.Main) {
                 Toast.makeText(AppGlobal.getAppContext(),"网络异常,获取好友列表失败",Toast.LENGTH_SHORT).show()

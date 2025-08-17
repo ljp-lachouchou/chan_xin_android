@@ -30,9 +30,9 @@ interface ApiService {
     data class TokenResp(val token:String,val exp:Long)
     data class UpdateUserReq(val nickname: String? = null,val avatar:String? = null,val sex:Int? = null)
     @GET("v1/user/findUser")
-    suspend fun findUser(@Query("name") name: String = "点",@Query("phone") phone:String="1",@Query("ids") ids:String=StringUtil.listToString(
-        listOf("1")
-    )):ApiResult<DataInfosWrapper<User>>
+    suspend fun findUser(@Query("name") name: String = "点", @Query("phone") phone:String="1",
+                         @Query("ids") ids: List<String> = listOf("22")
+    ):ApiResult<DataInfosWrapper<User>>
     @POST("v1/user/register")
     suspend fun register(@Body registerReq:RegisterReq):ApiResult<TokenResp>
     @POST("v1/user/login")

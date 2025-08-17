@@ -25,7 +25,7 @@ import com.software.jetpack.compose.chan_xin_android.entity.PostLike
 import com.software.jetpack.compose.chan_xin_android.entity.User
 import com.software.jetpack.compose.chan_xin_android.util.AppGlobal
 internal const val DATABASE_NAME = "chan_xin.db"
-@Database(entities = [User::class,FriendApply::class,FriendRelation::class,Post::class,FriendFeed::class,PostLike::class,CommentReply::class,ChatLog::class], version = 11, exportSchema = true)
+@Database(entities = [User::class,FriendApply::class,FriendRelation::class,Post::class,FriendFeed::class,PostLike::class,CommentReply::class,ChatLog::class], version = 12, exportSchema = true)
 @TypeConverters(
     FriendStatusConverter::class,
     FriendStatusInfoConverter::class,
@@ -185,6 +185,15 @@ abstract class UserDatabase:RoomDatabase() {
                 }
 
             }
+            val migration11To12 = object : Migration(11, 12) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        ALTER TABLE chat_log 
+                        ADD COLUMN is_local INTEGER NOT NULL CHECK (is_local IN (0,1)) DEFAULT 0;
+                    """.trimIndent())
+                }
+
+            }
             return Room.databaseBuilder(
                 context = AppGlobal.getAppContext(), klass = UserDatabase::
                 class.java, name = DATABASE_NAME
@@ -199,7 +208,8 @@ abstract class UserDatabase:RoomDatabase() {
                     migration7To8,
                     migration8To9,
                     migration9To10,
-                    migration10To11
+                    migration10To11,
+                    migration11To12,
                 )
                 .build()
         }

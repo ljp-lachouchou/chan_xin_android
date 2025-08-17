@@ -46,6 +46,7 @@ class WebsocketManager(url:String, token:String,private val onWebSocketMessageLi
                 super.onFailure(webSocket, t, response)
                 Log.e("websocket","连接失败")
                 isConnectBool = false
+                connect()
             }
         })
     }

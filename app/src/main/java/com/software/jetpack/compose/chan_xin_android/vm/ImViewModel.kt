@@ -45,7 +45,9 @@ class ImViewModel @Inject constructor(private val imRepository: ImRepository):Vi
         initialLoadSize = 15,
         enablePlaceholders = false // 不启用占位符（适合网络数据）
     )
+    private val _newChatLog = MutableStateFlow(ChatLog())
     private val chatLogMap = ConcurrentHashMap<String,MutableStateFlow<Flow<PagingData<ChatLog>>>>()
+    private val chatLogListCache = ConcurrentHashMap<String,MutableStateFlow<List<ChatLog>>>()
     init {
         initWorkManager()
     }
@@ -61,6 +63,8 @@ class ImViewModel @Inject constructor(private val imRepository: ImRepository):Vi
     private var websocketManager:WebsocketManager? = null
     fun send(messageFrame: MessageFrame) {
         websocketManager?.sendMessage(messageFrame)
+        val chatLog = messageFrame.let { ChatLog(id = it.id, sendId = it.data.sendId, recvId = it.data.recvId, msgType = it.data.msg.msgType, msgContent = it.data.msg.msgContent, chatType = it.data.chatType, conversationId = it.data.conversationId, sendTime = it.data.sendTime, isLocal = true) }
+        addChatLog(chatLog)
     }
     fun connect() {
         if (isConnect) return
@@ -87,7 +91,7 @@ class ImViewModel @Inject constructor(private val imRepository: ImRepository):Vi
     }.catch { Log.e("ImViewModel_chatLogListFlow", it.toString()) }.stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(5000), initialValue = emptyList())
     @OptIn(ExperimentalCoroutinesApi::class, ExperimentalPagingApi::class)
     val chatLogFlow = _currentConversationId.flatMapLatest { (cid,_)->
-        Pager(config = pagingConfig, remoteMediator = ChatLogRemoteMediator(cid,imRepository.chatDao,pagingConfig.pageSize),pagingSourceFactory = {ChatLogPagingSource(cid)}).flow.cachedIn(viewModelScope)
+        imRepository.chatDao.getChatLogsFlow(cid, count = Int.MAX_VALUE)
     }.catch { Log.e("ImViewModel_chatLogFlow", it.toString()) }
     inner class ChatLogPagingSource(
         private val conversationId: String,
@@ -135,11 +139,40 @@ class ImViewModel @Inject constructor(private val imRepository: ImRepository):Vi
     ) {
         flow.value = Pager(config = pagingConfig, remoteMediator = ChatLogRemoteMediator(conversationId,imRepository.chatDao,pagingConfig.pageSize),pagingSourceFactory = { ChatLogPagingSource(_currentConversationId.value.userId) }).flow.cachedIn(viewModelScope)
     }
+    private fun initChatLogList(conversationId: String,flow: MutableStateFlow<List<ChatLog>>) {
+        viewModelScope.launch {
+            if (AppGlobal.isNetworkValid()) {
+                try {
+                    flow.value = apiService.getChatLog(0,System.currentTimeMillis(),Int.MAX_VALUE,conversationId,"").data?.list ?: emptyList()
+                    imRepository.chatDao.saveChatLogs(flow.value)
+                }catch (e:Exception) {
+                    Log.e("initChatLogList",e.toString())
 
-    fun addChatLog() {
+                }
+            }else {
+                flow.value = imRepository.chatDao.getChatLogs(conversationId, count = Int.MAX_VALUE)
+            }
+        }
+    }
+    fun chatLogListByConversationId():StateFlow<List<ChatLog>> {
         val conversationId = _currentConversationId.value.userId
-        val flow = chatLogMap[conversationId] ?:return
+        return chatLogListCache.getOrPut(conversationId) {
+            MutableStateFlow<List<ChatLog>>(emptyList()).also {
+                flow->
+                initChatLogList(conversationId,flow)
+            }
+        }
+    }
+    fun addChatLog(chatLog: ChatLog) {
+        val flow = chatLogListCache[_currentConversationId.value.userId] ?: return
         Log.e("websocket_messageFrame","websocket_messageFrame_addChatLog")
+        viewModelScope.launch(Dispatchers.IO) {
+            imRepository.chatDao.saveChatLogs(listOf(chatLog))
+        }
+        _newChatLog.value = chatLog
+        val newList = flow.value.toMutableList()
+        newList.add(0,chatLog)
+        flow.value = newList
 
     }
 
@@ -153,6 +186,10 @@ class ImViewModel @Inject constructor(private val imRepository: ImRepository):Vi
 
     override fun onMessageReceive(messageFrame: MessageFrame) {
         Log.e("websocket_messageFrame","websocket_messageFrame22")
-        addChatLog()
+
+        if (messageFrame.frameType == 0) {
+            val chatLog = messageFrame.let { ChatLog(id = it.id, sendId = it.data.sendId, recvId = it.data.recvId, msgType = it.data.msg.msgType, msgContent = it.data.msg.msgContent, chatType = it.data.chatType, conversationId = it.data.conversationId, sendTime = it.data.sendTime) }
+            addChatLog(chatLog)
+        }
     }
 }

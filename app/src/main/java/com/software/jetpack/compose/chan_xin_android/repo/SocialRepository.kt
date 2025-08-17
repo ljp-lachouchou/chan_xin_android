@@ -39,7 +39,6 @@ class SocialRepository @Inject constructor(val socialDao: ISocialDao,private val
     @OptIn(ExperimentalCoroutinesApi::class)
     val currentFriendListFlow = _currentUid.flatMapLatest { (uid,version)->
         Log.e("SocialRepository_uid","$uid,$version")
-        Log.e("SocialRepository_uid_data",socialDao.getFriendList(uid).first().toString())
         val list = socialDao.getFriendList(uid)
         getGroup(list.first()) {
             setCurrentGroup(it)
